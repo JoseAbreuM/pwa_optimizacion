@@ -1,0 +1,45 @@
+<section class="panel login-panel">
+  <h1>Plataforma Operacional Petrolera</h1>
+  <p class="muted">Acceso por departamento con control de rol.</p>
+
+  <% if (error) { %>
+    <div class="alert"><%= error %></div>
+  <% } %>
+
+  <form action="/login" method="post" class="stack">
+    <label>Usuario
+      <input type="text" name="username" placeholder="ej: j.abreu" required />
+    </label>
+
+    <label>Departamento
+      <select name="department" required>
+        <option value="">Selecciona</option>
+        <option value="optimizacion">Optimizacion</option>
+        <option value="operaciones">Operaciones</option>
+        <option value="mantenimiento">Mantenimiento</option>
+        <option value="laboratorio">Laboratorio</option>
+        <option value="seguridad">Seguridad</option>
+        <option value="admin">Admin (rol secreto dev)</option>
+      </select>
+    </label>
+
+    <label>Rol
+      <select name="role" required>
+        <option value="">Selecciona</option>
+        <option value="optimizacion">optimizacion</option>
+        <option value="supervisor_optimizacion">supervisor_optimizacion</option>
+        <option value="operaciones">operaciones</option>
+        <option value="supervisor_operaciones">supervisor_operaciones</option>
+        <option value="mantenimiento">mantenimiento</option>
+        <option value="supervisor_mantenimiento">supervisor_mantenimiento</option>
+        <option value="laboratorio">laboratorio</option>
+        <option value="supervisor_laboratorio">supervisor_laboratorio</option>
+        <option value="seguridad">seguridad</option>
+        <option value="supervisor_seguridad">supervisor_seguridad</option>
+        <option value="admin">admin</option>
+      </select>
+    </label>
+
+    <button type="submit" class="btn">Entrar</button>
+  </form>
+</section>
