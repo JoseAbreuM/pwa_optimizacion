@@ -1,0 +1,42 @@
+<section class="space-y-6">
+  <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+    <div>
+      <a href="/pozos" class="text-sm font-semibold text-[#033F73] dark:text-sky-300">← Volver a pozos</a>
+      <h1 class="mt-2 text-2xl font-bold">Pozo <%= pozo.codigo %></h1>
+      <p class="mt-1 text-sm text-slate-600 dark:text-slate-300"><%= pozo.area %> · <%= pozo.yacimiento || 'Sin yacimiento' %></p>
+    </div>
+    <span class="inline-flex items-center self-start rounded-full px-3 py-1 text-sm font-semibold text-white" style="background-color: <%= pozo.color_estado_mapa || '#033F73' %>">
+      <%= pozo.estado %>
+    </span>
+  </div>
+
+  <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+    <article class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+      <p class="text-sm text-slate-500">Categoría</p>
+      <p class="mt-2 text-lg font-semibold"><%= pozo.categoria %></p>
+    </article>
+    <article class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+      <p class="text-sm text-slate-500">Potencial</p>
+      <p class="mt-2 text-lg font-semibold"><%= pozo.potencial || '—' %></p>
+    </article>
+    <article class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+      <p class="text-sm text-slate-500">Velocidad actual</p>
+      <p class="mt-2 text-lg font-semibold"><%= pozo.vel_actual || '—' %></p>
+    </article>
+    <article class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+      <p class="text-sm text-slate-500">Método</p>
+      <p class="mt-2 text-lg font-semibold"><%= pozo.metodo_levantamiento || '—' %></p>
+    </article>
+  </div>
+
+  <div class="grid gap-4 xl:grid-cols-2">
+    <%- include('./partials/general', { pozo }) %>
+    <%- include('./partials/equipos', { pozo }) %>
+  </div>
+
+  <div class="grid gap-4 xl:grid-cols-3">
+    <%- include('./partials/parametros', { timeline }) %>
+    <%- include('./partials/niveles', { timeline }) %>
+    <%- include('./partials/muestras', { timeline }) %>
+  </div>
+</section>

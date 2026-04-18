@@ -1,0 +1,9 @@
+<article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+  <h2 class="text-lg font-semibold">Equipos</h2>
+  <dl class="mt-4 grid gap-3 text-sm sm:grid-cols-2">
+    <div><dt class="text-slate-500">VDF</dt><dd class="font-medium"><%= pozo.marca_vdf || '—' %></dd></div>
+    <div><dt class="text-slate-500">Cabezal</dt><dd class="font-medium"><%= pozo.cabezal || '—' %></dd></div>
+    <div><dt class="text-slate-500">Velocidad actual</dt><dd class="font-medium"><%= pozo.vel_actual || '—' %></dd></div>
+    <div><dt class="text-slate-500">Velocidad operativa</dt><dd class="font-medium"><%= pozo.vel_operacional || '—' %></dd></div>
+  </dl>
+</article>

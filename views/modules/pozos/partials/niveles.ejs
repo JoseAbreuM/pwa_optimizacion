@@ -1,0 +1,12 @@
+<article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+  <h2 class="text-lg font-semibold">Niveles</h2>
+  <div class="mt-4 space-y-2 text-sm">
+    <% if (!timeline.niveles.length) { %><p class="text-slate-500">Sin registros.</p><% } %>
+    <% timeline.niveles.forEach(item => { %>
+      <div class="rounded-xl bg-slate-50 p-3 dark:bg-slate-800">
+        <div class="font-semibold"><%= new Date(item.fecha).toLocaleDateString('es-VE') %></div>
+        <div>NF: <%= item.nf_pies || '—' %> · PIP: <%= item.pip || '—' %></div>
+      </div>
+    <% }) %>
+  </div>
+</article>

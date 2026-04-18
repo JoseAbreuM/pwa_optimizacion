@@ -1,32 +1,80 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" class="h-full">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#1f3a5f" />
+  <meta name="theme-color" content="#033F73" />
   <link rel="manifest" href="/manifest.json" />
+  <link rel="icon" type="image/png" href="/assets/icons/icono.png" />
+  <script>
+    (function () {
+      const storedTheme = localStorage.getItem('color-theme');
+      const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const shouldUseDark = storedTheme === 'dark' || (!storedTheme && systemPrefersDark);
+      document.documentElement.classList.toggle('dark', shouldUseDark);
+    })();
+  </script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
+  <link rel="stylesheet" href="/css/tailwind.css" />
   <link rel="stylesheet" href="/css/app.css" />
-  <title><%= title %> | PetroField</title>
+  <title>
+    <%= title %> | Cavallino
+  </title>
 </head>
-<body>
-  <header class="topbar">
-    <div class="brand">PetroField</div>
-    <div class="user-meta">
-      <% if (currentUser) { %>
-        <span><%= currentUser.username %> - <%= currentUser.role %></span>
-        <form method="post" action="/logout">
-          <button type="submit" class="btn ghost">Salir</button>
-        </form>
-      <% } %>
+
+<body class="min-h-screen bg-[#F2F2F2] text-[#0D0D0D] dark:bg-slate-950 dark:text-slate-100">
+  <%- include('../partials/topbar') %>
+  <%- include('../partials/sidebar') %>
+
+  <div class="mt-[57px] p-4 sm:ml-64">
+    <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+      <%- body %>
     </div>
-  </header>
+  </div>
 
-  <main class="page-shell">
-    <%- body %>
-  </main>
+  <footer class="m-4 rounded-xl border border-slate-200 bg-white shadow-sm sm:ml-64 dark:border-slate-800 dark:bg-slate-900">
+    <div class="mx-auto flex w-full max-w-screen-xl flex-col items-center justify-center gap-3 p-4 text-center md:flex-row md:justify-between md:text-left">
+      <span class="text-sm text-slate-600 sm:text-center dark:text-slate-400">© 2026 <a href="/dashboard" class="hover:underline">Cavallino</a>. All Rights Reserved.</span>
+      <ul class="flex flex-wrap items-center justify-center text-sm font-medium text-slate-600 dark:text-slate-400">
+        <li><a href="#" class="me-4 hover:underline md:me-6">About</a></li>
+        <li><a href="#" class="me-4 hover:underline md:me-6">Privacy Policy</a></li>
+        <li><a href="#" class="me-4 hover:underline md:me-6">Licensing</a></li>
+        <li><a href="#" class="hover:underline">Contact</a></li>
+      </ul>
+    </div>
+  </footer>
 
-  <script src="/js/offline-store.js" defer></script>
-  <script src="/js/app-ui.js" defer></script>
+  <script>
+    (function () {
+      const root = document.documentElement;
+      const themeToggle = document.getElementById('theme-toggle');
+      const darkIcon = document.getElementById('theme-toggle-dark-icon');
+      const lightIcon = document.getElementById('theme-toggle-light-icon');
+
+      const syncThemeIcons = () => {
+        const isDark = root.classList.contains('dark');
+        darkIcon?.classList.toggle('hidden', isDark);
+        lightIcon?.classList.toggle('hidden', !isDark);
+      };
+
+      themeToggle?.addEventListener('click', () => {
+        const isDark = root.classList.toggle('dark');
+        localStorage.setItem('color-theme', isDark ? 'dark' : 'light');
+        syncThemeIcons();
+      });
+
+      syncThemeIcons();
+    })();
+  </script>
+
+  <script src="https://cdn.jsdelivr.net/npm/flowbite@2.5.2/dist/flowbite.min.js"></script>
+  <script src="/js/offline/db.js" defer></script>
+  <script src="/js/offline/sync.js" defer></script>
+  <script src="/js/core/ui.js" defer></script>
+  <script src="/js/modules/pozos.js" defer></script>
+  <script src="/js/core/app.js" defer></script>
   <script src="/js/sw-register.js" defer></script>
 </body>
+
 </html>

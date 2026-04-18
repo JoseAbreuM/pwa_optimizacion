@@ -1,0 +1,49 @@
+<section class="panel login-panel soft-panel">
+  <div class="login-logo-stack">
+    <img src="/assets/icons/icono.png" alt="Logo Cavallino" class="login-icon" />
+    <img src="/assets/images/header.png" alt="Cavallino" class="login-wordmark" />
+  </div>
+
+  <h1>Gestión de usuarios</h1>
+  <p class="muted">Formulario de alta y administración inicial de accesos.</p>
+
+  <% if (success) { %>
+    <div class="alert success"><%= success %></div>
+  <% } %>
+
+  <% if (error) { %>
+    <div class="alert"><%= error %></div>
+  <% } %>
+
+  <form action="/usuarios/crear" method="post" class="stack">
+    <label>Usuario
+      <input type="text" name="username" value="<%= formData.username %>" placeholder="ej: admin.opti" required />
+    </label>
+
+    <label>Contraseña
+      <input type="password" name="password" placeholder="Mínimo 6 caracteres" required />
+    </label>
+
+    <label>Departamento
+      <select name="department" required>
+        <% departments.forEach((dept)=> { const deptValue = String(dept.nombre).toLowerCase(); %>
+          <option value="<%= deptValue %>" <%= formData.department === deptValue ? 'selected' : '' %>><%= dept.nombre %></option>
+        <% }) %>
+      </select>
+    </label>
+
+    <label>Rol
+      <select name="role" required>
+        <% roles.forEach((roleOption)=> { %>
+          <option value="<%= roleOption %>" <%= formData.role === roleOption ? 'selected' : '' %>><%= roleOption %></option>
+        <% }) %>
+      </select>
+    </label>
+
+    <button type="submit" class="btn">Guardar usuario</button>
+  </form>
+
+  <div class="actions-row">
+    <a href="/login" class="inline-link">Volver al login</a>
+  </div>
+</section>

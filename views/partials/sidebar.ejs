@@ -1,0 +1,30 @@
+<aside id="top-bar-sidebar" class="fixed left-0 top-[57px] z-40 h-[calc(100vh-57px)] w-64 -translate-x-full border-e border-[#022b4f] bg-[#033F73] transition-transform sm:translate-x-0 dark:border-[#022b4f] dark:bg-[#033F73]" aria-label="Sidebar">
+  <div class="h-full overflow-y-auto px-3 py-4">
+    <a href="/dashboard" class="mb-5 flex items-center ps-2.5">
+      <img src="/assets/icons/icono.png" class="me-3 h-6 w-6" alt="Logo Cavallino" />
+      <span class="self-center whitespace-nowrap text-lg font-semibold text-white dark:text-white">Cavallino</span>
+    </a>
+
+    <ul class="space-y-2 font-medium">
+      <li>
+        <a href="/dashboard" class="group flex items-center rounded-xl px-3 py-2 text-sm <%= currentSection === 'optimizacion' ? 'bg-white text-[#033F73]' : 'text-white hover:bg-white/10 hover:text-white dark:text-white dark:hover:bg-white/10 dark:hover:text-white' %>">
+          <svg class="h-5 w-5 transition duration-75" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6.025A7.5 7.5 0 1 0 17.975 14H10V6.025Z" /><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.5 3c-.169 0-.334.014-.5.025V11h7.975c.011-.166.025-.331.025-.5A7.5 7.5 0 0 0 13.5 3Z" /></svg>
+          <span class="ms-3">Optimización</span>
+        </a>
+      </li>
+      <li>
+        <a href="/pozos" class="group flex items-center rounded-xl px-3 py-2 text-sm <%= currentSection === 'pozos' ? 'bg-white text-[#033F73]' : 'text-white hover:bg-white/10 hover:text-white dark:text-white dark:hover:bg-white/10 dark:hover:text-white' %>">
+          <svg class="h-5 w-5 transition duration-75" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 18h10M6 6h12M8 12h8" /></svg>
+          <span class="ms-3">Pozos</span>
+        </a>
+      </li>
+      <li><a href="/muestras" class="group flex items-center rounded-xl px-3 py-2 text-sm text-white hover:bg-white/10">Muestras</a></li>
+      <li><a href="/parametros" class="group flex items-center rounded-xl px-3 py-2 text-sm text-white hover:bg-white/10">Parámetros</a></li>
+      <li><a href="/niveles" class="group flex items-center rounded-xl px-3 py-2 text-sm text-white hover:bg-white/10">Niveles</a></li>
+      <li><a href="/servicios" class="group flex items-center rounded-xl px-3 py-2 text-sm text-white hover:bg-white/10">Servicios</a></li>
+      <% if (currentUser && currentUser.role === 'admin') { %>
+        <li><a href="/usuarios/crear" class="group flex items-center rounded-xl px-3 py-2 text-sm text-white hover:bg-white/10">Usuarios</a></li>
+      <% } %>
+    </ul>
+  </div>
+</aside>

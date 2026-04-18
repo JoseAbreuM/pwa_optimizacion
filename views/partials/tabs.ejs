@@ -1,0 +1,7 @@
+<div class="flex flex-wrap gap-2">
+  <% (tabs || []).forEach(tab => { %>
+    <a href="<%= tab.href %>" class="rounded-xl px-3 py-2 text-sm font-medium <%= tab.active ? 'bg-[#033F73] text-white' : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200' %>">
+      <%= tab.label %>
+    </a>
+  <% }) %>
+</div>

@@ -1,12 +1,19 @@
-const CACHE_NAME = 'petrofield-cache-v1';
+const CACHE_NAME = 'petrofield-cache-v3';
 
 const FILES_TO_CACHE = [
   '/',
   '/login',
   '/css/app.css',
   '/js/sw-register.js',
-  '/js/offline-store.js',
-  '/js/app-ui.js',
+  '/js/core/app.js',
+  '/js/core/ui.js',
+  '/js/offline/db.js',
+  '/js/offline/sync.js',
+  '/js/modules/pozos.js',
+  '/js/modules/muestras.js',
+  '/js/modules/parametros.js',
+  '/js/modules/niveles.js',
+  '/assets/icons/icono.png',
   '/manifest.json'
 ];
 

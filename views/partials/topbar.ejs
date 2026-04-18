@@ -1,0 +1,60 @@
+<nav class="fixed top-0 z-50 w-full border-b border-[#022b4f] bg-[#033F73] shadow-sm dark:border-[#022b4f] dark:bg-[#033F73]">
+  <div class="px-3 py-2 lg:px-5 lg:pl-3">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center justify-start rtl:justify-end">
+        <button id="sidebar-toggle" data-drawer-target="top-bar-sidebar" data-drawer-toggle="top-bar-sidebar"
+          aria-controls="top-bar-sidebar" type="button"
+          class="inline-flex items-center rounded-xl border border-white/20 bg-transparent p-2 text-sm font-medium leading-5 text-white hover:bg-white/10 focus:outline-none focus:ring-4 focus:ring-white/20 sm:hidden dark:border-white/20 dark:text-white dark:hover:bg-white/10 dark:focus:ring-white/20">
+          <span class="sr-only">Open sidebar</span>
+          <svg class="h-6 w-6" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
+            <path stroke="currentColor" stroke-linecap="round" stroke-width="2" d="M5 7h14M5 12h14M5 17h10" />
+          </svg>
+        </button>
+        <a href="/dashboard" class="ms-2 flex items-center md:me-24">
+          <img src="/assets/icons/icono.png" class="me-2 h-6 w-6" alt="Logo Cavallino" />
+          <span class="self-center whitespace-nowrap text-base font-semibold text-white dark:text-white">Cavallino</span>
+        </a>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <button id="theme-toggle" type="button"
+          class="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-white/20 bg-white/10 text-white hover:bg-white/20 focus:outline-none focus:ring-4 focus:ring-white/20 dark:border-white/20 dark:bg-white/10 dark:text-white dark:hover:bg-white/20 dark:focus:ring-white/20"
+          aria-label="Cambiar tema">
+          <svg id="theme-toggle-dark-icon" class="hidden h-5 w-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+            <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path>
+          </svg>
+          <svg id="theme-toggle-light-icon" class="hidden h-5 w-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+            <path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414Z"></path>
+          </svg>
+        </button>
+
+        <div class="relative ms-3">
+          <button type="button"
+            class="flex h-9 w-9 items-center justify-center rounded-full bg-[#033F73] text-sm text-white focus:ring-4 focus:ring-slate-300 dark:focus:ring-slate-700"
+            aria-expanded="false" data-dropdown-toggle="dropdown-user">
+            <span class="sr-only">Open user menu</span>
+            <span class="font-semibold"><%= currentUser ? currentUser.username.slice(0, 1).toUpperCase() : 'U' %></span>
+          </button>
+
+          <div class="z-50 hidden w-52 divide-y divide-slate-100 rounded-xl border border-slate-200 bg-white shadow-lg dark:divide-slate-700 dark:border-slate-700 dark:bg-slate-900" id="dropdown-user">
+            <div class="px-4 py-3" role="none">
+              <p class="text-sm font-medium text-[#0D0D0D] dark:text-white" role="none"><%= currentUser ? currentUser.username : 'Usuario' %></p>
+              <p class="truncate text-sm text-slate-500 dark:text-slate-400" role="none"><%= currentUser ? currentUser.role : 'Sin rol' %></p>
+            </div>
+            <ul class="space-y-1 p-2 text-sm font-medium text-slate-700 dark:text-slate-200" role="none">
+              <li><a href="/dashboard" class="flex w-full items-center rounded-lg px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-800" role="menuitem">Dashboard</a></li>
+              <% if (currentUser && currentUser.role === 'admin') { %>
+                <li><a href="/usuarios/crear" class="flex w-full items-center rounded-lg px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-800" role="menuitem">Usuarios</a></li>
+              <% } %>
+              <li>
+                <form method="post" action="/logout">
+                  <button type="submit" class="flex w-full items-center rounded-lg px-3 py-2 text-left hover:bg-slate-100 dark:hover:bg-slate-800" role="menuitem">Cerrar sesión</button>
+                </form>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</nav>

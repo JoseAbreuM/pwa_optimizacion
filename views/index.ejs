@@ -1,19 +1,70 @@
-<section class="hero panel">
-  <h1>Centro Operacional de Campo</h1>
-  <p>Plataforma offline-first para pozos, bombas, parametros diarios, niveles y muestras.</p>
-  <div class="kpi-grid">
-    <article><h3>Pozos</h3><p data-kpi="pozos">0</p></article>
-    <article><h3>Bombas</h3><p data-kpi="bombas">0</p></article>
-    <article><h3>Parametros</h3><p data-kpi="parametros">0</p></article>
-    <article><h3>Pendiente sync</h3><p data-kpi="queue">0</p></article>
+<section class="space-y-6">
+  <div class="rounded-2xl bg-[#033F73] p-6 text-white shadow-lg">
+    <div class="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+      <div>
+        <span class="inline-flex rounded-full bg-white/15 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em]">Optimización</span>
+        <h1 class="mt-3 text-3xl font-bold">Menú principal del sistema</h1>
+        <p class="mt-2 max-w-2xl text-sm text-slate-200">Vista base para el usuario administrador. Desde aquí construiremos el resto de módulos manteniendo un estilo profesional, limpio y responsivo.</p>
+      </div>
+      <div class="flex h-20 w-20 items-center justify-center rounded-2xl bg-white/10">
+        <img src="/assets/icons/icono.png" alt="Logo Cavallino" class="h-12 w-12" />
+      </div>
+    </div>
   </div>
-</section>
 
-<section class="panel">
-  <h2>Dashboards por departamento</h2>
-  <div class="cards">
-    <a class="card" href="/dashboards/optimizacion">Optimizacion</a>
-    <a class="card" href="/dashboards/operaciones">Operaciones</a>
-    <a class="card" href="/dashboards/mantenimiento">Mantenimiento</a>
+  <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+    <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+      <p class="text-sm text-slate-500 dark:text-slate-400">Pozos monitoreados</p>
+      <p data-kpi="pozos" class="mt-2 text-3xl font-bold text-[#033F73] dark:text-sky-300">0</p>
+    </article>
+    <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+      <p class="text-sm text-slate-500 dark:text-slate-400">Bombas registradas</p>
+      <p data-kpi="bombas" class="mt-2 text-3xl font-bold text-[#033F73] dark:text-sky-300">0</p>
+    </article>
+    <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+      <p class="text-sm text-slate-500 dark:text-slate-400">Parámetros diarios</p>
+      <p data-kpi="parametros" class="mt-2 text-3xl font-bold text-[#033F73] dark:text-sky-300">0</p>
+    </article>
+    <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+      <p class="text-sm text-slate-500 dark:text-slate-400">Pendientes por sincronizar</p>
+      <p data-kpi="queue" class="mt-2 text-3xl font-bold text-[#033F73] dark:text-sky-300">0</p>
+    </article>
+  </div>
+
+  <div class="grid gap-4 xl:grid-cols-3">
+    <article class="xl:col-span-2 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+      <h2 class="text-lg font-semibold text-[#0D0D0D] dark:text-white">Resumen operativo</h2>
+      <p class="mt-2 text-sm text-slate-600 dark:text-slate-300">Este espacio funcionará como tablero principal de optimización. La navegación y los módulos visibles se controlarán luego según el rol usando EJS.</p>
+      <div class="mt-5 grid gap-3 sm:grid-cols-2">
+        <div class="rounded-xl bg-[#F2F2F2] p-4 dark:bg-slate-800">
+          <p class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Estado</p>
+          <p class="mt-2 text-sm font-medium text-[#0D0D0D] dark:text-white">Base del dashboard lista para crecer.</p>
+        </div>
+        <div class="rounded-xl bg-[#F2F2F2] p-4 dark:bg-slate-800">
+          <p class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Diseño</p>
+          <p class="mt-2 text-sm font-medium text-[#0D0D0D] dark:text-white">Minimalista, corporativo y adaptable a móvil.</p>
+        </div>
+      </div>
+    </article>
+
+    <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+      <h2 class="text-lg font-semibold text-[#0D0D0D] dark:text-white">Accesos rápidos</h2>
+      <div class="mt-4 space-y-2">
+        <a href="/dashboard" class="flex items-center justify-between rounded-xl bg-[#F2F2F2] px-4 py-3 text-sm font-medium text-[#033F73] hover:bg-slate-200 dark:bg-slate-800 dark:text-sky-300 dark:hover:bg-slate-700">
+          <span>Panel principal</span>
+          <i class="fa-solid fa-arrow-right"></i>
+        </a>
+        <a href="/pozos" class="flex items-center justify-between rounded-xl bg-[#F2F2F2] px-4 py-3 text-sm font-medium text-[#033F73] hover:bg-slate-200 dark:bg-slate-800 dark:text-sky-300 dark:hover:bg-slate-700">
+          <span>Módulo de pozos</span>
+          <i class="fa-solid fa-arrow-right"></i>
+        </a>
+        <% if (currentUser && currentUser.role === 'admin') { %>
+          <a href="/usuarios/crear" class="flex items-center justify-between rounded-xl bg-[#F2F2F2] px-4 py-3 text-sm font-medium text-[#033F73] hover:bg-slate-200 dark:bg-slate-800 dark:text-sky-300 dark:hover:bg-slate-700">
+            <span>Gestión de usuarios</span>
+            <i class="fa-solid fa-arrow-right"></i>
+          </a>
+        <% } %>
+      </div>
+    </article>
   </div>
 </section>
