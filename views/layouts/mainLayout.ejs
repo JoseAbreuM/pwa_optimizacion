@@ -7,6 +7,7 @@
   <meta name="theme-color" content="#033F73" />
   <link rel="manifest" href="/manifest.json" />
   <link rel="icon" type="image/png" href="/assets/icons/icono.png" />
+
   <script>
     (function () {
       const storedTheme = localStorage.getItem('color-theme');
@@ -15,66 +16,90 @@
       document.documentElement.classList.toggle('dark', shouldUseDark);
     })();
   </script>
+
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
   <link rel="stylesheet" href="/css/tailwind.css" />
   <link rel="stylesheet" href="/css/app.css" />
+
   <title>
     <%= title %> | Cavallino
   </title>
 </head>
 
-<body class="min-h-screen bg-[#F2F2F2] text-[#0D0D0D] dark:bg-slate-950 dark:text-slate-100">
-  <%- include('../partials/topbar') %>
-  <%- include('../partials/sidebar') %>
+<body class="min-h-screen bg-[#F2F2F2] text-[#0D0D0D] antialiased dark:bg-[#0f172a] dark:text-slate-100">
+  <%- include('../partials/topbar', { currentUser: typeof currentUser !=='undefined' ? currentUser : null, pageTitle:
+    typeof title !=='undefined' ? title : 'Dashboard' }) %>
 
-  <div class="mt-[57px] p-4 sm:ml-64">
-    <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-      <%- body %>
-    </div>
-  </div>
+    <%- include('../partials/sidebar', { currentSection: typeof currentSection !=='undefined' ? currentSection : '' ,
+      currentUser: typeof currentUser !=='undefined' ? currentUser : null }) %>
 
-  <footer class="m-4 rounded-xl border border-slate-200 bg-white shadow-sm sm:ml-64 dark:border-slate-800 dark:bg-slate-900">
-    <div class="mx-auto flex w-full max-w-screen-xl flex-col items-center justify-center gap-3 p-4 text-center md:flex-row md:justify-between md:text-left">
-      <span class="text-sm text-slate-600 sm:text-center dark:text-slate-400">© 2026 <a href="/dashboard" class="hover:underline">Cavallino</a>. All Rights Reserved.</span>
-      <ul class="flex flex-wrap items-center justify-center text-sm font-medium text-slate-600 dark:text-slate-400">
-        <li><a href="#" class="me-4 hover:underline md:me-6">About</a></li>
-        <li><a href="#" class="me-4 hover:underline md:me-6">Privacy Policy</a></li>
-        <li><a href="#" class="me-4 hover:underline md:me-6">Licensing</a></li>
-        <li><a href="#" class="hover:underline">Contact</a></li>
-      </ul>
-    </div>
-  </footer>
+      <main class="mt-14 p-4 sm:ml-64">
+        <div class="mx-auto max-w-screen-2xl space-y-5">
+          <%- body %>
 
-  <script>
-    (function () {
-      const root = document.documentElement;
-      const themeToggle = document.getElementById('theme-toggle');
-      const darkIcon = document.getElementById('theme-toggle-dark-icon');
-      const lightIcon = document.getElementById('theme-toggle-light-icon');
+            <footer
+              class="rounded-2xl border border-slate-200 bg-white px-4 py-4 text-sm text-slate-500 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
+              <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div class="space-y-1">
+                  <p class="font-medium text-slate-600 dark:text-slate-300">
+                    © 2026 Cavallino. Plataforma Operacional.
+                  </p>
+                  <p class="text-xs text-slate-500 dark:text-slate-400">
+                    Sistema interno para control, monitoreo y sincronización operativa.
+                  </p>
+                </div>
 
-      const syncThemeIcons = () => {
-        const isDark = root.classList.contains('dark');
-        darkIcon?.classList.toggle('hidden', isDark);
-        lightIcon?.classList.toggle('hidden', !isDark);
-      };
+                <div class="flex flex-wrap items-center gap-4">
+                  <a href="/dashboard" class="transition hover:text-[#033F73] dark:hover:text-sky-300">
+                    Inicio
+                  </a>
+                  <a href="#" class="transition hover:text-[#033F73] dark:hover:text-sky-300">
+                    Soporte
+                  </a>
+                  <a href="#" class="transition hover:text-[#033F73] dark:hover:text-sky-300">
+                    Privacidad
+                  </a>
+                </div>
+              </div>
+            </footer>
+        </div>
+      </main>
 
-      themeToggle?.addEventListener('click', () => {
-        const isDark = root.classList.toggle('dark');
-        localStorage.setItem('color-theme', isDark ? 'dark' : 'light');
-        syncThemeIcons();
-      });
+      <script>
+        (function () {
+          const root = document.documentElement;
+          const themeToggle = document.getElementById('theme-toggle');
+          const darkIcon = document.getElementById('theme-toggle-dark-icon');
+          const lightIcon = document.getElementById('theme-toggle-light-icon');
 
-      syncThemeIcons();
-    })();
-  </script>
+          const syncThemeIcons = () => {
+            const isDark = root.classList.contains('dark');
+            if (darkIcon) darkIcon.classList.toggle('hidden', isDark);
+            if (lightIcon) lightIcon.classList.toggle('hidden', !isDark);
+          };
 
-  <script src="https://cdn.jsdelivr.net/npm/flowbite@2.5.2/dist/flowbite.min.js"></script>
-  <script src="/js/offline/db.js" defer></script>
-  <script src="/js/offline/sync.js" defer></script>
-  <script src="/js/core/ui.js" defer></script>
-  <script src="/js/modules/pozos.js" defer></script>
-  <script src="/js/core/app.js" defer></script>
-  <script src="/js/sw-register.js" defer></script>
+          if (themeToggle) {
+            themeToggle.addEventListener('click', () => {
+              const isDark = root.classList.toggle('dark');
+              localStorage.setItem('color-theme', isDark ? 'dark' : 'light');
+              syncThemeIcons();
+            });
+          }
+
+          syncThemeIcons();
+        })();
+      </script>
+
+      <script src="https://cdn.jsdelivr.net/npm/flowbite@2.5.2/dist/flowbite.min.js"></script>
+      <script src="/js/offline/db.js" defer></script>
+      <script src="/js/offline/sync.js" defer></script>
+      <script src="/js/core/ui.js" defer></script>
+      <script src="/js/core/app.js" defer></script>
+      <script src="/js/sw-register.js" defer></script>
+
+      <% if (typeof pageScript !=='undefined' && pageScript) { %>
+        <script src="<%= pageScript %>" defer></script>
+        <% } %>
 </body>
 
 </html>

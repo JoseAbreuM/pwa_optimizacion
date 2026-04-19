@@ -18,28 +18,14 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
   <link rel="stylesheet" href="/css/tailwind.css" />
   <link rel="stylesheet" href="/css/app.css" />
-  <title>
-    <%= title %> | Cavallino
-  </title>
+  <title><%= title %> | Cavallino</title>
 </head>
 
 <body class="min-h-screen bg-brand-bg text-brand-dark dark:bg-slate-950 dark:text-white">
   <%- body %>
 
-    <script>
-      (function () {
-        const toggleButton = document.getElementById('theme-toggle');
-        if (!toggleButton) return;
-
-        toggleButton.addEventListener('click', function () {
-          const root = document.documentElement;
-          const isDark = root.classList.toggle('dark');
-          localStorage.setItem('color-theme', isDark ? 'dark' : 'light');
-        });
-      })();
-    </script>
-    <script src="https://cdn.jsdelivr.net/npm/flowbite@2.5.2/dist/flowbite.min.js"></script>
-    <script src="/js/sw-register.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/flowbite@2.5.2/dist/flowbite.min.js"></script>
+  <script src="/js/sw-register.js" defer></script>
 </body>
 
 </html>

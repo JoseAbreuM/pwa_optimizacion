@@ -1,4 +1,4 @@
-const CACHE_NAME = 'petrofield-cache-v3';
+const CACHE_NAME = 'petrofield-cache-v4';
 
 const FILES_TO_CACHE = [
   '/',
@@ -18,6 +18,7 @@ const FILES_TO_CACHE = [
 ];
 
 self.addEventListener('install', event => {
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then(cache => Promise.allSettled(FILES_TO_CACHE.map(file => cache.add(file))))
   );
@@ -33,6 +34,14 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
 
+  const url = new URL(event.request.url);
+  const isStaticAppAsset = url.origin === self.location.origin && (
+    url.pathname.startsWith('/css/') ||
+    url.pathname.startsWith('/js/') ||
+    url.pathname.startsWith('/assets/') ||
+    url.pathname === '/manifest.json'
+  );
+
   if (event.request.mode === 'navigate') {
     event.respondWith(
       fetch(event.request)
@@ -45,6 +54,21 @@ self.addEventListener('fetch', event => {
           const cached = await caches.match(event.request);
           return cached || caches.match('/login');
         })
+    );
+    return;
+  }
+
+  if (isStaticAppAsset) {
+    event.respondWith(
+      fetch(event.request)
+        .then(response => {
+          if (response.status === 200) {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+          }
+          return response;
+        })
+        .catch(() => caches.match(event.request, { ignoreSearch: true }))
     );
     return;
   }

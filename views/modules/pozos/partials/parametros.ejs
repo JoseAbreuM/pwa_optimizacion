@@ -1,12 +1,17 @@
 <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900">
   <h2 class="text-lg font-semibold">Parámetros</h2>
   <div class="mt-4 space-y-2 text-sm">
-    <% if (!timeline.parametros.length) { %><p class="text-slate-500">Sin registros.</p><% } %>
-    <% timeline.parametros.forEach(item => { %>
-      <div class="rounded-xl bg-slate-50 p-3 dark:bg-slate-800">
-        <div class="font-semibold"><%= new Date(item.fecha).toLocaleDateString('es-VE') %></div>
-        <div>Torque: <%= item.torque || '—' %> · AMP: <%= item.amp || '—' %></div>
-      </div>
-    <% }) %>
+    <% if (!timeline.parametros.length) { %>
+      <p class="text-slate-500">Sin registros.</p>
+      <% } %>
+        <% timeline.parametros.forEach(item=> { %>
+          <div class="rounded-xl bg-slate-50 p-3 dark:bg-slate-800">
+            <div class="font-semibold">
+              <%= new Date(item.fecha).toLocaleDateString('es-VE') %>
+            </div>
+            <div>Torque: <%= item.torque || '—' %> · AMP: <%= item.amp || '—' %>
+            </div>
+          </div>
+          <% }) %>
   </div>
 </article>

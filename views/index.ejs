@@ -1,70 +1,227 @@
-<section class="space-y-6">
-  <div class="rounded-2xl bg-[#033F73] p-6 text-white shadow-lg">
-    <div class="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-      <div>
-        <span class="inline-flex rounded-full bg-white/15 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em]">Optimización</span>
-        <h1 class="mt-3 text-3xl font-bold">Menú principal del sistema</h1>
-        <p class="mt-2 max-w-2xl text-sm text-slate-200">Vista base para el usuario administrador. Desde aquí construiremos el resto de módulos manteniendo un estilo profesional, limpio y responsivo.</p>
+<section class="space-y-4">
+  <!-- CABECERA DEL DASHBOARD -->
+  <section
+    class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-6">
+    <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+      <div class="max-w-3xl">
+        <div class="flex flex-wrap items-center gap-2">
+          <span
+            class="inline-flex items-center rounded-full bg-[#EAF1F7] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#033F73] dark:bg-slate-800 dark:text-sky-300">
+            Dashboard base
+          </span>
+
+          <% if (currentUser && currentUser.role) { %>
+            <span
+              class="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+              <%= currentUser.role %>
+            </span>
+            <% } %>
+        </div>
+
+        <h2 class="mt-3 text-2xl font-bold text-[#0D0D0D] dark:text-white sm:text-3xl">
+          Centro de control operativo
+        </h2>
+
+        <p class="mt-2 max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-300">
+          Consulta el estado general del sistema, revisa los principales indicadores y accede rápidamente a los módulos
+          clave de operación.
+        </p>
       </div>
-      <div class="flex h-20 w-20 items-center justify-center rounded-2xl bg-white/10">
-        <img src="/assets/icons/icono.png" alt="Logo Cavallino" class="h-12 w-12" />
+
+      <div class="flex flex-wrap gap-3">
+        <a href="/pozos"
+          class="inline-flex items-center gap-2 rounded-xl bg-[#033F73] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#023059]">
+          <i class="fa-solid fa-oil-well"></i>
+          <span>Ir a pozos</span>
+        </a>
+
+        <a href="/muestras"
+          class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800">
+          <i class="fa-solid fa-vials"></i>
+          <span>Ver muestras</span>
+        </a>
       </div>
     </div>
-  </div>
+  </section>
 
-  <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-    <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-      <p class="text-sm text-slate-500 dark:text-slate-400">Pozos monitoreados</p>
-      <p data-kpi="pozos" class="mt-2 text-3xl font-bold text-[#033F73] dark:text-sky-300">0</p>
-    </article>
-    <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-      <p class="text-sm text-slate-500 dark:text-slate-400">Bombas registradas</p>
-      <p data-kpi="bombas" class="mt-2 text-3xl font-bold text-[#033F73] dark:text-sky-300">0</p>
-    </article>
-    <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-      <p class="text-sm text-slate-500 dark:text-slate-400">Parámetros diarios</p>
-      <p data-kpi="parametros" class="mt-2 text-3xl font-bold text-[#033F73] dark:text-sky-300">0</p>
-    </article>
-    <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-      <p class="text-sm text-slate-500 dark:text-slate-400">Pendientes por sincronizar</p>
-      <p data-kpi="queue" class="mt-2 text-3xl font-bold text-[#033F73] dark:text-sky-300">0</p>
-    </article>
-  </div>
-
-  <div class="grid gap-4 xl:grid-cols-3">
-    <article class="xl:col-span-2 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-      <h2 class="text-lg font-semibold text-[#0D0D0D] dark:text-white">Resumen operativo</h2>
-      <p class="mt-2 text-sm text-slate-600 dark:text-slate-300">Este espacio funcionará como tablero principal de optimización. La navegación y los módulos visibles se controlarán luego según el rol usando EJS.</p>
-      <div class="mt-5 grid gap-3 sm:grid-cols-2">
-        <div class="rounded-xl bg-[#F2F2F2] p-4 dark:bg-slate-800">
-          <p class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Estado</p>
-          <p class="mt-2 text-sm font-medium text-[#0D0D0D] dark:text-white">Base del dashboard lista para crecer.</p>
+  <!-- KPIS -->
+  <section class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+    <article
+      class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-slate-800 dark:bg-slate-900">
+      <div class="flex items-start justify-between gap-4">
+        <div>
+          <p class="text-sm text-slate-500 dark:text-slate-400">Pozos monitoreados</p>
+          <p data-kpi="pozos" class="mt-2 text-3xl font-bold text-[#033F73] dark:text-sky-300">0</p>
         </div>
-        <div class="rounded-xl bg-[#F2F2F2] p-4 dark:bg-slate-800">
-          <p class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Diseño</p>
-          <p class="mt-2 text-sm font-medium text-[#0D0D0D] dark:text-white">Minimalista, corporativo y adaptable a móvil.</p>
+        <span
+          class="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-[#EAF1F7] text-[#033F73] dark:bg-slate-800 dark:text-sky-300">
+          <i class="fa-solid fa-oil-well text-base"></i>
+        </span>
+      </div>
+    </article>
+
+    <article
+      class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-slate-800 dark:bg-slate-900">
+      <div class="flex items-start justify-between gap-4">
+        <div>
+          <p class="text-sm text-slate-500 dark:text-slate-400">Bombas registradas</p>
+          <p data-kpi="bombas" class="mt-2 text-3xl font-bold text-[#033F73] dark:text-sky-300">0</p>
+        </div>
+        <span
+          class="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-[#EAF1F7] text-[#033F73] dark:bg-slate-800 dark:text-sky-300">
+          <i class="fa-solid fa-gears text-base"></i>
+        </span>
+      </div>
+    </article>
+
+    <article
+      class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-slate-800 dark:bg-slate-900">
+      <div class="flex items-start justify-between gap-4">
+        <div>
+          <p class="text-sm text-slate-500 dark:text-slate-400">Parámetros diarios</p>
+          <p data-kpi="parametros" class="mt-2 text-3xl font-bold text-[#033F73] dark:text-sky-300">0</p>
+        </div>
+        <span
+          class="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-[#EAF1F7] text-[#033F73] dark:bg-slate-800 dark:text-sky-300">
+          <i class="fa-solid fa-gauge-high text-base"></i>
+        </span>
+      </div>
+    </article>
+
+    <article
+      class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-slate-800 dark:bg-slate-900">
+      <div class="flex items-start justify-between gap-4">
+        <div>
+          <p class="text-sm text-slate-500 dark:text-slate-400">Pendientes por sincronizar</p>
+          <p data-kpi="queue" class="mt-2 text-3xl font-bold text-[#033F73] dark:text-sky-300">0</p>
+        </div>
+        <span
+          class="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-[#EAF1F7] text-[#033F73] dark:bg-slate-800 dark:text-sky-300">
+          <i class="fa-solid fa-rotate text-base"></i>
+        </span>
+      </div>
+    </article>
+  </section>
+
+  <!-- CONTENIDO PRINCIPAL -->
+  <section class="grid gap-4 xl:grid-cols-3">
+    <!-- ESTADO GENERAL -->
+    <article
+      class="xl:col-span-2 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-6">
+      <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h3 class="text-lg font-semibold text-[#0D0D0D] dark:text-white">Estado general</h3>
+          <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">
+            Vista inicial del sistema para el rol actual. Más adelante cada área tendrá su propio dashboard con
+            indicadores y accesos personalizados.
+          </p>
+        </div>
+
+        <span
+          class="inline-flex w-fit items-center rounded-full bg-[#EAF1F7] px-3 py-1 text-xs font-semibold text-[#033F73] dark:bg-slate-800 dark:text-sky-300">
+          Operativo
+        </span>
+      </div>
+
+      <div class="mt-6 grid gap-3 sm:grid-cols-2">
+        <div class="rounded-2xl border border-slate-200 bg-[#F2F2F2] p-4 dark:border-slate-700 dark:bg-slate-800">
+          <p class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Sistema</p>
+          <p class="mt-2 text-sm font-medium text-[#0D0D0D] dark:text-white">
+            Base del dashboard lista para integrar métricas, alertas y estado de sincronización.
+          </p>
+        </div>
+
+        <div class="rounded-2xl border border-slate-200 bg-[#F2F2F2] p-4 dark:border-slate-700 dark:bg-slate-800">
+          <p class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Interfaz</p>
+          <p class="mt-2 text-sm font-medium text-[#0D0D0D] dark:text-white">
+            Diseño modular, corporativo y adaptable a escritorio, tablet y móvil.
+          </p>
+        </div>
+
+        <div class="rounded-2xl border border-slate-200 bg-[#F2F2F2] p-4 dark:border-slate-700 dark:bg-slate-800">
+          <p class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">PWA</p>
+          <p class="mt-2 text-sm font-medium text-[#0D0D0D] dark:text-white">
+            Preparada para trabajar offline y sincronizar registros cuando vuelva la conexión.
+          </p>
+        </div>
+
+        <div class="rounded-2xl border border-slate-200 bg-[#F2F2F2] p-4 dark:border-slate-700 dark:bg-slate-800">
+          <p class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Escalabilidad</p>
+          <p class="mt-2 text-sm font-medium text-[#0D0D0D] dark:text-white">
+            Lista para crecer con dashboards diferenciados por rol y módulos especializados.
+          </p>
         </div>
       </div>
     </article>
 
-    <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-      <h2 class="text-lg font-semibold text-[#0D0D0D] dark:text-white">Accesos rápidos</h2>
-      <div class="mt-4 space-y-2">
-        <a href="/dashboard" class="flex items-center justify-between rounded-xl bg-[#F2F2F2] px-4 py-3 text-sm font-medium text-[#033F73] hover:bg-slate-200 dark:bg-slate-800 dark:text-sky-300 dark:hover:bg-slate-700">
-          <span>Panel principal</span>
-          <i class="fa-solid fa-arrow-right"></i>
+    <!-- ACCESOS RÁPIDOS -->
+    <article
+      class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-6">
+      <div class="flex items-center justify-between gap-3">
+        <h3 class="text-lg font-semibold text-[#0D0D0D] dark:text-white">Accesos rápidos</h3>
+        <span
+          class="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-[#EAF1F7] text-[#033F73] dark:bg-slate-800 dark:text-sky-300">
+          <i class="fa-solid fa-bolt"></i>
+        </span>
+      </div>
+
+      <div class="mt-5 space-y-3">
+        <a href="/dashboard"
+          class="group flex items-center justify-between rounded-2xl bg-[#F2F2F2] px-4 py-3 text-sm font-medium text-[#033F73] transition hover:bg-slate-200 dark:bg-slate-800 dark:text-sky-300 dark:hover:bg-slate-700">
+          <span class="flex items-center gap-3">
+            <i class="fa-solid fa-chart-column"></i>
+            <span>Panel principal</span>
+          </span>
+          <i class="fa-solid fa-arrow-right transition group-hover:translate-x-0.5"></i>
         </a>
-        <a href="/pozos" class="flex items-center justify-between rounded-xl bg-[#F2F2F2] px-4 py-3 text-sm font-medium text-[#033F73] hover:bg-slate-200 dark:bg-slate-800 dark:text-sky-300 dark:hover:bg-slate-700">
-          <span>Módulo de pozos</span>
-          <i class="fa-solid fa-arrow-right"></i>
+
+        <a href="/pozos"
+          class="group flex items-center justify-between rounded-2xl bg-[#F2F2F2] px-4 py-3 text-sm font-medium text-[#033F73] transition hover:bg-slate-200 dark:bg-slate-800 dark:text-sky-300 dark:hover:bg-slate-700">
+          <span class="flex items-center gap-3">
+            <i class="fa-solid fa-oil-well"></i>
+            <span>Módulo de pozos</span>
+          </span>
+          <i class="fa-solid fa-arrow-right transition group-hover:translate-x-0.5"></i>
         </a>
-        <% if (currentUser && currentUser.role === 'admin') { %>
-          <a href="/usuarios/crear" class="flex items-center justify-between rounded-xl bg-[#F2F2F2] px-4 py-3 text-sm font-medium text-[#033F73] hover:bg-slate-200 dark:bg-slate-800 dark:text-sky-300 dark:hover:bg-slate-700">
-            <span>Gestión de usuarios</span>
-            <i class="fa-solid fa-arrow-right"></i>
+
+        <a href="/muestras"
+          class="group flex items-center justify-between rounded-2xl bg-[#F2F2F2] px-4 py-3 text-sm font-medium text-[#033F73] transition hover:bg-slate-200 dark:bg-slate-800 dark:text-sky-300 dark:hover:bg-slate-700">
+          <span class="flex items-center gap-3">
+            <i class="fa-solid fa-vials"></i>
+            <span>Muestras</span>
+          </span>
+          <i class="fa-solid fa-arrow-right transition group-hover:translate-x-0.5"></i>
+        </a>
+
+        <a href="/parametros"
+          class="group flex items-center justify-between rounded-2xl bg-[#F2F2F2] px-4 py-3 text-sm font-medium text-[#033F73] transition hover:bg-slate-200 dark:bg-slate-800 dark:text-sky-300 dark:hover:bg-slate-700">
+          <span class="flex items-center gap-3">
+            <i class="fa-solid fa-gauge-high"></i>
+            <span>Parámetros</span>
+          </span>
+          <i class="fa-solid fa-arrow-right transition group-hover:translate-x-0.5"></i>
+        </a>
+
+        <a href="/niveles"
+          class="group flex items-center justify-between rounded-2xl bg-[#F2F2F2] px-4 py-3 text-sm font-medium text-[#033F73] transition hover:bg-slate-200 dark:bg-slate-800 dark:text-sky-300 dark:hover:bg-slate-700">
+          <span class="flex items-center gap-3">
+            <i class="fa-solid fa-chart-line"></i>
+            <span>Niveles</span>
+          </span>
+          <i class="fa-solid fa-arrow-right transition group-hover:translate-x-0.5"></i>
+        </a>
+
+        <% if (currentUser && currentUser.role==='admin' ) { %>
+          <a href="/usuarios/crear"
+            class="group flex items-center justify-between rounded-2xl bg-[#F2F2F2] px-4 py-3 text-sm font-medium text-[#033F73] transition hover:bg-slate-200 dark:bg-slate-800 dark:text-sky-300 dark:hover:bg-slate-700">
+            <span class="flex items-center gap-3">
+              <i class="fa-solid fa-users"></i>
+              <span>Gestión de usuarios</span>
+            </span>
+            <i class="fa-solid fa-arrow-right transition group-hover:translate-x-0.5"></i>
           </a>
-        <% } %>
+          <% } %>
       </div>
     </article>
-  </div>
+  </section>
 </section>

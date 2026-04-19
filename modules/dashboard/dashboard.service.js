@@ -1,8 +1,8 @@
 function getDashboardContext(currentUser) {
   return {
-    title: 'Menú principal · Optimización',
-    user: currentUser,
-    currentSection: 'optimizacion',
+    title: 'Dashboard',
+    currentUser: currentUser || null,
+    currentSection: 'dashboard',
     layout: 'layouts/mainLayout'
   };
 }

@@ -1,7 +1,7 @@
 <section class="bg-brand-bg dark:bg-slate-950">
   <div class="mx-auto flex min-h-screen max-w-7xl items-center justify-center px-4 py-8 sm:px-6 lg:px-8">
     <div class="grid w-full items-center gap-8 lg:grid-cols-2">
-      <div class="hidden lg:block">
+      <div class="login-hero-panel">
         <div class="rounded-3xl bg-primary-700 p-8 text-white shadow-2xl">
           <div class="mb-6 flex items-center gap-4">
             <img src="/assets/icons/icono.png" alt="Logo Cavallino" class="h-12 w-12 rounded-xl bg-white/10 p-1" />
@@ -17,11 +17,12 @@
       </div>
 
       <div class="mx-auto w-full max-w-md">
-        <div class="auth-card">
+        <div class="auth-card backdrop-blur-sm bg-white/90 dark:bg-slate-900/80">
           <div class="mb-6 flex items-start justify-between gap-4">
             <div>
               <a href="/login" class="mb-4 flex items-center text-2xl font-semibold text-brand-dark dark:text-white">
-                <img src="/assets/icons/icono.png" alt="Logo Cavallino" class="mr-3 h-12 w-12 rounded-xl object-cover" />
+                <img src="/assets/icons/icono.png" alt="Logo Cavallino"
+                  class="mr-3 h-12 w-12 rounded-xl object-cover" />
                 Cavallino
               </a>
               <h1 class="text-2xl font-bold leading-tight tracking-tight text-brand-dark dark:text-white">Iniciar sesión
@@ -29,9 +30,10 @@
 
             </div>
             <button id="theme-toggle" type="button"
-              class="inline-flex rounded-lg border border-slate-200 p-2 text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+              class="inline-flex items-center justify-center rounded-lg border border-slate-200 p-2 text-slate-600 transition hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
               aria-label="Cambiar tema">
-              🌙
+              <i id="theme-toggle-dark-icon" class="fas fa-moon hidden"></i>
+              <i id="theme-toggle-light-icon" class="fas fa-sun hidden"></i>
             </button>
           </div>
 
@@ -58,9 +60,10 @@
 
                     <div>
                       <label for="password" class="auth-label">Contraseña</label>
-                      <div class="flex w-full items-center rounded-lg border border-slate-300 bg-slate-50 transition focus-within:border-primary-700 focus-within:ring-2 focus-within:ring-primary-200 dark:border-slate-700 dark:bg-slate-800 dark:focus-within:border-primary-400 dark:focus-within:ring-primary-900/40">
+                      <div
+                        class="flex w-full items-center rounded-lg border border-slate-300 bg-slate-50 transition-all duration-200 focus-within:border-primary-700 focus-within:ring-2 focus-within:ring-primary-200 dark:border-slate-700 dark:bg-slate-800 dark:focus-within:border-primary-400 dark:focus-within:ring-primary-900/40">
                         <input id="password" name="password" type="password"
-                          class="w-full border-0 bg-slate-50 px-3 py-3 text-sm text-brand-dark placeholder-slate-400 focus:outline-none focus:ring-0 dark:bg-slate-800 dark:text-white dark:placeholder-slate-400"
+                          class="w-full border-0 bg-transparent px-3 py-3 text-sm text-brand-dark placeholder-slate-400 focus:outline-none focus:ring-0 dark:text-white"
                           placeholder="Contraseña" required />
                         <span id="toggle-password"
                           class="mr-3 flex shrink-0 cursor-pointer items-center justify-center text-slate-500 transition-colors hover:text-primary-700 dark:text-slate-400 dark:hover:text-primary-400"
@@ -106,4 +109,35 @@
     toggleIcon.classList.toggle('fa-eye-slash', !isHidden);
     toggleIcon.classList.toggle('fa-eye', isHidden);
   }
+</script>
+
+<script>
+  (function () {
+    const toggleButton = document.getElementById('theme-toggle');
+    const darkIcon = document.getElementById('theme-toggle-dark-icon');
+    const lightIcon = document.getElementById('theme-toggle-light-icon');
+
+    if (!toggleButton) return;
+
+    const updateIcons = () => {
+      if (document.documentElement.classList.contains('dark')) {
+        darkIcon.classList.add('hidden');
+        lightIcon.classList.remove('hidden');
+      } else {
+        lightIcon.classList.add('hidden');
+        darkIcon.classList.remove('hidden');
+      }
+    };
+
+    updateIcons();
+
+    toggleButton.addEventListener('click', () => {
+      const root = document.documentElement;
+      const isDark = root.classList.toggle('dark');
+
+      localStorage.setItem('color-theme', isDark ? 'dark' : 'light');
+
+      updateIcons();
+    });
+  })();
 </script>

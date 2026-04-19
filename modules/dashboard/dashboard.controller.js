@@ -1,11 +1,11 @@
 const dashboardService = require('./dashboard.service');
 
-function dashboard(req, res) {
+function index(req, res) {
   return res.render('index', dashboardService.getDashboardContext(req.session.user));
 }
 
 function optimizacion(req, res) {
-  return dashboard(req, res);
+  return index(req, res);
 }
 
 function operaciones(req, res) {
@@ -17,7 +17,7 @@ function mantenimiento(req, res) {
 }
 
 module.exports = {
-  dashboard,
+  index,
   optimizacion,
   operaciones,
   mantenimiento

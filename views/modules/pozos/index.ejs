@@ -3,36 +3,41 @@
     <div>
       <p class="text-sm font-semibold uppercase tracking-[0.2em] text-[#033F73] dark:text-sky-300">Módulo</p>
       <h1 class="text-2xl font-bold">Pozos</h1>
-      <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">Listado operativo centralizado por dominio, listo para crecer con muestras, niveles y parámetros.</p>
+      <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">Listado operativo centralizado por dominio, listo para
+        crecer con muestras, niveles y parámetros.</p>
     </div>
-    <a href="/dashboard" class="inline-flex items-center justify-center rounded-xl bg-[#033F73] px-4 py-2 text-sm font-semibold text-white hover:bg-[#022b4f]">Volver al panel</a>
+    <a href="/dashboard"
+      class="inline-flex items-center justify-center rounded-xl bg-[#033F73] px-4 py-2 text-sm font-semibold text-white hover:bg-[#022b4f]">Volver
+      al panel</a>
   </div>
 
-  <form method="get" class="grid gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 md:grid-cols-4 dark:border-slate-700 dark:bg-slate-800/60">
-    <input
-      type="text"
-      name="search"
-      data-pozos-search
-      value="<%= filters.search %>"
+  <form method="get"
+    class="grid gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 md:grid-cols-4 dark:border-slate-700 dark:bg-slate-800/60">
+    <input type="text" name="search" data-pozos-search value="<%= filters.search %>"
       placeholder="Buscar por código, área o yacimiento"
-      class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
-    />
+      class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900" />
 
-    <select name="area" class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900">
+    <select name="area"
+      class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900">
       <option value="">Todas las áreas</option>
-      <% areas.forEach(area => { %>
-        <option value="<%= area.area %>" <%= filters.area === area.area ? 'selected' : '' %>><%= area.area %></option>
-      <% }) %>
+      <% areas.forEach(area=> { %>
+        <option value="<%= area.area %>" <%=filters.area===area.area ? 'selected' : '' %>><%= area.area %>
+        </option>
+        <% }) %>
     </select>
 
-    <select name="estado" class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900">
+    <select name="estado"
+      class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900">
       <option value="">Todos los estados</option>
-      <% estados.forEach(estado => { %>
-        <option value="<%= estado.id %>" <%= String(filters.estado) === String(estado.id) ? 'selected' : '' %>><%= estado.nombre %></option>
-      <% }) %>
+      <% estados.forEach(estado=> { %>
+        <option value="<%= estado.id %>" <%=String(filters.estado)===String(estado.id) ? 'selected' : '' %>><%=
+            estado.nombre %>
+        </option>
+        <% }) %>
     </select>
 
-    <button type="submit" class="rounded-xl bg-[#033F73] px-4 py-2 text-sm font-semibold text-white hover:bg-[#022b4f]">Filtrar</button>
+    <button type="submit"
+      class="rounded-xl bg-[#033F73] px-4 py-2 text-sm font-semibold text-white hover:bg-[#022b4f]">Filtrar</button>
   </form>
 
   <div class="overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-700">
@@ -51,33 +56,52 @@
         <tbody class="divide-y divide-slate-100 bg-white dark:divide-slate-800 dark:bg-slate-900">
           <% if (!pozos.length) { %>
             <tr>
-              <td colspan="6" class="px-4 py-8 text-center text-slate-500">No hay pozos que coincidan con el filtro actual.</td>
+              <td colspan="6" class="px-4 py-8 text-center text-slate-500">No hay pozos que coincidan con el filtro
+                actual.</td>
             </tr>
-          <% } %>
+            <% } %>
 
-          <% pozos.forEach(pozo => { %>
-            <tr data-pozo-row="<%= `${pozo.codigo} ${pozo.area} ${pozo.yacimiento || ''} ${pozo.estado}`.toLowerCase() %>" class="hover:bg-slate-50 dark:hover:bg-slate-800/50">
-              <td class="px-4 py-3">
-                <div class="font-semibold"><%= pozo.codigo %></div>
-                <div class="text-xs text-slate-500"><%= pozo.categoria %> · <%= pozo.yacimiento || 'Sin yacimiento' %></div>
-              </td>
-              <td class="px-4 py-3">
-                <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold text-white" style="background-color: <%= pozo.color_estado_mapa || '#033F73' %>">
-                  <%= pozo.estado %>
-                </span>
-              </td>
-              <td class="px-4 py-3"><%= pozo.area %></td>
-              <td class="px-4 py-3"><%= pozo.vel_actual || '—' %> / <%= pozo.vel_operacional || '—' %></td>
-              <td class="px-4 py-3 text-xs text-slate-600 dark:text-slate-300">
-                <div>Parámetros: <%= pozo.ultima_parametrizacion ? new Date(pozo.ultima_parametrizacion).toLocaleDateString('es-VE') : '—' %></div>
-                <div>Nivel: <%= pozo.ultimo_nivel ? new Date(pozo.ultimo_nivel).toLocaleDateString('es-VE') : '—' %></div>
-                <div>Muestra: <%= pozo.ultima_muestra ? new Date(pozo.ultima_muestra).toLocaleDateString('es-VE') : '—' %></div>
-              </td>
-              <td class="px-4 py-3 text-right">
-                <a href="/pozos/<%= pozo.id %>" class="inline-flex items-center rounded-lg border border-slate-200 px-3 py-2 font-medium text-[#033F73] hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800">Ver detalle</a>
-              </td>
-            </tr>
-          <% }) %>
+              <% pozos.forEach(pozo=> { %>
+                <tr
+                  data-pozo-row="<%= `${pozo.codigo} ${pozo.area} ${pozo.yacimiento || ''} ${pozo.estado}`.toLowerCase() %>"
+                  class="hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                  <td class="px-4 py-3">
+                    <div class="font-semibold">
+                      <%= pozo.codigo %>
+                    </div>
+                    <div class="text-xs text-slate-500">
+                      <%= pozo.categoria %> · <%= pozo.yacimiento || 'Sin yacimiento' %>
+                    </div>
+                  </td>
+                  <td class="px-4 py-3">
+                    <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold text-white"
+                      style="background-color: <%= pozo.color_estado_mapa || '#033F73' %>">
+                      <%= pozo.estado %>
+                    </span>
+                  </td>
+                  <td class="px-4 py-3">
+                    <%= pozo.area %>
+                  </td>
+                  <td class="px-4 py-3">
+                    <%= pozo.vel_actual || '—' %> / <%= pozo.vel_operacional || '—' %>
+                  </td>
+                  <td class="px-4 py-3 text-xs text-slate-600 dark:text-slate-300">
+                    <div>Parámetros: <%= pozo.ultima_parametrizacion ? new
+                        Date(pozo.ultima_parametrizacion).toLocaleDateString('es-VE') : '—' %>
+                    </div>
+                    <div>Nivel: <%= pozo.ultimo_nivel ? new Date(pozo.ultimo_nivel).toLocaleDateString('es-VE') : '—' %>
+                    </div>
+                    <div>Muestra: <%= pozo.ultima_muestra ? new Date(pozo.ultima_muestra).toLocaleDateString('es-VE')
+                        : '—' %>
+                    </div>
+                  </td>
+                  <td class="px-4 py-3 text-right">
+                    <a href="/pozos/<%= pozo.id %>"
+                      class="inline-flex items-center rounded-lg border border-slate-200 px-3 py-2 font-medium text-[#033F73] hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800">Ver
+                      detalle</a>
+                  </td>
+                </tr>
+                <% }) %>
         </tbody>
       </table>
     </div>
