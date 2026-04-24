@@ -1,4 +1,3 @@
-
 # 🛢️ PWA Optimización - Arquitectura Objetivo
 
 Este documento define la **estructura final recomendada del proyecto**, basada en una arquitectura modular (feature-based), diseñada para escalar un sistema complejo orientado a operaciones petroleras.
@@ -7,13 +6,13 @@ Este documento define la **estructura final recomendada del proyecto**, basada e
 
 # 🎯 Principios de Arquitectura
 
-* Arquitectura basada en **módulos (dominio/feature)**
-* Separación clara entre:
+- Arquitectura basada en **módulos (dominio/feature)**
+- Separación clara entre:
+  - Backend (lógica, rutas, DB)
+  - Frontend (PWA, offline-first)
+  - Vistas (EJS modular)
 
-  * Backend (lógica, rutas, DB)
-  * Frontend (PWA, offline-first)
-  * Vistas (EJS modular)
-* El sistema gira alrededor de la entidad central:
+- El sistema gira alrededor de la entidad central:
   👉 **POZOS**
 
 ---
@@ -22,102 +21,182 @@ Este documento define la **estructura final recomendada del proyecto**, basada e
 
 ```text
 pwa_optimizacion/
-├── app.js
-├── package.json
-├── .env
-├── .gitignore
-├── README.md
-│
-├── modules/                  # 🔥 CORE DE LA APP (feature-based)
-│   ├── pozos/
-│   │   ├── pozo.controller.js
-│   │   ├── pozo.service.js
-│   │   ├── pozo.routes.js
-│   │   └── pozo.validator.js (opcional)
-│   │
-│   ├── muestras/
-│   ├── parametros/
-│   ├── niveles/
-│   ├── servicios/
-│   ├── users/
-│   └── auth/
-│
-├── database/
-│   ├── db.js
-│   └── schema.sql
-│
-├── middleware/
-│   ├── auth.js
-│   └── error.js
-│
-├── services/                # 🔧 Servicios transversales (NO lógica de dominio)
-│   ├── auth/
-│   │   └── password.service.js
-│   ├── sync/
-│   │   └── sync.service.js
-│   └── db/ (opcional)
-│
-├── public/                  # 🎨 Frontend (PWA)
-│   ├── manifest.json
-│   ├── sw.js
-│   │
-│   ├── assets/
-│   │   ├── images/
-│   │   └── icons/
-│   │
-│   ├── css/
-│   │   ├── app.css          # CSS final compilado
-│   │   └── tailwind.input.css
-│   │
-│   └── js/
-│       ├── core/
-│       │   ├── app.js
-│       │   └── ui.js
-│       │
-│       ├── offline/
-│       │   ├── db.js        # IndexedDB wrapper
-│       │   └── sync.js
-│       │
-│       └── modules/
-│           ├── pozos.js
-│           ├── muestras.js
-│           ├── parametros.js
-│           └── niveles.js
-│
-├── views/
-│   ├── layouts/
-│   │   ├── mainLayout.ejs
-│   │   └── auth-layout.ejs
-│   │
-│   ├── partials/           # 🔥 REUTILIZABLES UI
-│   │   ├── sidebar.ejs
-│   │   ├── topbar.ejs
-│   │   ├── card.ejs
-│   │   ├── table.ejs
-│   │   └── tabs.ejs
-│   │
-│   ├── modules/
-│   │   ├── pozos/
-│   │   │   ├── index.ejs
-│   │   │   ├── detalle.ejs
-│   │   │   └── partials/
-│   │   │       ├── general.ejs
-│   │   │       ├── equipos.ejs
-│   │   │       ├── parametros.ejs
-│   │   │       ├── niveles.ejs
-│   │   │       └── muestras.ejs
-│   │   │
-│   │   ├── muestras/
-│   │   ├── parametros/
-│   │   └── niveles/
-│   │
-│   ├── auth/
-│   │   └── login.ejs
-│   │
-│   └── errors/
-│       ├── 404.ejs
-│       ├── 500.ejs
-│       └── noAutorizado.ejs
+  .env.example
+  .git/
+    config
+    description
+    HEAD
+    hooks/
+      applypatch-msg.sample
+      commit-msg.sample
+      fsmonitor-watchman.sample
+      post-update.sample
+      pre-applypatch.sample
+      pre-commit.sample
+      pre-merge-commit.sample
+      pre-push.sample
+      pre-rebase.sample
+      pre-receive.sample
+      prepare-commit-msg.sample
+      push-to-checkout.sample
+      sendemail-validate.sample
+      update.sample
+    index
+    info/
+      exclude
+    logs/
+      HEAD
+      refs/
+        heads/
+          main
+        remotes/
+          origin/
+            HEAD
+    objects/
+      info/
+      pack/
+        pack-abea1ada283ce1dc6658836020d5608056f7b356.idx
+        pack-abea1ada283ce1dc6658836020d5608056f7b356.pack
+        pack-abea1ada283ce1dc6658836020d5608056f7b356.rev
+    packed-refs
+    refs/
+      heads/
+        main
+      remotes/
+        origin/
+          HEAD
+      tags/
+  .gitignore
+  app.js
+  ARCHITECTURE_REFACTOR.md
+  controllers/
+    api/
+      apiController.js
+  database/
+    database.mwb
+    database.mwb.bak
+    db.js
+    pwa_opti (7).sql
+    schema.sql
+  middleware/
+    auth.js
+    error.js
+  modules/
+    auth/
+      auth.controller.js
+      auth.routes.js
+      auth.service.js
+    dashboard/
+      dashboard.controller.js
+      dashboard.routes.js
+      dashboard.service.js
+    index.js
+    muestras/
+      muestra.controller.js
+      muestra.routes.js
+      muestra.service.js
+    niveles/
+      nivel.controller.js
+      nivel.routes.js
+      nivel.service.js
+    offline/
+      offline.controller.js
+      offline.routes.js
+      offline.service.js
+    parametros/
+      parametro.controller.js
+      parametro.routes.js
+      parametro.service.js
+    pozos/
+      pozo.controller.js
+      pozo.routes.js
+      pozo.service.js
+    servicios/
+      servicio.controller.js
+      servicio.routes.js
+      servicio.service.js
+    users/
+      user.controller.js
+      user.routes.js
+      user.service.js
+  package-lock.json
+  package.json
+  postcss.config.js
+  public/
+    assets/
+      icons/
+        icon-192.svg
+        icon-512.svg
+        icono.png
+      images/
+        header.png
+    css/
+      app.css
+      tailwind.css
+      tailwind.input.css
+    js/
+      app-ui.js
+      core/
+        app.js
+        ui.js
+      modules/
+        muestras.js
+        niveles.js
+        parametros.js
+        pozos.js
+      offline/
+        db.js
+        sync.js
+      offline-store.js
+      sw-register.js
+    manifest.json
+    sw.js
+  README.md
+  services/
+    auth/
+      password.service.js
+    passwordService.js
+    sync/
+      sync.service.js
+    syncService.js
+  tailwind.config.js
+  views/
+    auth/
+      login.ejs
+    errors/
+      404.ejs
+      500.ejs
+      noAutorizado.ejs
+    index.ejs
+    layouts/
+      auth-layout.ejs
+      mainLayout.ejs
+    modules/
+      muestras/
+        index.ejs
+      niveles/
+        index.ejs
+      parametros/
+        index.ejs
+      pozos/
+        detalle.ejs
+        index.ejs
+        partials/
+          equipos.ejs
+          general.ejs
+          muestras.ejs
+          niveles.ejs
+          parametros.ejs
+      servicios/
+        index.ejs
+      users/
+        crear.ejs
+    partials/
+      card.ejs
+      sidebar.ejs
+      table.ejs
+      tabs.ejs
+      topbar.ejs
 ```
 
 ---
@@ -148,7 +227,7 @@ ANTES:
 DESPUÉS:
 
 ```js
-app.use('/pozos', require('./modules/pozos/pozo.routes'));
+app.use("/pozos", require("./modules/pozos/pozo.routes"));
 ```
 
 ---
@@ -236,9 +315,9 @@ Eliminar:
 
 ## 📌 1. Cada módulo debe contener:
 
-* controller
-* service
-* routes
+- controller
+- service
+- routes
 
 ---
 
@@ -281,12 +360,9 @@ Eliminar:
 Este sistema **NO es una app CRUD simple**.
 Es un sistema operativo de campo, por lo que:
 
-* La entidad central es: **POZO**
-* Todos los módulos deben relacionarse con ella
-* La UI debe seguir patrón:
+- La entidad central es: **POZO**
+- Todos los módulos deben relacionarse con ella
+- La UI debe seguir patrón:
   👉 lista → detalle → análisis → planificación
 
 ---
-
-
-

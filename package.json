@@ -23,7 +23,7 @@
     "cookie-parser": "^1.4.7",
     "dotenv": "^16.4.5",
     "ejs": "^3.1.10",
-    "express": "^4.21.1",
+    "express": "^4.22.1",
     "express-ejs-layouts": "^2.5.1",
     "express-session": "^1.18.1",
     "flowbite": "^4.0.1",
