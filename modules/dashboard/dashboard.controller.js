@@ -1,11 +1,16 @@
 const dashboardService = require('./dashboard.service');
 
-function index(req, res) {
-  return res.render('index', dashboardService.getDashboardContext(req.session.user));
+async function index(req, res, next) {
+  try {
+    const context = await dashboardService.getDashboardData(req.session.user);
+    return res.render('modules/dashboard/index', context);
+  } catch (error) {
+    return next(error);
+  }
 }
 
 function optimizacion(req, res) {
-  return index(req, res);
+  return res.redirect('/dashboard');
 }
 
 function operaciones(req, res) {

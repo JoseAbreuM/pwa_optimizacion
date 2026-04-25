@@ -1,4 +1,4 @@
-const { pool } = require('../../database/db');
+const { pool } = require('../../config/db');
 const { verifyPassword } = require('../../services/auth/password.service');
 
 async function findUserByUsername(username) {

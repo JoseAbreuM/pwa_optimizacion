@@ -1,4 +1,4 @@
-const { pool } = require('../../database/db');
+const { pool } = require('../../config/db');
 const { departmentRoles } = require('../../middleware/auth');
 const { hashPassword } = require('../../services/auth/password.service');
 

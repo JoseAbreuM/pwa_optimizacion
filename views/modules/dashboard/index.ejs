@@ -1,0 +1,237 @@
+<div class="min-w-0 space-y-5">
+  <div class="min-w-0">
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
+    <p class="text-sm text-gray-500 dark:text-gray-400">
+      Resumen operativo de pozos, servicios y muestreo.
+    </p>
+  </div>
+
+  <div class="flex w-full min-w-0 flex-wrap gap-2 lg:flex-nowrap">
+    <%- include('../../partials/card', { title: 'Total' , value: kpis?.total_pozos || 0, subtitle: 'Pozos' }) %>
+      <%- include('../../partials/card', { title: 'Cat. 1' , value: kpis?.total_cat_1 || 0, subtitle: 'Activos' }) %>
+        <%- include('../../partials/card', { title: 'Cat. 2' , value: kpis?.total_cat_2 || 0, subtitle: 'Servicio' }) %>
+          <%- include('../../partials/card', { title: 'Cat. 3' , value: kpis?.total_cat_3 || 0, subtitle: 'Diferidos' })
+            %>
+            <%- include('../../partials/card', { title: 'En servicio' , value: kpis?.total_en_servicio || 0,
+              subtitle: 'Pozos' }) %>
+  </div>
+
+  <div class="grid min-w-0 grid-cols-1 gap-4 xl:grid-cols-3">
+    <section
+      class="min-w-0 rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+      <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Distribución por categoría</h2>
+      <p class="mb-4 text-sm text-gray-500 dark:text-gray-400">Porcentaje de pozos por categoría.</p>
+
+      <div class="relative mx-auto h-64 w-full max-w-xs">
+        <canvas id="categoriaChart"></canvas>
+      </div>
+    </section>
+
+    <section
+      class="min-w-0 rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800 xl:col-span-2">
+      <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Servicios</h2>
+      <p class="mb-4 text-sm text-gray-500 dark:text-gray-400">Servicios asignados y disponibles.</p>
+
+      <div class="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <% if (servicios && servicios.length) { %>
+          <% servicios.forEach((item)=> { %>
+            <div class="min-w-0 rounded-lg border border-gray-200 p-3 dark:border-gray-700">
+              <p class="truncate text-sm font-semibold text-gray-900 dark:text-white">
+                <%= item.servicio %>
+              </p>
+              <p class="truncate text-xs text-gray-500 dark:text-gray-400">
+                <%= item.subtipo || item.tipo_servicio || 'Sin tipo' %>
+              </p>
+
+              <% if (item.pozo_codigo) { %>
+                <span
+                  class="mt-2 inline-flex rounded bg-green-100 px-2 py-1 text-xs font-medium text-green-700 dark:bg-green-900 dark:text-green-200">
+                  <%= item.pozo_codigo %>
+                </span>
+                <% } else { %>
+                  <span
+                    class="mt-2 inline-flex rounded bg-gray-100 px-2 py-1 text-xs font-medium text-gray-600 dark:bg-gray-700 dark:text-gray-300">
+                    Disponible
+                  </span>
+                  <% } %>
+            </div>
+            <% }) %>
+              <% } else { %>
+                <p class="text-sm text-gray-500 dark:text-gray-400">No hay servicios registrados.</p>
+                <% } %>
+      </div>
+    </section>
+  </div>
+
+  <div class="grid min-w-0 grid-cols-1 gap-4 xl:grid-cols-2">
+    <section
+      class="min-w-0 rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+      <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Muestreo</h2>
+      <p class="mb-4 text-sm text-gray-500 dark:text-gray-400">
+        Pozos activos con muestra vencida o próxima a realizarse.
+      </p>
+
+      <div class="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div class="rounded-lg bg-red-50 p-3 dark:bg-red-900/20">
+          <p class="text-sm text-red-700 dark:text-red-300">Muestras vencidas</p>
+          <p class="text-2xl font-bold text-red-800 dark:text-red-200">
+            <%= kpis?.total_muestras_vencidas || 0 %>
+          </p>
+        </div>
+
+        <div class="rounded-lg bg-yellow-50 p-3 dark:bg-yellow-900/20">
+          <p class="text-sm text-yellow-700 dark:text-yellow-300">Próximas</p>
+          <p class="text-2xl font-bold text-yellow-800 dark:text-yellow-200">
+            <%= kpis?.total_proximas_muestras || 0 %>
+          </p>
+        </div>
+      </div>
+
+      <div class="min-w-0 overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
+        <div class="w-full overflow-x-auto">
+          <table id="tabla-muestreo" class="w-full text-left text-sm">
+            <thead class="bg-gray-50 text-xs uppercase text-gray-500 dark:bg-gray-700 dark:text-gray-300">
+              <tr>
+                <th class="px-3 py-2">Pozo</th>
+                <th class="px-3 py-2">Próx. muestra</th>
+                <th class="px-3 py-2">Estado</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% if (muestrasAlerta && muestrasAlerta.length) { %>
+                <% muestrasAlerta.forEach((m)=> { %>
+                  <tr class="border-t dark:border-gray-700">
+                    <td class="px-3 py-2 font-medium text-gray-900 dark:text-white">
+                      <%= m.codigo %>
+                    </td>
+                    <td class="px-3 py-2 text-gray-600 dark:text-gray-300">
+                      <%= m.prox_muestra ? new Date(m.prox_muestra).toLocaleDateString('es-VE') : '-' %>
+                    </td>
+                    <td class="px-3 py-2">
+                      <% if (m.muestra_vencida) { %>
+                        <span
+                          class="rounded bg-red-100 px-2 py-1 text-xs font-medium text-red-700 dark:bg-red-900 dark:text-red-200">Vencida</span>
+                        <% } else { %>
+                          <span
+                            class="rounded bg-yellow-100 px-2 py-1 text-xs font-medium text-yellow-700 dark:bg-yellow-900 dark:text-yellow-200">Próxima</span>
+                          <% } %>
+                    </td>
+                  </tr>
+                  <% }) %>
+                    <% } else { %>
+                      <tr>
+                        <td colspan="3" class="px-3 py-4 text-center text-gray-500">
+                          No hay alertas de muestreo.
+                        </td>
+                      </tr>
+                      <% } %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section
+      class="min-w-0 rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+      <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Accesos rápidos</h2>
+      <p class="mb-4 text-sm text-gray-500 dark:text-gray-400">Módulos principales de la alpha.</p>
+
+      <div class="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2">
+        <a href="/pozos"
+          class="min-w-0 rounded-lg border border-gray-200 p-4 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-700">
+          <p class="font-semibold text-gray-900 dark:text-white">Pozos</p>
+          <p class="text-sm text-gray-500 dark:text-gray-400">Listado y fichas técnicas.</p>
+        </a>
+
+        <a href="/muestras"
+          class="min-w-0 rounded-lg border border-gray-200 p-4 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-700">
+          <p class="font-semibold text-gray-900 dark:text-white">Muestras</p>
+          <p class="text-sm text-gray-500 dark:text-gray-400">AYS y programación.</p>
+        </a>
+
+        <a href="/servicios"
+          class="min-w-0 rounded-lg border border-gray-200 p-4 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-700">
+          <p class="font-semibold text-gray-900 dark:text-white">Servicios</p>
+          <p class="text-sm text-gray-500 dark:text-gray-400">Asignaciones y cestas.</p>
+        </a>
+
+        <a href="/parametros"
+          class="min-w-0 rounded-lg border border-gray-200 p-4 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-700">
+          <p class="font-semibold text-gray-900 dark:text-white">Parámetros</p>
+          <p class="text-sm text-gray-500 dark:text-gray-400">Datos operacionales.</p>
+        </a>
+      </div>
+    </section>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const categorias = <% - JSON.stringify(categorias || []) %>;
+
+    const labels = categorias.map(function (c) {
+      return 'Cat. ' + (c.categoria || 'S/C');
+    });
+
+    const values = categorias.map(function (c) {
+      return Number(c.cantidad || 0);
+    });
+
+    const ctx = document.getElementById('categoriaChart');
+
+    if (ctx && window.Chart && values.length > 0) {
+      new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: labels,
+          datasets: [
+            {
+              data: values
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'bottom'
+            },
+            tooltip: {
+              callbacks: {
+                label: function (context) {
+                  const total = values.reduce(function (a, b) {
+                    return a + b;
+                  }, 0);
+
+                  const value = context.raw || 0;
+                  const pct = total ? ((value / total) * 100).toFixed(1) : 0;
+
+                  return context.label + ': ' + value + ' (' + pct + '%)';
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+
+    const tablaMuestreo = document.getElementById('tabla-muestreo');
+
+    if (tablaMuestreo && window.simpleDatatables) {
+      new simpleDatatables.DataTable(tablaMuestreo, {
+        searchable: true,
+        fixedHeight: false,
+        perPage: 10,
+        perPageSelect: [5, 10, 25, 50],
+        labels: {
+          placeholder: 'Buscar...',
+          searchTitle: 'Buscar en tabla',
+          perPage: 'registros por página',
+          noRows: 'No hay registros',
+          info: 'Mostrando {start} a {end} de {rows} registros'
+        }
+      });
+    }
+  });
+</script>

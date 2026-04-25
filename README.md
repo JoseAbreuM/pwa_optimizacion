@@ -69,15 +69,21 @@ pwa_optimizacion/
   .gitignore
   app.js
   ARCHITECTURE_REFACTOR.md
-  controllers/
-    api/
-      apiController.js
-  database/
-    database.mwb
-    database.mwb.bak
+  config/
     db.js
-    pwa_opti (7).sql
-    schema.sql
+    env.js
+  database/
+    dumps/
+      pwa_opti_legacy.sql
+    migrations/
+    model/
+      database.mwb
+      database.mwb.bak
+    schema/
+      schema.sql
+    seeds/
+    views/
+      README.md
   middleware/
     auth.js
     error.js
@@ -146,8 +152,8 @@ pwa_optimizacion/
         pozos.js
       offline/
         db.js
+        store.js
         sync.js
-      offline-store.js
       sw-register.js
     manifest.json
     sw.js
@@ -155,10 +161,8 @@ pwa_optimizacion/
   services/
     auth/
       password.service.js
-    passwordService.js
     sync/
       sync.service.js
-    syncService.js
   tailwind.config.js
   views/
     auth/
@@ -209,7 +213,7 @@ Eliminar completamente:
 /controllers/
 routes/
 controllers/shared/crud.js
-env/                ❌ mover .env al root
+env/                ❌ mover .env al root (mantener solo compatibilidad temporal)
 ```
 
 ---

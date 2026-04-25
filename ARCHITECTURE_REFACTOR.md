@@ -47,12 +47,13 @@
 - Mantener [routes/web.js](routes/web.js) sólo para rutas transversales: login, logout, dashboard y navegación base.
 - Reducir [routes/api.js](routes/api.js) a bootstrap global y sync, mientras cada dominio publica sus propios endpoints.
 - Reemplazar [controllers/shared/crud.js](controllers/shared/crud.js) por servicios específicos por módulo.
-- Migrar [services/passwordService.js](services/passwordService.js) y [services/syncService.js](services/syncService.js) a carpetas por responsabilidad, dejando wrappers de compatibilidad durante la transición.
+- Consolidar servicios en [services/auth/password.service.js](services/auth/password.service.js) y [services/sync/sync.service.js](services/sync/sync.service.js), sin duplicados en la raíz de services.
 - Reubicar las vistas de dominio bajo [views/modules/pozos](views/modules/pozos).
 
 ## Renombres y limpieza
 
 - Usar el nombre correcto de Service Worker register: ya existe como [public/js/sw-register.js](public/js/sw-register.js).
+- Mantener configuración centralizada en [config/env.js](config/env.js) y [config/db.js](config/db.js).
 - Adoptar raíz para variables de entorno, manteniendo compatibilidad temporal con la carpeta legacy [env](env).
 - Unificar imágenes e iconos dentro de [public/assets](public/assets).
 

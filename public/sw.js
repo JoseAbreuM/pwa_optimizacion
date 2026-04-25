@@ -8,6 +8,7 @@ const FILES_TO_CACHE = [
   '/js/core/app.js',
   '/js/core/ui.js',
   '/js/offline/db.js',
+  '/js/offline/store.js',
   '/js/offline/sync.js',
   '/js/modules/pozos.js',
   '/js/modules/muestras.js',
