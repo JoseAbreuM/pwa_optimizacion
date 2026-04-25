@@ -1,112 +1,74 @@
 <% const activeSection=typeof currentSection !=='undefined' ? currentSection : '' ; const safeCurrentUser=typeof
-  currentUser !=='undefined' ? currentUser : null; %>
+  currentUser !=='undefined' ? currentUser : null; const navItems=[ { href: '/dashboard' , section: 'dashboard' ,
+  icon: 'fa-house' , label: 'Dashboard' }, { href: '/pozos' , section: 'pozos' , icon: 'fa-oil-well' , label: 'Pozos' },
+  { href: '/muestras' , section: 'muestras' , icon: 'fa-vials' , label: 'Muestras' }, { href: '/parametros' ,
+  section: 'parametros' , icon: 'fa-gauge-high' , label: 'Parámetros' }, { href: '/niveles' , section: 'niveles' ,
+  icon: 'fa-chart-line' , label: 'Niveles' }, { href: '/servicios' , section: 'servicios' ,
+  icon: 'fa-screwdriver-wrench' , label: 'Servicios' } ]; %>
 
   <aside id="app-sidebar"
-    class="fixed top-0 left-0 z-50 h-full w-64 -translate-x-full border-r border-[#022b4f] bg-[#033F73] text-white transition-transform sm:translate-x-0"
+    class="fixed left-0 top-0 z-40 h-screen w-64 -translate-x-full border-r border-[#022b4f] bg-[#033F73] text-white transition-transform duration-300 sm:translate-x-0"
     aria-label="Sidebar">
-    <div class="h-full overflow-y-auto px-3 py-4">
+    <div class="flex h-full flex-col overflow-y-auto px-3 py-4">
       <a href="/dashboard"
         class="mb-5 flex items-center gap-3 rounded-2xl border border-white/10 bg-white/10 px-3 py-3">
-        <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10">
+        <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/10">
           <img src="/assets/icons/icono.png" alt="Logo Cavallino" class="h-6 w-6" />
         </div>
+
         <div class="min-w-0">
           <p class="truncate text-sm font-bold text-white">Cavallino</p>
           <p class="truncate text-xs text-slate-200">Plataforma Operacional</p>
         </div>
       </a>
 
-      <ul class="space-y-2 text-sm font-medium text-white">
-        <li>
-          <a href="/dashboard" class="<%= activeSection === 'dashboard'
-            ? 'bg-white text-[#033F73]'
-            : 'text-white hover:bg-white/10 hover:text-white'
-          %> group flex items-center rounded-xl px-3 py-2.5 transition">
-            <i class="fa-solid fa-house h-5 w-5 text-center"></i>
-            <span class="ms-3 text-current">Dashboard</span>
-          </a>
-        </li>
+      <nav class="flex-1">
+        <ul class="space-y-2 text-sm font-medium text-white">
+          <% navItems.forEach((item)=> { %>
+            <li>
+              <a href="<%= item.href %>" class="<%= activeSection === item.section
+                ? 'bg-white text-[#033F73] shadow-sm'
+                : 'text-white hover:bg-white/10 hover:text-white'
+              %> group flex items-center rounded-xl px-3 py-2.5 transition">
+                <i class="fa-solid <%= item.icon %> h-5 w-5 text-center"></i>
+                <span class="ms-3 text-current">
+                  <%= item.label %>
+                </span>
+              </a>
+            </li>
+            <% }) %>
+        </ul>
 
-        <li>
-          <a href="/pozos" class="<%= activeSection === 'pozos'
-            ? 'bg-white text-[#033F73]'
-            : 'text-white hover:bg-white/10 hover:text-white'
-          %> group flex items-center rounded-xl px-3 py-2.5 transition">
-            <i class="fa-solid fa-oil-well h-5 w-5 text-center"></i>
-            <span class="ms-3 text-current">Pozos</span>
-          </a>
-        </li>
-
-        <li>
-          <a href="/muestras" class="<%= activeSection === 'muestras'
-            ? 'bg-white text-[#033F73]'
-            : 'text-white hover:bg-white/10 hover:text-white'
-          %> group flex items-center rounded-xl px-3 py-2.5 transition">
-            <i class="fa-solid fa-vials h-5 w-5 text-center"></i>
-            <span class="ms-3 text-current">Muestras</span>
-          </a>
-        </li>
-
-        <li>
-          <a href="/parametros" class="<%= activeSection === 'parametros'
-            ? 'bg-white text-[#033F73]'
-            : 'text-white hover:bg-white/10 hover:text-white'
-          %> group flex items-center rounded-xl px-3 py-2.5 transition">
-            <i class="fa-solid fa-gauge-high h-5 w-5 text-center"></i>
-            <span class="ms-3 text-current">Parámetros</span>
-          </a>
-        </li>
-
-        <li>
-          <a href="/niveles" class="<%= activeSection === 'niveles'
-            ? 'bg-white text-[#033F73]'
-            : 'text-white hover:bg-white/10 hover:text-white'
-          %> group flex items-center rounded-xl px-3 py-2.5 transition">
-            <i class="fa-solid fa-chart-line h-5 w-5 text-center"></i>
-            <span class="ms-3 text-current">Niveles</span>
-          </a>
-        </li>
-
-        <li>
-          <a href="/servicios" class="<%= activeSection === 'servicios'
-            ? 'bg-white text-[#033F73]'
-            : 'text-white hover:bg-white/10 hover:text-white'
-          %> group flex items-center rounded-xl px-3 py-2.5 transition">
-            <i class="fa-solid fa-screwdriver-wrench h-5 w-5 text-center"></i>
-            <span class="ms-3 text-current">Servicios</span>
-          </a>
-        </li>
-      </ul>
-
-      <% if (safeCurrentUser && safeCurrentUser.role==='admin' ) { %>
-        <div class="mt-5 border-t border-white/10 pt-4">
-          <p class="px-3 pb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-white/60">
-            Administración
-          </p>
-
-          <a href="/usuarios/crear" class="<%= activeSection === 'usuarios'
-            ? 'bg-white text-[#033F73]'
-            : 'text-white hover:bg-white/10 hover:text-white'
-          %> group flex items-center rounded-xl px-3 py-2.5 text-sm font-medium transition">
-            <i class="fa-solid fa-users h-5 w-5 text-center"></i>
-            <span class="ms-3 text-current">Usuarios</span>
-          </a>
-        </div>
-        <% } %>
-
-          <div class="mt-6 rounded-2xl border border-white/10 bg-white/10 p-4">
-            <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/60">
-              Estado del sistema
+        <% if (safeCurrentUser && safeCurrentUser.role==='admin' ) { %>
+          <div class="mt-5 border-t border-white/10 pt-4">
+            <p class="px-3 pb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-white/60">
+              Administración
             </p>
 
-            <div class="mt-2 flex items-center gap-2 text-sm font-medium text-white">
-              <span class="h-2 w-2 rounded-full bg-emerald-400"></span>
-              Operativo
-            </div>
-
-            <p class="mt-1 text-xs text-slate-200">
-              PWA lista para sincronizar datos.
-            </p>
+            <a href="/usuarios/crear" class="<%= activeSection === 'usuarios'
+              ? 'bg-white text-[#033F73] shadow-sm'
+              : 'text-white hover:bg-white/10 hover:text-white'
+            %> group flex items-center rounded-xl px-3 py-2.5 text-sm font-medium transition">
+              <i class="fa-solid fa-users h-5 w-5 text-center"></i>
+              <span class="ms-3 text-current">Usuarios</span>
+            </a>
           </div>
+          <% } %>
+      </nav>
+
+      <div class="mt-6 rounded-2xl border border-white/10 bg-white/10 p-4">
+        <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/60">
+          Estado del sistema
+        </p>
+
+        <div class="mt-2 flex items-center gap-2 text-sm font-medium text-white">
+          <span class="h-2 w-2 rounded-full bg-emerald-400"></span>
+          Operativo
+        </div>
+
+        <p class="mt-1 text-xs text-slate-200">
+          PWA lista para sincronizar datos.
+        </p>
+      </div>
     </div>
   </aside>

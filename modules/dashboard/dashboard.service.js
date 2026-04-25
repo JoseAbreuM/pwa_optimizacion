@@ -20,16 +20,33 @@ const [muestrasAlerta] = await pool.query(`
   ORDER BY muestra_vencida DESC, prox_muestra ASC, codigo
 `);
 
+
+const [bombasCriticas] = await pool.query(`
+  SELECT *
+  FROM vw_dashboard_bombas_tvu_critico
+  ORDER BY tvu DESC
+  LIMIT 10
+`);
+
+console.log({
+  muestrasAlerta: muestrasAlerta.length,
+  bombasCriticas: bombasCriticas.length,
+  categorias: categorias.length,
+  servicios: servicios.length
+});
+
   return {
-    title: 'Dashboard',
-    currentUser: currentUser || null,
-    currentSection: 'dashboard',
-    layout: 'layouts/mainLayout',
-    kpis,
-    categorias,
-    servicios,
-    muestrasAlerta
-  };
+  title: 'Dashboard',
+  currentUser: currentUser || null,
+  currentSection: 'dashboard',
+  layout: 'layouts/mainLayout',
+  pageScript: '/js/modules/dashboard.js',
+  kpis,
+  categorias,
+  servicios,
+  muestrasAlerta,
+  bombasCriticas
+};
 }
 
 module.exports = {

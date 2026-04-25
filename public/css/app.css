@@ -12,7 +12,9 @@
   --shadow: 0 16px 35px rgba(3, 63, 115, 0.10);
 }
 
-* {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
 }
 
@@ -39,6 +41,21 @@ select,
 textarea {
   font: inherit;
 }
+
+/* =========================
+   LAYOUT FIXES
+========================= */
+
+main {
+  width: auto;
+  min-width: 0;
+}
+
+main>div {
+  min-width: 0;
+}
+
+
 
 /* =========================
    UTILIDADES PEQUEÑAS
@@ -326,4 +343,507 @@ textarea:focus {
     padding-left: 0.9rem;
     padding-right: 0.9rem;
   }
+}
+/* =========================
+   HARD LAYOUT FIX
+========================= */
+
+#app-main {
+  width: 100%;
+  padding-left: 0;
+}
+
+#app-topbar {
+  left: 0;
+}
+
+@media (min-width: 640px) {
+  #app-main {
+    padding-left: 16rem;
+  }
+
+  #app-topbar {
+    left: 16rem;
+    width: calc(100% - 16rem);
+  }
+}
+
+/* =========================
+   DASHBOARD TABLE FIX
+========================= */
+
+.dashboard-table-card {
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.dashboard-table-card>div {
+  min-width: 0;
+}
+
+.dashboard-table-card table {
+  width: 100%;
+}
+
+/* =========================
+   SIMPLE DATATABLES V9 FIX
+========================= */
+
+.datatable-wrapper {
+  width: 100%;
+  max-width: 100%;
+  overflow: visible;
+  color: #111827;
+}
+
+.dark .datatable-wrapper {
+  color: #e5e7eb;
+}
+
+.datatable-wrapper.datatable-loading,
+.datatable-wrapper.datatable-loading .datatable-container,
+.datatable-wrapper.datatable-loading .datatable-table {
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+.datatable-top,
+.datatable-bottom {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 0;
+}
+
+.datatable-dropdown label {
+  display: flex;
+  width: auto;
+  align-items: center;
+  gap: 0.5rem;
+  color: #374151;
+  font-size: 0.875rem;
+}
+
+.dark .datatable-dropdown label {
+  color: #d1d5db;
+}
+
+.datatable-search {
+  min-width: 220px;
+}
+
+.datatable-container {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  border-top: 1px solid #e5e7eb;
+}
+
+.dark .datatable-container {
+  border-top-color: #374151;
+}
+
+.datatable-table {
+  width: 100% !important;
+  min-width: 560px;
+  border-collapse: collapse;
+  background: transparent;
+  color: #111827 !important;
+}
+
+.dark .datatable-table {
+  color: #e5e7eb !important;
+}
+
+.datatable-table thead {
+  background: #f9fafb;
+}
+
+.dark .datatable-table thead {
+  background: #374151;
+}
+
+.datatable-table th,
+.datatable-table td {
+  padding: 0.75rem !important;
+  border-bottom: 1px solid #e5e7eb;
+  color: #374151 !important;
+  background: transparent !important;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.dark .datatable-table th,
+.dark .datatable-table td {
+  border-bottom-color: #374151;
+  color: #e5e7eb !important;
+}
+
+.datatable-table th {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #6b7280 !important;
+}
+
+.dark .datatable-table th {
+  color: #d1d5db !important;
+}
+
+.datatable-table td:first-child {
+  font-weight: 700;
+  color: #111827 !important;
+}
+
+.dark .datatable-table td:first-child {
+  color: #ffffff !important;
+}
+
+.datatable-sorter {
+  color: inherit !important;
+  font: inherit;
+  font-weight: 700;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
+.datatable-input,
+.datatable-selector {
+  width: auto;
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  background: #ffffff;
+  color: #111827;
+  padding: 0.45rem 0.75rem;
+  font-size: 0.875rem;
+}
+
+.dark .datatable-input,
+.dark .datatable-selector {
+  border-color: #4b5563;
+  background: #374151;
+  color: #ffffff;
+}
+
+.datatable-info {
+  color: #4b5563;
+  font-size: 0.875rem;
+}
+
+.dark .datatable-info {
+  color: #d1d5db;
+}
+
+.datatable-pagination-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.datatable-pagination button,
+.datatable-pagination a {
+  display: inline-flex;
+  min-width: 2rem;
+  min-height: 2rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.375rem;
+  color: #374151;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
+.dark .datatable-pagination button,
+.dark .datatable-pagination a {
+  color: #d1d5db;
+}
+
+.datatable-pagination .datatable-active button,
+.datatable-pagination .datatable-active a,
+.datatable-pagination button:hover,
+.datatable-pagination a:hover {
+  background: #e5e7eb;
+}
+
+.dark .datatable-pagination .datatable-active button,
+.dark .datatable-pagination .datatable-active a,
+.dark .datatable-pagination button:hover,
+.dark .datatable-pagination a:hover {
+  background: #4b5563;
+}
+
+/* =========================
+   FLOWBITE TABS CLEAN FIX
+========================= */
+
+#dashboard-table-tabs button[aria-selected="true"] {
+  border-color: #033F73;
+  color: #033F73;
+  background-color: #f8fafc;
+}
+
+.dark #dashboard-table-tabs button[aria-selected="true"] {
+  border-color: #60a5fa;
+  color: #93c5fd;
+  background-color: #1e293b;
+}
+
+#dashboard-table-tabs button[aria-selected="false"] {
+  border-color: transparent;
+  color: #6b7280;
+}
+
+.dark #dashboard-table-tabs button[aria-selected="false"] {
+  color: #9ca3af;
+}
+
+/* =========================
+   SIMPLE DATATABLES VISIBILITY FIX
+========================= */
+
+.datatable-wrapper,
+.datatable-container,
+.datatable-table,
+.datatable-table thead,
+.datatable-table tbody,
+.datatable-table tr,
+.datatable-table th,
+.datatable-table td {
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+.datatable-wrapper.datatable-loading {
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+.datatable-table th,
+.datatable-table td {
+  color: #374151 !important;
+}
+
+.datatable-table td:first-child {
+  color: #111827 !important;
+  font-weight: 700;
+}
+
+.dark .datatable-table th,
+.dark .datatable-table td {
+  color: #e5e7eb !important;
+}
+
+.dark .datatable-table td:first-child {
+  color: #ffffff !important;
+}
+
+.datatable-sorter {
+  color: inherit !important;
+}
+
+.datatable-input,
+.datatable-selector {
+  width: auto !important;
+}
+
+/* =========================
+   FINAL LAYOUT FIX
+========================= */
+
+#app-main {
+  width: 100%;
+  min-width: 0;
+  padding-top: 5.5rem !important;
+  padding-left: 0;
+}
+
+#app-topbar {
+  left: 0;
+  height: 4rem;
+}
+
+@media (min-width: 640px) {
+  #app-main {
+    padding-left: 16rem;
+  }
+
+  #app-topbar {
+    left: 16rem;
+    width: calc(100% - 16rem);
+  }
+}
+
+/* =========================
+   FINAL DATATABLE FIX
+========================= */
+
+.datatable-wrapper {
+  width: 100%;
+  max-width: 100%;
+  overflow: visible !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+.datatable-wrapper.datatable-loading {
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+.datatable-top {
+  display: flex !important;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem;
+}
+
+.datatable-bottom {
+  display: flex !important;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem;
+}
+
+.datatable-search {
+  display: block !important;
+  min-width: 240px;
+}
+
+.datatable-input {
+  display: block !important;
+  width: 100% !important;
+  min-width: 220px;
+  border: 1px solid #475569;
+  border-radius: 0.5rem;
+  background: #ffffff;
+  color: #111827;
+  padding: 0.5rem 0.75rem;
+}
+
+.dark .datatable-input {
+  background: #0f172a;
+  color: #f8fafc;
+  border-color: #475569;
+}
+
+.datatable-dropdown label {
+  display: flex !important;
+  width: auto !important;
+  grid-template-columns: none !important;
+  align-items: center;
+  gap: 0.5rem;
+  color: #374151;
+}
+
+.dark .datatable-dropdown label {
+  color: #e5e7eb;
+}
+
+.datatable-selector {
+  width: auto !important;
+  min-width: 72px;
+  border: 1px solid #475569;
+  border-radius: 0.5rem;
+  background: #ffffff;
+  color: #111827;
+  padding: 0.45rem 0.75rem;
+}
+
+.dark .datatable-selector {
+  background: #0f172a;
+  color: #f8fafc;
+  border-color: #475569;
+}
+
+.datatable-container {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto !important;
+}
+
+.datatable-table {
+  width: 100% !important;
+  min-width: 760px !important;
+  border-collapse: collapse !important;
+}
+
+.datatable-table thead tr {
+  background: #f1f5f9 !important;
+}
+
+.dark .datatable-table thead tr {
+  background: #334155 !important;
+}
+
+.datatable-table th,
+.datatable-table td {
+  display: table-cell !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  padding: 0.75rem !important;
+  border-bottom: 1px solid #e5e7eb !important;
+  color: #111827 !important;
+  background: transparent !important;
+  white-space: nowrap !important;
+}
+
+.dark .datatable-table th,
+.dark .datatable-table td {
+  border-bottom-color: #334155 !important;
+  color: #f8fafc !important;
+}
+
+.datatable-table td span {
+  color: inherit;
+}
+
+.datatable-table td .bg-red-100 {
+  color: #b91c1c !important;
+}
+
+.dark .datatable-table td .dark\:text-red-200 {
+  color: #fecaca !important;
+}
+
+.datatable-sorter {
+  color: inherit !important;
+  font-weight: 700 !important;
+  background: transparent !important;
+  border: 0 !important;
+}
+
+.datatable-info {
+  color: #374151 !important;
+}
+
+.dark .datatable-info {
+  color: #e5e7eb !important;
+}
+
+.dashboard-table-card table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.dashboard-table-card th,
+.dashboard-table-card td {
+  white-space: nowrap;
+}
+
+.dashboard-table-card tbody tr {
+  border-top: 1px solid #e5e7eb;
+}
+
+.dark .dashboard-table-card tbody tr {
+  border-top-color: #374151;
 }
