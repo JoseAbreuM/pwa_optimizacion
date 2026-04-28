@@ -54,6 +54,57 @@ function redirectRoot(req, res) {
   return res.redirect('/login');
 }
 
+
+async function renderTrainee(req, res, next) {
+  try {
+    const traineeActual = await userService.getCurrentTraineeAssignment();
+
+    res.render('users/trainee', {
+      title: 'Trainee actual',
+      currentUser: req.session.user,
+      layout: 'layouts/mainLayout',
+      traineeActual,
+      error: null,
+      success: null
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function updateTrainee(req, res, next) {
+  const nombre = String(req.body.nombre || '').trim();
+  const cedula = String(req.body.cedula || '').trim();
+
+  if (!nombre) {
+    return res.status(400).render('users/trainee', {
+      title: 'Trainee actual',
+      currentUser: req.session.user,
+      layout: 'layouts/mainLayout',
+      traineeActual: null,
+      success: null,
+      error: 'Indica el nombre del trainee.'
+    });
+  }
+
+  try {
+    await userService.updateCurrentTrainee({ nombre, cedula });
+
+    const traineeActual = await userService.getCurrentTraineeAssignment();
+
+    res.render('users/trainee', {
+      title: 'Trainee actual',
+      currentUser: req.session.user,
+      layout: 'layouts/mainLayout',
+      traineeActual,
+      error: null,
+      success: 'Trainee actualizado correctamente.'
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
 module.exports = {
   renderLogin,
   login,

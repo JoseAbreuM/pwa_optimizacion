@@ -1,72 +1,196 @@
 const { pool } = require('../../config/db');
-const { departmentRoles } = require('../../middleware/auth');
 const { hashPassword } = require('../../services/auth/password.service');
 
-const departmentLabels = {
-  optimizacion: 'Optimización',
-  operaciones: 'Operaciones',
-  mantenimiento: 'Mantenimiento',
-  laboratorio: 'Laboratorio',
-  seguridad: 'Seguridad',
-  admin: 'Admin'
-};
+const roleOptions = [
+  { value: 'admin', label: 'Admin' },
+  { value: 'coordinador', label: 'Coordinador' },
+  { value: 'ing_dpto', label: 'Ing. Dpto' },
+  { value: 'ing_trainee', label: 'Ing. Trainee' },
+  { value: 'trainee_visual', label: 'Trainee visual' }
+];
 
 function getRoleOptions() {
-  return Object.values(departmentRoles).flat();
+  return roleOptions;
 }
 
-function normalizeDepartment(value) {
-  return String(value || '').trim().toLowerCase();
-}
-
-function getDepartmentLabel(value) {
-  const key = normalizeDepartment(value);
-  return departmentLabels[key] || key;
+function normalizeText(value) {
+  return String(value || '').trim();
 }
 
 async function loadDepartments() {
-  const [rows] = await pool.query('SELECT id, nombre FROM departamentos ORDER BY nombre');
+  const [rows] = await pool.query(`
+    SELECT id, nombre
+    FROM departamentos
+    ORDER BY nombre ASC
+  `);
 
-  if (rows.length) return rows;
-
-  return Object.keys(departmentRoles).map((key, index) => ({
-    id: index + 1,
-    nombre: getDepartmentLabel(key)
-  }));
+  return rows;
 }
 
-async function ensureDepartment(department) {
-  const departmentName = getDepartmentLabel(department);
-  const [rows] = await pool.query(
-    'SELECT id FROM departamentos WHERE LOWER(nombre) = LOWER(?) LIMIT 1',
-    [departmentName]
-  );
+async function usernameExists(username, excludeUserId = null) {
+  const params = [normalizeText(username)];
+  let sql = `
+    SELECT id
+    FROM usuarios
+    WHERE username = ?
+  `;
 
-  if (rows.length) return rows[0].id;
+  if (excludeUserId) {
+    sql += ` AND id <> ?`;
+    params.push(Number(excludeUserId));
+  }
 
-  const [result] = await pool.query('INSERT INTO departamentos (nombre) VALUES (?)', [departmentName]);
-  return result.insertId;
-}
+  sql += ` LIMIT 1`;
 
-async function usernameExists(username) {
-  const [rows] = await pool.query('SELECT id FROM usuarios WHERE username = ? LIMIT 1', [username]);
+  const [rows] = await pool.query(sql, params);
   return Boolean(rows.length);
 }
 
-async function createUser({ username, password, department, role }) {
-  const departmentId = await ensureDepartment(department);
+async function createUser({
+  username,
+  password,
+  id_dept,
+  rol,
+  id_personal = null
+}) {
   const passwordHash = hashPassword(password);
 
-  await pool.query(
-    'INSERT INTO usuarios (username, password, id_dept, rol) VALUES (?, ?, ?, ?)',
-    [username, passwordHash, departmentId, role]
+  const [result] = await pool.query(
+    `INSERT INTO usuarios (
+      username,
+      password,
+      id_dept,
+      rol,
+      id_personal,
+      activo
+    )
+    VALUES (?, ?, ?, ?, ?, 1)`,
+    [
+      normalizeText(username),
+      passwordHash,
+      Number(id_dept),
+      normalizeText(rol),
+      id_personal ? Number(id_personal) : null
+    ]
   );
+
+  return result.insertId;
+}
+
+async function getUsers() {
+  const [rows] = await pool.query(`
+    SELECT
+      u.id,
+      u.username,
+      u.rol,
+      u.activo,
+      u.id_dept,
+      u.id_personal,
+      d.nombre AS departamento,
+      p.nombre_completo AS personal_nombre,
+      p.cedula AS personal_cedula
+    FROM usuarios u
+    INNER JOIN departamentos d ON d.id = u.id_dept
+    LEFT JOIN personal p ON p.id = u.id_personal
+    ORDER BY u.username ASC
+  `);
+
+  return rows;
+}
+
+async function getUserById(id) {
+  const [rows] = await pool.query(`
+    SELECT
+      id,
+      username,
+      rol,
+      activo,
+      id_dept,
+      id_personal
+    FROM usuarios
+    WHERE id = ?
+    LIMIT 1
+  `, [Number(id)]);
+
+  return rows[0] || null;
+}
+
+async function updateUser(id, {
+  username,
+  id_dept,
+  rol,
+  id_personal = null,
+  activo = 1,
+  password = null
+}) {
+  const params = [
+    normalizeText(username),
+    Number(id_dept),
+    normalizeText(rol),
+    id_personal ? Number(id_personal) : null,
+    Number(activo),
+    Number(id)
+  ];
+
+  let sql = `
+    UPDATE usuarios
+    SET
+      username = ?,
+      id_dept = ?,
+      rol = ?,
+      id_personal = ?,
+      activo = ?
+  `;
+
+  if (password) {
+    sql += `, password = ?`;
+    params.splice(params.length - 1, 0, hashPassword(password));
+  }
+
+  sql += ` WHERE id = ?`;
+
+  await pool.query(sql, params);
+}
+
+async function getPersonal() {
+  const [rows] = await pool.query(`
+    SELECT
+      p.id,
+      p.nombre_completo,
+      p.cedula,
+      p.activo,
+      p.id_dept,
+      d.nombre AS departamento
+    FROM personal p
+    LEFT JOIN departamentos d ON d.id = p.id_dept
+    ORDER BY p.nombre_completo ASC
+  `);
+
+  return rows;
+}
+
+async function getCurrentTraineeAssignment() {
+  const [rows] = await pool.query(`
+    SELECT ta.*
+    FROM trainee_asignaciones ta
+    INNER JOIN usuarios u ON u.id = ta.id_usuario
+    WHERE u.username = 'trainee'
+      AND ta.activo = 1
+    LIMIT 1
+  `);
+
+  return rows[0] || null;
 }
 
 module.exports = {
   getRoleOptions,
-  normalizeDepartment,
+  normalizeText,
   loadDepartments,
   usernameExists,
-  createUser
+  createUser,
+  getUsers,
+  getUserById,
+  updateUser,
+  getPersonal,
+  getCurrentTraineeAssignment
 };

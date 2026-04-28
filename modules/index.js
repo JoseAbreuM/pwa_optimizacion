@@ -9,21 +9,14 @@ const servicioRoutes = require('./servicios/servicio.routes');
 const offlineRoutes = require('./offline/offline.routes');
 
 function registerModuleRoutes(app) {
-  // Autenticación y raíz
   app.use('/', authRoutes);
-
-  // Dashboard principal
   app.use('/dashboard', dashboardRoutes);
-
-  // Módulos funcionales
   app.use('/usuarios', userRoutes);
   app.use('/pozos', pozoRoutes);
   app.use('/muestras', muestraRoutes);
   app.use('/parametros', parametroRoutes);
   app.use('/niveles', nivelRoutes);
   app.use('/servicios', servicioRoutes);
-
-  // Endpoints técnicos / sincronización
   app.use('/api', offlineRoutes);
 }
 

@@ -41,8 +41,11 @@
 
             <label>Rol
               <select name="role" required>
-                <% roles.forEach((roleOption)=> { %>
-                  <option value="<%= roleOption %>" <%=formData.role===roleOption ? 'selected' : '' %>><%= roleOption %>
+                <% [ ['admin', 'Admin' ], ['coordinador', 'Coordinador' ], ['ing_dpto', 'Ing. Dpto' ],
+                  ['ing_trainee', 'Ing. Trainee' ], ['trainee_visual', 'Trainee visual' ] ].forEach(([value, label])=> {
+                  %>
+                  <option value="<%= value %>" <%=formData.role===value ? 'selected' : '' %>>
+                    <%= label %>
                   </option>
                   <% }) %>
               </select>

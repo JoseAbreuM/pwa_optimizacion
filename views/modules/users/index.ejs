@@ -1,0 +1,53 @@
+<section
+  class="dashboard-table-card min-w-0 rounded-lg border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+
+  <div class="border-b border-gray-200 dark:border-gray-700">
+    <ul class="grid grid-cols-3 text-center text-sm font-medium text-gray-500 dark:text-gray-400" id="users-tabs"
+      data-tabs-toggle="#users-tabs-content" role="tablist">
+
+      <li role="presentation">
+        <button
+          class="inline-flex w-full items-center justify-center gap-2 border-b-2 border-[#033F73] px-4 py-3 text-[#033F73] dark:border-blue-400 dark:text-blue-400"
+          id="usuarios-tab" data-tabs-target="#usuarios-panel" type="button" role="tab" aria-controls="usuarios-panel"
+          aria-selected="true">
+          <i class="fa-solid fa-user-lock"></i>
+          Usuarios
+        </button>
+      </li>
+
+      <li role="presentation">
+        <button
+          class="inline-flex w-full items-center justify-center gap-2 border-b-2 border-transparent px-4 py-3 hover:border-gray-300 hover:text-gray-700 dark:hover:text-gray-300"
+          id="personal-tab" data-tabs-target="#personal-panel" type="button" role="tab" aria-controls="personal-panel"
+          aria-selected="false">
+          <i class="fa-solid fa-id-card"></i>
+          Personal
+        </button>
+      </li>
+
+      <li role="presentation">
+        <button
+          class="inline-flex w-full items-center justify-center gap-2 border-b-2 border-transparent px-4 py-3 hover:border-gray-300 hover:text-gray-700 dark:hover:text-gray-300"
+          id="trainee-tab" data-tabs-target="#trainee-panel" type="button" role="tab" aria-controls="trainee-panel"
+          aria-selected="false">
+          <i class="fa-solid fa-user-graduate"></i>
+          Trainee
+        </button>
+      </li>
+    </ul>
+  </div>
+
+  <div id="users-tabs-content">
+    <div id="usuarios-panel" role="tabpanel" aria-labelledby="usuarios-tab" class="p-4">
+      <%- include('./partials/usuarios-tab', { usuarios, currentUser }) %>
+    </div>
+
+    <div id="personal-panel" role="tabpanel" aria-labelledby="personal-tab" class="hidden p-4">
+      <%- include('./partials/personal-tab', { personal, currentUser }) %>
+    </div>
+
+    <div id="trainee-panel" role="tabpanel" aria-labelledby="trainee-tab" class="hidden p-4">
+      <%- include('./partials/trainee-tab', { traineeActual, currentUser }) %>
+    </div>
+  </div>
+</section>
