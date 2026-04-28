@@ -5,19 +5,29 @@ function buildWhereClause(filters = {}) {
   const params = [];
 
   if (filters.search) {
-    clauses.push('(p.codigo LIKE ? OR p.area LIKE ? OR p.yacimiento LIKE ?)');
+    clauses.push(`(
+      codigo LIKE ?
+      OR area LIKE ?
+      OR yacimiento LIKE ?
+      OR estado LIKE ?
+      OR categoria LIKE ?
+      OR variador LIKE ?
+      OR cabezal LIKE ?
+      OR metodo_levantamiento LIKE ?
+    )`);
+
     const term = `%${filters.search}%`;
-    params.push(term, term, term);
+    params.push(term, term, term, term, term, term, term, term);
   }
 
   if (filters.area) {
-    clauses.push('p.area = ?');
+    clauses.push('area = ?');
     params.push(filters.area);
   }
 
   if (filters.estado) {
-    clauses.push('p.id_estado = ?');
-    params.push(Number(filters.estado));
+    clauses.push('estado = ?');
+    params.push(filters.estado);
   }
 
   return {
@@ -30,40 +40,53 @@ async function listPozos(filters = {}) {
   const { whereSql, params } = buildWhereClause(filters);
 
   const [rows] = await pool.query(
-    `SELECT
-      p.id,
-      p.codigo,
-      p.categoria,
-      p.area,
-      p.yacimiento,
-      p.potencial,
-      p.vel_operacional,
-      p.vel_actual,
-      p.color_estado_mapa,
-      ep.nombre AS estado,
-      (
-        SELECT MAX(pd.fecha)
-        FROM parametros_diarios pd
-        WHERE pd.id_pozo = p.id
-      ) AS ultima_parametrizacion,
-      (
-        SELECT MAX(tn.fecha)
-        FROM tomas_nivel tn
-        WHERE tn.id_pozo = p.id
-      ) AS ultimo_nivel,
-      (
-        SELECT MAX(mf.fecha)
-        FROM muestras_fluido mf
-        WHERE mf.id_pozo = p.id
-      ) AS ultima_muestra
-    FROM pozos p
-    INNER JOIN estado_pozo ep ON ep.id = p.id_estado
-    ${whereSql}
-    ORDER BY p.codigo ASC`,
-    params
-  );
+  `SELECT
+    id,
+    codigo,
+    categoria,
+    area,
+    yacimiento,
+    potencial,
+    vel_actual,
+    vel_operacional,
+    color_estado_mapa,
+    estado,
+    metodo_levantamiento,
+    cabezal,
+    variador,
+    ultima_parametrizacion,
+    ultimo_nivel,
+    ultima_muestra,
+    prox_muestra
+  FROM vw_pozos_listado
+  ${whereSql}
+  ORDER BY codigo ASC`,
+  params
+);
 
   return rows;
+}
+
+async function getFilterOptions() {
+  const [[areas], [estados]] = await Promise.all([
+    pool.query(`
+      SELECT DISTINCT area
+      FROM vw_pozos_listado
+      WHERE area IS NOT NULL AND area <> ''
+      ORDER BY area ASC
+    `),
+    pool.query(`
+      SELECT DISTINCT estado AS nombre
+      FROM vw_pozos_listado
+      WHERE estado IS NOT NULL AND estado <> ''
+      ORDER BY estado ASC
+    `)
+  ]);
+
+  return {
+    areas,
+    estados
+  };
 }
 
 async function getPozoById(id) {

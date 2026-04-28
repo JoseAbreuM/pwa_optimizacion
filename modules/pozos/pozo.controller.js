@@ -20,7 +20,8 @@ async function list(req, res, next) {
       areas: options.areas,
       estados: options.estados,
       currentSection: 'pozos',
-      layout: 'layouts/mainLayout'
+      layout: 'layouts/mainLayout',
+      pageScript: '/js/modules/pozos.js'
     });
   } catch (error) {
     return next(error);
@@ -33,7 +34,8 @@ async function detail(req, res, next) {
 
     if (!pozo) {
       return res.status(404).render('errors/404', {
-        title: 'Pozo no encontrado'
+        title: 'Pozo no encontrado',
+        layout: 'layouts/mainLayout'
       });
     }
 
@@ -53,7 +55,13 @@ async function detail(req, res, next) {
 
 async function listApi(req, res, next) {
   try {
-    const pozos = await pozoService.listPozos(req.query);
+    const filters = {
+      search: String(req.query.search || '').trim(),
+      area: String(req.query.area || '').trim(),
+      estado: String(req.query.estado || '').trim()
+    };
+
+    const pozos = await pozoService.listPozos(filters);
     return res.json({ ok: true, data: pozos });
   } catch (error) {
     return next(error);
@@ -65,11 +73,21 @@ async function detailApi(req, res, next) {
     const pozo = await pozoService.getPozoById(req.params.id);
 
     if (!pozo) {
-      return res.status(404).json({ ok: false, message: 'Pozo no encontrado.' });
+      return res.status(404).json({
+        ok: false,
+        message: 'Pozo no encontrado.'
+      });
     }
 
     const timeline = await pozoService.getPozoTimeline(pozo.id);
-    return res.json({ ok: true, data: { pozo, timeline } });
+
+    return res.json({
+      ok: true,
+      data: {
+        pozo,
+        timeline
+      }
+    });
   } catch (error) {
     return next(error);
   }

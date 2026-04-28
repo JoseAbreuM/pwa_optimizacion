@@ -144,7 +144,7 @@
             </p>
           </div>
 
-          <button type="button" data-export-table="tabla-muestreo"
+          <button type="button" data-export-flowbite-table="tabla-muestreo"
             class="inline-flex items-center justify-center rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600">
             Exportar Excel
           </button>
@@ -172,6 +172,7 @@
               <thead class="bg-gray-50 text-xs uppercase text-gray-500 dark:bg-gray-700 dark:text-gray-300">
                 <tr>
                   <th class="px-3 py-2">Pozo</th>
+                  <th class="px-3 py-2">Última muestra</th>
                   <th class="px-3 py-2">Próx. muestra</th>
                   <th class="px-3 py-2">Estado</th>
                 </tr>
@@ -183,6 +184,10 @@
                     <tr class="cursor-pointer border-t hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-700">
                       <td class="whitespace-nowrap px-3 py-2 font-medium text-gray-900 dark:text-white">
                         <%= m.codigo %>
+                      </td>
+
+                      <td class="px-3 py-2 text-gray-600 dark:text-gray-300">
+                        <%= m.ultima_muestra ? new Date(m.ultima_muestra).toLocaleDateString('es-VE') : '-' %>
                       </td>
 
                       <td class="px-3 py-2 text-gray-600 dark:text-gray-300">
@@ -206,7 +211,7 @@
                     <% }) %>
                       <% } else { %>
                         <tr>
-                          <td colspan="3" class="px-3 py-4 text-center text-gray-500">
+                          <td colspan="4" class="px-3 py-4 text-center text-gray-500">
                             No hay alertas de muestreo.
                           </td>
                         </tr>
@@ -218,16 +223,15 @@
       </div>
 
       <div id="bombas-panel" role="tabpanel" aria-labelledby="bombas-tab" class="hidden p-4">
-
         <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Bombas con TVU crítico</h2>
+            <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Bombas con alerta TVU</h2>
             <p class="text-sm text-gray-500 dark:text-gray-400">
-              Calculado desde la fecha de instalación hasta hoy.
+              Crítico desde 365 días. Próximo desde 250 días.
             </p>
           </div>
 
-          <button type="button" data-export-table="tabla-bombas-criticas"
+          <button type="button" data-export-flowbite-table="tabla-bombas-criticas"
             class="inline-flex items-center justify-center rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600">
             Exportar Excel
           </button>
@@ -242,37 +246,66 @@
                   <th class="px-3 py-2">Método</th>
                   <th class="px-3 py-2">Bomba</th>
                   <th class="px-3 py-2">TVU</th>
+                  <th class="px-3 py-2">Estado</th>
+                  <th class="px-3 py-2">Días para crítico</th>
                 </tr>
               </thead>
 
               <tbody>
                 <% if (bombasCriticas && bombasCriticas.length) { %>
-                  <% bombasCriticas.forEach((b)=> { %>
-                    <tr class="border-t hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-700">
-                      <td class="whitespace-nowrap px-3 py-2 font-medium text-gray-900 dark:text-white">
-                        <%= b.codigo %>
+                  <% bombasCriticas.forEach((b)=> {
+                    const tvuValue = Number(b.tvu_dias ?? b.tvu ?? 0);
+                    const estadoTvu = String(b.estado_tvu || '').toUpperCase();
+
+                    const isCritico = estadoTvu === 'CRITICO' || tvuValue >= 365;
+                    const isPendiente = !isCritico && (estadoTvu === 'PENDIENTE' || tvuValue >= 250);
+                    const badgeClass = isCritico
+                    ? 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-200'
+                    : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
+
+                    const rowClass = isCritico
+                    ? 'bg-red-50/60 hover:bg-red-100 dark:bg-red-950/20 dark:hover:bg-red-900/30'
+                    : 'bg-yellow-50/60 hover:bg-yellow-100 dark:bg-yellow-950/20 dark:hover:bg-yellow-900/30';
+
+                    const pozo = b.pozo || b.codigo || '-';
+                    const tvu = b.tvu_dias ?? b.tvu ?? '-';
+                    const diasParaCritico = b.dias_para_critico ?? '-';
+                    const bomba = [b.marca, b.modelo, b.serial].filter(Boolean).join(' ') || '-';
+                    %>
+                    <tr class="border-t <%= rowClass %> dark:border-gray-700">
+                      <td class="whitespace-nowrap px-3 py-2 font-semibold text-gray-900 dark:text-white">
+                        <%= pozo %>
                       </td>
 
-                      <td class="px-3 py-2 text-gray-600 dark:text-gray-300">
+                      <td class="px-3 py-2 text-gray-700 dark:text-gray-300">
                         <%= b.metodo || '-' %>
                       </td>
 
-                      <td class="px-3 py-2 text-gray-600 dark:text-gray-300">
-                        <%= [b.marca, b.modelo].filter(Boolean).join(' ') || ' -' %>
+                      <td class="px-3 py-2 text-gray-700 dark:text-gray-300">
+                        <%= bomba %>
                       </td>
 
                       <td class="px-3 py-2">
-                        <span
-                          class="rounded bg-red-100 px-2 py-1 text-xs font-medium text-red-700 dark:bg-red-900 dark:text-red-200">
-                          <%= b.tvu %> días
+                        <span class="rounded px-2 py-1 text-xs font-semibold <%= badgeClass %>">
+                          <%= tvu %> días
                         </span>
+                      </td>
+
+                      <td class="px-3 py-2">
+                        <span class="rounded px-2 py-1 text-xs font-semibold <%= badgeClass %>">
+                          <%= isCritico ? 'Crítico' : 'Próximo' %>
+                        </span>
+                      </td>
+
+                      <td class="px-3 py-2 text-gray-700 dark:text-gray-300">
+                        <%= isCritico ? '0' : diasParaCritico %>
                       </td>
                     </tr>
                     <% }) %>
                       <% } else { %>
                         <tr>
-                          <td colspan="4" class="px-3 py-4 text-center text-gray-500">
-                            No hay bombas críticas.
+                          <td colspan="6" class="px-3 py-4 text-center text-gray-500">
+                            No hay bombas críticas o próximas a crítico.
                           </td>
                         </tr>
                         <% } %>
