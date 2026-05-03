@@ -1,0 +1,97 @@
+<div class="min-w-0 space-y-5">
+  <div>
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Crear personal</h1>
+    <p class="text-sm text-gray-500 dark:text-gray-400">
+      Registra personal fijo asociado a un departamento.
+    </p>
+  </div>
+
+  <section class="rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+    <div class="border-b border-gray-200 px-5 py-4 dark:border-gray-700">
+      <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Datos del personal</h2>
+      <p class="text-sm text-gray-500 dark:text-gray-400">Completa la información básica del trabajador.</p>
+    </div>
+
+    <div class="p-5">
+      <% if (error) { %>
+        <div
+          class="mb-5 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-200">
+          <%= error %>
+        </div>
+        <% } %>
+
+          <form action="/usuarios/personal/crear" method="post" class="space-y-6">
+            <div>
+              <label for="nombre_completo" class="mb-2 block text-sm font-medium text-gray-900 dark:text-white">
+                Nombre completo
+              </label>
+              <input id="nombre_completo" name="nombre_completo" type="text"
+                value="<%= formData.nombre_completo || '' %>" required
+                class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-[#033F73] focus:ring-[#033F73] dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                placeholder="Ej: Pedro Hernández" />
+            </div>
+
+            <div class="grid gap-5 md:grid-cols-2">
+              <div>
+                <label class="mb-2 block text-sm font-medium text-gray-900 dark:text-white">
+                  Cédula
+                </label>
+
+                <div class="flex gap-2">
+                  <select name="cedula_tipo"
+                    class="w-12 shrink-0 rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-center text-sm text-gray-900 focus:border-[#033F73] focus:ring-[#033F73] dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+                    <option value="V" <%=formData.cedula_tipo==='V' ? 'selected' : '' %>>V</option>
+                    <option value="E" <%=formData.cedula_tipo==='E' ? 'selected' : '' %>>E</option>
+                    <option value="J" <%=formData.cedula_tipo==='J' ? 'selected' : '' %>>J</option>
+                    <option value="G" <%=formData.cedula_tipo==='G' ? 'selected' : '' %>>G</option>
+                  </select>
+
+                  <input name="cedula_numero" type="text" value="<%= formData.cedula_numero || '' %>"
+                    class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-[#033F73] focus:ring-[#033F73] dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                    placeholder="12345678" />
+                </div>
+              </div>
+
+              <div>
+                <label for="id_dept" class="mb-2 block text-sm font-medium text-gray-900 dark:text-white">
+                  Departamento
+                </label>
+                <select id="id_dept" name="id_dept" required
+                  class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-[#033F73] focus:ring-[#033F73] dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+                  <option value="">Selecciona departamento</option>
+                  <% departments.forEach((dept)=> { %>
+                    <option value="<%= dept.id %>" <%=Number(formData.id_dept)===Number(dept.id) ? 'selected' : '' %>>
+                      <%= dept.nombre %>
+                    </option>
+                    <% }) %>
+                </select>
+              </div>
+
+              <div>
+                <label for="activo" class="mb-2 block text-sm font-medium text-gray-900 dark:text-white">
+                  Estado
+                </label>
+                <select id="activo" name="activo"
+                  class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-[#033F73] focus:ring-[#033F73] dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+                  <option value="1" <%=Number(formData.activo)===1 ? 'selected' : '' %>>Libre</option>
+                  <option value="0" <%=Number(formData.activo)===0 ? 'selected' : '' %>>De guardia</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="flex flex-col gap-3 border-t border-gray-200 pt-5 sm:flex-row dark:border-gray-700">
+              <button type="submit"
+                class="inline-flex items-center justify-center rounded-lg bg-[#033F73] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#023059]">
+                <i class="fa-solid fa-floppy-disk mr-2"></i>
+                Guardar personal
+              </button>
+
+              <a href="/usuarios"
+                class="inline-flex items-center justify-center rounded-lg border border-gray-300 bg-white px-5 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600">
+                Cancelar
+              </a>
+            </div>
+          </form>
+    </div>
+  </section>
+</div>

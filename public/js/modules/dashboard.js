@@ -1,5 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
   initDashboardChart();
+  initPotencialAreaChart();
   initDashboardTables();
 });
 
@@ -522,6 +523,169 @@ function initDashboardChart() {
       `;
     }).join('');
   }
+}
+
+function initPotencialAreaChart() {
+  const dataNode = document.getElementById('dashboard-data');
+  const chartEl = document.getElementById('chart-potencial-area');
+
+  if (!dataNode || !chartEl || typeof ApexCharts === 'undefined') return;
+
+  let dashboardData = {
+    potencialPorArea: {
+      labels: [],
+      values: [],
+      colors: []
+    }
+  };
+
+  try {
+    dashboardData = JSON.parse(dataNode.textContent);
+  } catch (error) {
+    console.error('Error leyendo dashboard-data para potencial:', error);
+    return;
+  }
+
+  const potencial = dashboardData.potencialPorArea || {};
+  const labels = potencial.labels || [];
+  const values = potencial.values || [];
+  const colors = potencial.colors || [];
+
+  if (!labels.length || !values.length) return;
+
+  const isDark = document.documentElement.classList.contains('dark');
+
+  const formatBls = (value) => {
+    return `${Number(value || 0).toLocaleString('es-VE')} Bls`;
+  };
+
+  const chart = new ApexCharts(chartEl, {
+    series: [
+      {
+        name: 'Potencial',
+        data: values
+      }
+    ],
+    chart: {
+      type: 'bar',
+      height: 360,
+      width: '100%',
+      toolbar: {
+        show: false
+      },
+      fontFamily: 'Inter, sans-serif',
+      foreColor: isDark ? '#E5E7EB' : '#374151',
+      animations: {
+        enabled: true,
+        easing: 'easeinout',
+        speed: 650
+      }
+    },
+    colors,
+    plotOptions: {
+      bar: {
+        distributed: true,
+        borderRadius: 10,
+        borderRadiusApplication: 'end',
+        columnWidth: '38%'
+      }
+    },
+    dataLabels: {
+      enabled: true,
+      offsetY: -18,
+      formatter: value => formatBls(value),
+      style: {
+        fontSize: '12px',
+        fontWeight: 700,
+        colors: [isDark ? '#F8FAFC' : '#111827']
+      },
+      background: {
+        enabled: true,
+        foreColor: isDark ? '#0F172A' : '#FFFFFF',
+        borderRadius: 6,
+        padding: 4,
+        opacity: 0.92,
+        borderWidth: 0
+      }
+    },
+    stroke: {
+      show: true,
+      width: 2,
+      colors: ['transparent']
+    },
+    xaxis: {
+      categories: labels,
+      axisBorder: {
+        show: false
+      },
+      axisTicks: {
+        show: false
+      },
+      labels: {
+        trim: true,
+        style: {
+          colors: labels.map(() => (isDark ? '#E5E7EB' : '#374151')),
+          fontSize: '12px',
+          fontWeight: 600
+        }
+      }
+    },
+    yaxis: {
+      labels: {
+        formatter: value => formatBls(value),
+        style: {
+          colors: [isDark ? '#CBD5E1' : '#64748B'],
+          fontSize: '12px'
+        }
+      }
+    },
+    legend: {
+      show: true,
+      position: 'bottom',
+      horizontalAlign: 'center',
+      fontSize: '13px',
+      fontWeight: 600,
+      labels: {
+        colors: isDark ? '#E5E7EB' : '#374151'
+      },
+      markers: {
+        radius: 12
+      }
+    },
+    tooltip: {
+      theme: isDark ? 'dark' : 'light',
+      y: {
+        formatter: value => formatBls(value)
+      }
+    },
+    grid: {
+      show: true,
+      strokeDashArray: 4,
+      borderColor: isDark ? '#374151' : '#E5E7EB',
+      padding: {
+        top: 20,
+        right: 12,
+        bottom: 0,
+        left: 12
+      }
+    },
+    states: {
+      hover: {
+        filter: {
+          type: 'lighten',
+          value: 0.08
+        }
+      },
+      active: {
+        filter: {
+          type: 'darken',
+          value: 0.08
+        }
+      }
+    }
+  });
+
+  chart.render();
 }
 
 function initThemeToggle() {

@@ -182,6 +182,87 @@ async function getCurrentTraineeAssignment() {
   return rows[0] || null;
 }
 
+
+async function createPersonal({
+  nombre_completo,
+  cedula,
+  id_dept,
+  activo = 1
+}) {
+  const [result] = await pool.query(
+    `INSERT INTO personal (
+      nombre_completo,
+      cedula,
+      id_dept,
+      activo
+    )
+    VALUES (?, ?, ?, ?)`,
+    [
+      normalizeText(nombre_completo),
+      normalizeText(cedula),
+      Number(id_dept),
+      Number(activo)
+    ]
+  );
+
+  return result.insertId;
+}
+
+async function getTraineeUserId() {
+  const [rows] = await pool.query(`
+    SELECT id
+    FROM usuarios
+    WHERE username = 'trainee'
+    LIMIT 1
+  `);
+
+  return rows[0]?.id || null;
+}
+
+async function updateTraineeAssignment({ nombre, cedula }) {
+  const traineeUserId = await getTraineeUserId();
+
+  if (!traineeUserId) {
+    throw new Error('No existe el usuario trainee.');
+  }
+
+  const conn = await pool.getConnection();
+
+  try {
+    await conn.beginTransaction();
+
+    await conn.query(`
+      UPDATE trainee_asignaciones
+      SET activo = 0,
+          fecha_fin = NOW()
+      WHERE id_usuario = ?
+        AND activo = 1
+    `, [traineeUserId]);
+
+    await conn.query(`
+      INSERT INTO trainee_asignaciones (
+        id_usuario,
+        nombre,
+        cedula,
+        fecha_inicio,
+        activo
+      )
+      VALUES (?, ?, ?, NOW(), 1)
+    `, [
+      traineeUserId,
+      normalizeText(nombre),
+      normalizeText(cedula) || null
+    ]);
+
+    await conn.commit();
+  } catch (error) {
+    await conn.rollback();
+    throw error;
+  } finally {
+    conn.release();
+  }
+}
+
 module.exports = {
   getRoleOptions,
   normalizeText,
@@ -192,5 +273,7 @@ module.exports = {
   getUserById,
   updateUser,
   getPersonal,
-  getCurrentTraineeAssignment
+  getCurrentTraineeAssignment,
+  updateTraineeAssignment,
+  createPersonal
 };

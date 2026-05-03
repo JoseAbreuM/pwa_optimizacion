@@ -1,0 +1,564 @@
+<div class="space-y-4">
+
+  <!-- Datos generales del pozo -->
+  <section class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+    <div class="mb-4 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+      <div>
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">
+          Datos generales
+        </h2>
+        <p class="text-sm text-slate-500 dark:text-slate-400">
+          Información base registrada para el pozo y equipos actualmente asignados.
+        </p>
+      </div>
+
+      <button type="button"
+        class="inline-flex items-center gap-1.5 rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:bg-slate-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700">
+        <i class="fa-solid fa-pen-to-square text-[11px]"></i>
+        Editar datos
+      </button>
+    </div>
+
+    <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+
+      <div class="rounded-xl bg-slate-50 px-3 py-2 dark:bg-slate-800">
+        <p class="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Código</p>
+        <p class="mt-1 text-sm font-semibold text-slate-900 dark:text-white">
+          <%= fallback(pozo.codigo) %>
+        </p>
+      </div>
+
+      <div class="rounded-xl bg-slate-50 px-3 py-2 dark:bg-slate-800">
+        <p class="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Área</p>
+        <p class="mt-1 text-sm font-semibold text-slate-900 dark:text-white">
+          <%= fallback(pozo.area) %>
+        </p>
+      </div>
+
+      <div class="rounded-xl bg-slate-50 px-3 py-2 dark:bg-slate-800">
+        <p class="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Estado</p>
+        <p class="mt-1 text-sm font-semibold text-slate-900 dark:text-white">
+          <%= fallback(pozo.estado) %>
+        </p>
+      </div>
+
+      <div class="rounded-xl bg-slate-50 px-3 py-2 dark:bg-slate-800">
+        <p class="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Categoría</p>
+        <p class="mt-1 text-sm font-semibold text-slate-900 dark:text-white">
+          <%= fallback(pozo.categoria) %>
+        </p>
+      </div>
+
+      <div class="rounded-xl bg-slate-50 px-3 py-2 dark:bg-slate-800">
+        <p class="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Yacimiento</p>
+        <p class="mt-1 text-sm font-semibold text-slate-900 dark:text-white">
+          <%= fallback(pozo.yacimiento) %>
+        </p>
+      </div>
+
+      <div class="rounded-xl bg-slate-50 px-3 py-2 dark:bg-slate-800">
+        <p class="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Método</p>
+        <p class="mt-1 text-sm font-semibold text-slate-900 dark:text-white">
+          <%= fallback(pozo.metodo_levantamiento) %>
+        </p>
+      </div>
+
+      <div class="rounded-xl bg-slate-50 px-3 py-2 dark:bg-slate-800">
+        <p class="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Fecha arranque</p>
+        <p class="mt-1 text-sm font-semibold text-slate-900 dark:text-white">
+          <%= formatDate(pozo.fecha_arranque) %>
+        </p>
+      </div>
+
+      <div class="rounded-xl bg-slate-50 px-3 py-2 dark:bg-slate-800">
+        <p class="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Potencial</p>
+        <p class="mt-1 text-sm font-semibold text-slate-900 dark:text-white">
+          <%= pozo.potencial !=null && pozo.potencial !=='' ? formatNumber(pozo.potencial, 2) : '—' %>
+        </p>
+      </div>
+
+    </div>
+
+    <!-- Equipos asignados -->
+    <div class="mt-4 grid gap-3 lg:grid-cols-2">
+
+      <!-- Variador -->
+      <article class="rounded-2xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800/60">
+        <div class="mb-3 flex items-center justify-between gap-3">
+          <div>
+            <h3 class="text-sm font-semibold text-slate-900 dark:text-white">
+              Variador asignado
+            </h3>
+            <p class="text-xs text-slate-500 dark:text-slate-400">
+              Datos actuales del VSD/VDF asociado al pozo.
+            </p>
+          </div>
+
+          <span
+            class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300">
+            <i class="fa-solid fa-bolt text-xs"></i>
+          </span>
+        </div>
+
+        <% const variadorNombre=pozo.marca_vdf || pozo.variador || pozo.variador_nombre_original || null; const
+          potenciaVariador=pozo.capacidad_vdf !=null && pozo.capacidad_vdf !=='' ? pozo.capacidad_vdf : (
+          pozo.potencia_variador !=null && pozo.potencia_variador !=='' ? pozo.potencia_variador : ( pozo.potencia_vsd
+          !=null && pozo.potencia_vsd !=='' ? pozo.potencia_vsd : null ) ); %>
+
+          <div class="grid gap-2 sm:grid-cols-2">
+            <div class="rounded-xl bg-white px-3 py-2 dark:bg-slate-900">
+              <p class="text-[10px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Equipo</p>
+              <p class="mt-1 truncate text-sm font-semibold text-slate-900 dark:text-white"
+                title="<%= fallback(variadorNombre) %>">
+                <%= fallback(variadorNombre) %>
+              </p>
+            </div>
+
+            <div class="rounded-xl bg-white px-3 py-2 dark:bg-slate-900">
+              <p class="text-[10px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                Potencia / capacidad
+              </p>
+              <p class="mt-1 text-sm font-semibold text-slate-900 dark:text-white">
+                <%= potenciaVariador !=null ? `${formatNumber(potenciaVariador, 2)} HP` : '—' %>
+              </p>
+            </div>
+          </div>
+      </article>
+
+      <!-- Cabezal / motores -->
+      <article class="rounded-2xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800/60">
+        <div class="mb-3 flex items-center justify-between gap-3">
+          <div>
+            <h3 class="text-sm font-semibold text-slate-900 dark:text-white">
+              Cabezal / motores
+            </h3>
+            <p class="text-xs text-slate-500 dark:text-slate-400">
+              Configuración vigente del cabezal y motores del pozo.
+            </p>
+          </div>
+      
+          <span
+            class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">
+            <i class="fa-solid fa-gears text-xs"></i>
+          </span>
+        </div>
+      
+        <% const cabezalNombre=pozo.cabezal || pozo.cabezal_nombre_original || null; const hpMotor=pozo.hp_motor !=null &&
+          pozo.hp_motor !=='' ? pozo.hp_motor : ( pozo.hp_motor_cabezal !=null && pozo.hp_motor_cabezal !=='' ?
+          pozo.hp_motor_cabezal : ( pozo.cabezal_hp_motor !=null && pozo.cabezal_hp_motor !=='' ? pozo.cabezal_hp_motor : null
+          ) ); const cantidadMotores=pozo.cantidad_motores !=null && pozo.cantidad_motores !=='' ? pozo.cantidad_motores : (
+          pozo.cabezal_cantidad_motores !=null && pozo.cabezal_cantidad_motores !=='' ? pozo.cabezal_cantidad_motores : null
+          ); const configuracionMotores=pozo.configuracion_motor_stg || pozo.configuracion_motor || pozo.motores_cabezal ||
+          pozo.cabezal_configuracion_motor || ( cantidadMotores !=null && hpMotor !=null ? `${formatNumber(cantidadMotores,
+          0)}x${formatNumber(hpMotor, 0)}` : ( cantidadMotores !=null ? `${formatNumber(cantidadMotores, 0)} motor(es)` : null
+          ) ); %>
+      
+          <div class="grid gap-2 sm:grid-cols-3">
+            <div class="rounded-xl bg-white px-3 py-2 dark:bg-slate-900">
+              <p class="text-[10px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                Cabezal
+              </p>
+              <p class="mt-1 truncate text-sm font-semibold text-slate-900 dark:text-white"
+                title="<%= fallback(cabezalNombre) %>">
+                <%= fallback(cabezalNombre) %>
+              </p>
+            </div>
+      
+            <div class="rounded-xl bg-white px-3 py-2 dark:bg-slate-900">
+              <p class="text-[10px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                Configuración
+              </p>
+              <p class="mt-1 truncate text-sm font-semibold text-slate-900 dark:text-white"
+                title="<%= fallback(configuracionMotores) %>">
+                <%= fallback(configuracionMotores) %>
+              </p>
+            </div>
+      
+            <div class="rounded-xl bg-white px-3 py-2 dark:bg-slate-900">
+              <p class="text-[10px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                HP motor
+              </p>
+              <p class="mt-1 text-sm font-semibold text-slate-900 dark:text-white">
+                <%= hpMotor !=null ? `${formatNumber(hpMotor, 2)} HP` : '—' %>
+              </p>
+            </div>
+          </div>
+      </article>
+
+    </div>
+  </section>
+
+  <!-- Bomba actual -->
+  <section class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+    <div class="mb-4 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+      <div>
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">
+          Bomba actualmente instalada
+        </h2>
+        <p class="text-sm text-slate-500 dark:text-slate-400">
+          Se toma como bomba actual la más nueva registrada para este pozo.
+        </p>
+      </div>
+
+      <button type="button" data-pozo-open-modal="modal-historial-bombas"
+        class="inline-flex items-center gap-1.5 rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:bg-slate-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700">
+        <i class="fa-solid fa-clock-rotate-left text-[11px]"></i>
+        Ver histórico
+      </button>
+    </div>
+
+    <% if (bombaActual) { %>
+      <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-7">
+
+        <div class="rounded-xl bg-slate-50 px-3 py-2 dark:bg-slate-800">
+          <p class="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Método</p>
+          <p class="mt-1 text-sm font-semibold text-slate-900 dark:text-white">
+            <%= fallback(bombaActual.metodo) %>
+          </p>
+        </div>
+
+        <div class="rounded-xl bg-slate-50 px-3 py-2 dark:bg-slate-800">
+          <p class="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Marca</p>
+          <p class="mt-1 text-sm font-semibold text-slate-900 dark:text-white">
+            <%= fallback(bombaActual.marca) %>
+          </p>
+        </div>
+
+        <div class="rounded-xl bg-slate-50 px-3 py-2 dark:bg-slate-800">
+          <p class="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Modelo</p>
+          <p class="mt-1 text-sm font-semibold text-slate-900 dark:text-white">
+            <%= fallback(bombaActual.modelo) %>
+          </p>
+        </div>
+
+        <div class="rounded-xl bg-slate-50 px-3 py-2 dark:bg-slate-800">
+          <p class="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Serial</p>
+          <p class="mt-1 text-sm font-semibold text-slate-900 dark:text-white">
+            <%= fallback(bombaActual.serial) %>
+          </p>
+        </div>
+
+        <div class="rounded-xl bg-slate-50 px-3 py-2 dark:bg-slate-800">
+          <p class="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Instalación</p>
+          <p class="mt-1 text-sm font-semibold text-slate-900 dark:text-white">
+            <%= formatDate(bombaActual.fecha_inst) %>
+          </p>
+        </div>
+
+        <div class="rounded-xl bg-slate-50 px-3 py-2 dark:bg-slate-800">
+          <p class="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">TVU</p>
+          <p class="mt-1 text-sm font-semibold text-slate-900 dark:text-white">
+            <%= bombaActual.tvu_dias !=null ? `${formatNumber(bombaActual.tvu_dias, 0)} días` : (bombaActual.tvu !=null
+              ? `${formatNumber(bombaActual.tvu, 0)} días` : '—' ) %>
+          </p>
+        </div>
+
+        <div class="rounded-xl bg-slate-50 px-3 py-2 dark:bg-slate-800">
+          <p class="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Estatus</p>
+          <p class="mt-1 text-sm font-semibold text-slate-900 dark:text-white">
+            <%= fallback(bombaActual.estatus) %>
+          </p>
+        </div>
+
+      </div>
+
+      <% if (bombaActual.observaciones) { %>
+        <div class="mt-3 rounded-xl bg-slate-50 px-3 py-2 text-sm text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+          <span class="font-semibold text-slate-800 dark:text-white">Observaciones:</span>
+          <%= bombaActual.observaciones %>
+        </div>
+        <% } %>
+          <% } else { %>
+            <div class="rounded-xl bg-yellow-50 p-4 text-sm text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-300">
+              No hay bomba registrada para este pozo.
+            </div>
+            <% } %>
+  </section>
+
+  <!-- Datos de completación -->
+  <section class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+    <div class="mb-4 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+      <div>
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">
+          Datos de completación
+        </h2>
+        <p class="text-sm text-slate-500 dark:text-slate-400">
+          Diagrama mecánico, survey y trayectoria del pozo.
+        </p>
+      </div>
+
+      <button type="button"
+        class="inline-flex items-center gap-1.5 rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:bg-slate-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700">
+        <i class="fa-solid fa-pen-to-square text-[11px]"></i>
+        Editar completación
+      </button>
+    </div>
+
+    <div class="grid gap-4 xl:grid-cols-2">
+
+      <!-- Visor PDF -->
+      <div class="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/60">
+        <div class="mb-3 flex items-center justify-between gap-3">
+          <div>
+            <h3 class="text-sm font-semibold text-slate-900 dark:text-white">
+              Diagrama mecánico
+            </h3>
+            <p class="text-xs text-slate-500 dark:text-slate-400">
+              PDF cargado del diagrama mecánico del pozo.
+            </p>
+          </div>
+
+          <button type="button"
+            class="inline-flex items-center gap-1.5 rounded-full bg-[#033F73] px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-[#022f56]">
+            <i class="fa-solid fa-upload text-[11px]"></i>
+            Subir PDF
+          </button>
+        </div>
+
+        <div
+          class="flex min-h-[320px] items-center justify-center rounded-xl border border-dashed border-slate-300 bg-white dark:border-slate-600 dark:bg-slate-900">
+          <p class="text-sm text-slate-500 dark:text-slate-400">
+            Visor PDF pendiente por conectar.
+          </p>
+        </div>
+      </div>
+
+      <!-- Gráfica survey -->
+      <div class="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/60">
+        <div class="mb-3 flex items-center justify-between gap-3">
+          <div>
+            <h3 class="text-sm font-semibold text-slate-900 dark:text-white">
+              Trayectoria / Survey
+            </h3>
+            <p class="text-xs text-slate-500 dark:text-slate-400">
+              Gráfica de trayectoria basada en X Offset y Y Offset.
+            </p>
+          </div>
+        </div>
+
+        <script type="application/json" id="survey-data-json"><%- JSON.stringify(survey || []) %></script>
+
+        <div id="chart-survey-pozo"
+          class="min-h-[320px] rounded-xl border border-dashed border-slate-300 bg-white p-2 dark:border-slate-600 dark:bg-slate-900">
+          <% if (!survey || !survey.length) { %>
+            <div class="flex min-h-[300px] items-center justify-center">
+              <p class="text-sm text-slate-500 dark:text-slate-400">
+                Gráfica de survey pendiente.
+              </p>
+            </div>
+            <% } %>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Tabla survey DataTables / FlyonUI sin sort -->
+    <div class="mt-4 rounded-xl border border-slate-200 dark:border-slate-700">
+      <div
+        class="flex flex-col gap-2 border-b border-slate-200 px-3 py-2 dark:border-slate-700 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h3 class="text-sm font-semibold text-slate-900 dark:text-white">
+            Tabla de survey
+          </h3>
+          <p class="text-[11px] text-slate-500 dark:text-slate-400">
+            MD, TVD, offsets y azimut calculado automáticamente.
+          </p>
+        </div>
+
+        <button type="button" data-pozo-open-modal="modal-survey-pozo"
+          class="inline-flex items-center gap-1.5 rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:bg-slate-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700">
+          <i class="fa-solid fa-table text-[11px]"></i>
+          Pegar / actualizar survey
+        </button>
+      </div>
+
+      <div class="p-2">
+        <table id="tabla-survey-pozo" class="w-full text-left text-[11px] text-slate-500 dark:text-slate-400">
+          <thead class="bg-slate-50 text-[10px] uppercase text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+            <tr>
+              <th class="whitespace-nowrap px-2 py-1.5">#</th>
+              <th class="whitespace-nowrap px-2 py-1.5">MD</th>
+              <th class="whitespace-nowrap px-2 py-1.5">TVD</th>
+              <th class="whitespace-nowrap px-2 py-1.5">X Offset</th>
+              <th class="whitespace-nowrap px-2 py-1.5">Y Offset</th>
+              <th class="whitespace-nowrap px-2 py-1.5">ΔX</th>
+              <th class="whitespace-nowrap px-2 py-1.5">ΔY</th>
+              <th class="whitespace-nowrap px-2 py-1.5">Azimut</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            <% if (survey && survey.length) { %>
+              <% survey.forEach((row, index)=> { %>
+                <tr class="border-b bg-white text-[11px] dark:border-slate-700 dark:bg-slate-900">
+                  <td class="whitespace-nowrap px-2 py-1 text-slate-400">
+                    <%= row.fila_orden || index + 1 %>
+                  </td>
+                  <td class="whitespace-nowrap px-2 py-1">
+                    <%= formatNumber(row.md, 2) %>
+                  </td>
+                  <td class="whitespace-nowrap px-2 py-1">
+                    <%= formatNumber(row.tvd, 2) %>
+                  </td>
+                  <td class="whitespace-nowrap px-2 py-1">
+                    <%= formatNumber(row.x_offset, 2) %>
+                  </td>
+                  <td class="whitespace-nowrap px-2 py-1">
+                    <%= formatNumber(row.y_offset, 2) %>
+                  </td>
+                  <td class="whitespace-nowrap px-2 py-1">
+                    <%= formatNumber(row.delta_x, 2) %>
+                  </td>
+                  <td class="whitespace-nowrap px-2 py-1">
+                    <%= formatNumber(row.delta_y, 2) %>
+                  </td>
+                  <td class="whitespace-nowrap px-2 py-1 font-semibold text-slate-700 dark:text-slate-200">
+                    <%= formatNumber(row.azimut, 2) %>
+                  </td>
+                </tr>
+                <% }) %>
+                  <% } else { %>
+                    <tr>
+                      <td colspan="8" class="px-4 py-5 text-center text-xs text-slate-500 dark:text-slate-400">
+                        Survey pendiente por cargar.
+                      </td>
+                    </tr>
+                    <% } %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- Modal historial de bombas -->
+  <div id="modal-historial-bombas" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/60 p-4"
+    role="dialog" aria-modal="true" aria-labelledby="modal-historial-bombas-title">
+
+    <div class="max-h-[90vh] w-full max-w-6xl overflow-hidden rounded-2xl bg-white shadow-xl dark:bg-slate-900">
+      <div class="flex items-center justify-between border-b border-slate-200 p-4 dark:border-slate-700">
+        <div>
+          <h3 id="modal-historial-bombas-title" class="text-lg font-semibold text-slate-900 dark:text-white">
+            Historial de bombas - <%= pozo.codigo %>
+          </h3>
+          <p class="text-sm text-slate-500 dark:text-slate-400">
+            Registros históricos asociados a este pozo.
+          </p>
+        </div>
+
+        <button type="button" data-pozo-close-modal="modal-historial-bombas"
+          class="rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white">
+          ✕
+        </button>
+      </div>
+
+      <div class="max-h-[70vh] overflow-auto p-4">
+        <table id="tabla-historial-bombas-pozo" class="w-full text-left text-sm text-slate-500 dark:text-slate-400">
+          <thead class="bg-slate-50 text-xs uppercase text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+            <tr>
+              <th class="px-4 py-3">Método</th>
+              <th class="px-4 py-3">Marca</th>
+              <th class="px-4 py-3">Modelo</th>
+              <th class="px-4 py-3">Serial</th>
+              <th class="px-4 py-3">Instalación</th>
+              <th class="px-4 py-3">Falla</th>
+              <th class="px-4 py-3">TVU</th>
+              <th class="px-4 py-3">Estatus</th>
+              <th class="px-4 py-3">Observaciones</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            <% if (historialBombas && historialBombas.length) { %>
+              <% historialBombas.forEach((bomba)=> { %>
+                <tr class="border-b bg-white dark:border-slate-700 dark:bg-slate-900">
+                  <td class="px-4 py-3">
+                    <%= fallback(bomba.metodo || bomba.id_metodo) %>
+                  </td>
+                  <td class="px-4 py-3">
+                    <%= fallback(bomba.marca) %>
+                  </td>
+                  <td class="px-4 py-3">
+                    <%= fallback(bomba.modelo) %>
+                  </td>
+                  <td class="px-4 py-3">
+                    <%= fallback(bomba.serial) %>
+                  </td>
+                  <td class="px-4 py-3">
+                    <%= formatDate(bomba.fecha_inst) %>
+                  </td>
+                  <td class="px-4 py-3">
+                    <%= formatDate(bomba.fecha_falla) %>
+                  </td>
+                  <td class="px-4 py-3">
+                    <%= bomba.tvu_dias !=null ? `${formatNumber(bomba.tvu_dias, 0)} días` : (bomba.tvu !=null ?
+                      `${formatNumber(bomba.tvu, 0)} días` : '—' ) %>
+                  </td>
+                  <td class="px-4 py-3">
+                    <%= fallback(bomba.estatus) %>
+                  </td>
+                  <td class="px-4 py-3">
+                    <%= fallback(bomba.observaciones) %>
+                  </td>
+                </tr>
+                <% }) %>
+                  <% } else { %>
+                    <tr>
+                      <td colspan="9" class="px-4 py-6 text-center text-slate-500 dark:text-slate-400">
+                        No hay historial de bombas para este pozo.
+                      </td>
+                    </tr>
+                    <% } %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal pegar survey -->
+  <div id="modal-survey-pozo" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/60 p-4"
+    role="dialog" aria-modal="true" aria-labelledby="modal-survey-pozo-title">
+
+    <div class="max-h-[90vh] w-full max-w-5xl overflow-hidden rounded-2xl bg-white shadow-xl dark:bg-slate-900">
+      <div class="flex items-center justify-between border-b border-slate-200 p-4 dark:border-slate-700">
+        <div>
+          <h3 id="modal-survey-pozo-title" class="text-lg font-semibold text-slate-900 dark:text-white">
+            Pegar survey - <%= pozo.codigo %>
+          </h3>
+          <p class="text-sm text-slate-500 dark:text-slate-400">
+            Pega una tabla desde Excel con columnas MD, TVD, x-offset y y-offset.
+          </p>
+        </div>
+
+        <button type="button" data-pozo-close-modal="modal-survey-pozo"
+          class="rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white">
+          ✕
+        </button>
+      </div>
+
+      <form id="form-survey-pozo" data-pozo-id="<%= pozo.id %>" class="p-4">
+        <label class="mb-2 block text-sm font-medium text-slate-900 dark:text-white">
+          Tabla de survey
+        </label>
+
+        <textarea name="survey_text" rows="14"
+          class="w-full rounded-xl border border-slate-300 bg-white p-3 font-mono text-xs text-slate-900 focus:border-[#033F73] focus:ring-[#033F73] dark:border-slate-600 dark:bg-slate-800 dark:text-white"
+          placeholder="MD&#9;TVD&#9;x-offset&#9;y-offset&#10;0&#9;0&#9;0&#9;0&#10;100&#9;95&#9;5&#9;2"></textarea>
+
+        <div id="survey-form-message" class="mt-3 hidden rounded-lg p-3 text-sm"></div>
+
+        <div class="mt-4 flex justify-end gap-2 border-t border-slate-200 pt-4 dark:border-slate-700">
+          <button type="button" data-pozo-close-modal="modal-survey-pozo"
+            class="rounded-full border border-slate-300 px-4 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800">
+            Cancelar
+          </button>
+
+          <button type="submit"
+            class="rounded-full bg-[#033F73] px-4 py-1.5 text-xs font-semibold text-white hover:bg-[#022f56]">
+            Guardar survey
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+</div>

@@ -1,60 +1,117 @@
-<section class="panel login-panel soft-panel">
-  <div class="login-logo-stack">
-    <img src="/assets/icons/icono.png" alt="Logo Cavallino" class="login-icon" />
-    <img src="/assets/images/header.png" alt="Cavallino" class="login-wordmark" />
+<div class="min-w-0 space-y-5">
+  <div>
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Crear usuario</h1>
+    <p class="text-sm text-gray-500 dark:text-gray-400">
+      Registra accesos del sistema y vincúlalos opcionalmente a personal fijo.
+    </p>
   </div>
 
-  <h1>Gestión de usuarios</h1>
-  <p class="muted">Formulario de alta y administración inicial de accesos.</p>
+  <section class="rounded-lg border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+    <% if (success) { %>
+      <div
+        class="mb-4 rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-700 dark:border-green-900 dark:bg-green-950 dark:text-green-200">
+        <%= success %>
+      </div>
+      <% } %>
 
-  <% if (success) { %>
-    <div class="alert success">
-      <%= success %>
-    </div>
-    <% } %>
-
-      <% if (error) { %>
-        <div class="alert">
-          <%= error %>
-        </div>
-        <% } %>
-
-          <form action="/usuarios/crear" method="post" class="stack">
-            <label>Usuario
-              <input type="text" name="username" value="<%= formData.username %>" placeholder="ej: admin.opti"
-                required />
-            </label>
-
-            <label>Contraseña
-              <input type="password" name="password" placeholder="Mínimo 6 caracteres" required />
-            </label>
-
-            <label>Departamento
-              <select name="department" required>
-                <% departments.forEach((dept)=> { const deptValue = String(dept.nombre).toLowerCase(); %>
-                  <option value="<%= deptValue %>" <%=formData.department===deptValue ? 'selected' : '' %>><%=
-                      dept.nombre %>
-                  </option>
-                  <% }) %>
-              </select>
-            </label>
-
-            <label>Rol
-              <select name="role" required>
-                <% [ ['admin', 'Admin' ], ['coordinador', 'Coordinador' ], ['ing_dpto', 'Ing. Dpto' ],
-                  ['ing_trainee', 'Ing. Trainee' ], ['trainee_visual', 'Trainee visual' ] ].forEach(([value, label])=> {
-                  %>
-                  <option value="<%= value %>" <%=formData.role===value ? 'selected' : '' %>>
-                    <%= label %>
-                  </option>
-                  <% }) %>
-              </select>
-            </label>
-
-            <button type="submit" class="btn">Guardar usuario</button>
-          </form>
-
-          <div class="actions-row">
-            <a href="/login" class="inline-link">Volver al login</a>
+        <% if (error) { %>
+          <div
+            class="mb-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-200">
+            <%= error %>
           </div>
-</section>
+          <% } %>
+
+            <form action="/usuarios/crear" method="post" class="grid gap-5 md:grid-cols-2">
+              <div>
+                <label for="username" class="mb-2 block text-sm font-medium text-gray-900 dark:text-white">
+                  Usuario
+                </label>
+                <input id="username" name="username" type="text" value="<%= formData.username || '' %>" required
+                  class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-[#033F73] focus:ring-[#033F73] dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                  placeholder="Ej: opti.abreu" />
+              </div>
+
+              <div>
+                <label for="password" class="mb-2 block text-sm font-medium text-gray-900 dark:text-white">
+                  Contraseña
+                </label>
+                <input id="password" name="password" type="password" required
+                  class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-[#033F73] focus:ring-[#033F73] dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                  placeholder="Mínimo 6 caracteres" />
+              </div>
+
+              <div>
+                <label for="id_dept" class="mb-2 block text-sm font-medium text-gray-900 dark:text-white">
+                  Departamento
+                </label>
+                <select id="id_dept" name="id_dept" required
+                  class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-[#033F73] focus:ring-[#033F73] dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+                  <option value="">Selecciona departamento</option>
+                  <% departments.forEach((dept)=> { %>
+                    <option value="<%= dept.id %>" <%=Number(formData.id_dept)===Number(dept.id) ? 'selected' : '' %>>
+                      <%= dept.nombre %>
+                    </option>
+                    <% }) %>
+                </select>
+              </div>
+
+              <div>
+                <label for="rol" class="mb-2 block text-sm font-medium text-gray-900 dark:text-white">
+                  Rol
+                </label>
+                <select id="rol" name="rol" required
+                  class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-[#033F73] focus:ring-[#033F73] dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+                  <% roles.forEach((role)=> { %>
+                    <option value="<%= role.value %>" <%=formData.rol===role.value ? 'selected' : '' %>>
+                      <%= role.label %>
+                    </option>
+                    <% }) %>
+                </select>
+              </div>
+
+              <div class="md:col-span-2">
+                <label for="id_personal" class="mb-2 block text-sm font-medium text-gray-900 dark:text-white">
+                  Personal vinculado
+                </label>
+                <select id="id_personal" name="id_personal"
+                  class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-[#033F73] focus:ring-[#033F73] dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+                  <option value="">Sin vincular / usuario genérico</option>
+                  <% personal.forEach((p)=> { %>
+                    <option value="<%= p.id %>" <%=Number(formData.id_personal)===Number(p.id) ? 'selected' : '' %>>
+                      <%= p.nombre_completo %>
+                        <%= p.cedula ? `(${p.cedula})` : '' %> - <%= p.departamento || 'Sin depto.' %>
+                    </option>
+                    <% }) %>
+                </select>
+
+                <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                  Para el usuario trainee visual, puedes dejarlo sin vincular y administrar la persona actual desde la
+                  pestaña Trainee.
+                </p>
+              </div>
+
+              <div class="rounded-lg bg-blue-50 p-4 dark:bg-blue-950/30 md:col-span-2">
+                <p class="text-sm font-semibold text-blue-800 dark:text-blue-200">
+                  Reglas de acceso
+                </p>
+                <p class="mt-1 text-sm text-blue-700 dark:text-blue-300">
+                  Admin y Coordinador pueden gestionar usuarios y personal. Ing. Dpto e Ing. Trainee pueden visualizar y
+                  editar sus propios datos. Trainee visual es solo lectura.
+                </p>
+              </div>
+
+              <div class="flex flex-col gap-3 sm:flex-row md:col-span-2">
+                <button type="submit"
+                  class="inline-flex items-center justify-center rounded-lg bg-[#033F73] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#023059]">
+                  <i class="fa-solid fa-floppy-disk mr-2"></i>
+                  Guardar usuario
+                </button>
+
+                <a href="/usuarios"
+                  class="inline-flex items-center justify-center rounded-lg border border-gray-300 bg-white px-5 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600">
+                  Cancelar
+                </a>
+              </div>
+            </form>
+  </section>
+</div>

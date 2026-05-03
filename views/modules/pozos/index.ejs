@@ -24,6 +24,7 @@
             <th class="px-4 py-3">Estado</th>
             <th class="px-4 py-3">Categoría</th>
             <th class="px-4 py-3">Área</th>
+            <th class="px-4 py-3">Potencial</th>
             <th class="px-4 py-3">Velocidades</th>
             <th class="px-4 py-3">Variador</th>
             <th class="px-4 py-3">Cabezal</th>
@@ -32,69 +33,103 @@
         </thead>
 
         <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
-          <% if (!pozos.length) { %>
+          <% if (!pozos || !pozos.length) { %>
             <tr>
-              <td colspan="8" class="px-4 py-8 text-center text-slate-500">
+              <td colspan="9" class="px-4 py-8 text-center text-slate-500 dark:text-slate-400">
                 No hay pozos registrados.
               </td>
             </tr>
             <% } %>
 
-              <% pozos.forEach((pozo)=> { %>
-                <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                  <td class="px-4 py-3">
-                    <div class="font-semibold text-slate-900 dark:text-white">
-                      <%= pozo.codigo %>
-                    </div>
-                    <div class="max-w-[220px] truncate text-xs text-slate-500 dark:text-slate-400">
-                      <%= pozo.yacimiento || 'Sin yacimiento' %>
-                    </div>
-                  </td>
+              <% (pozos || []).forEach((pozo)=> { %>
+                <% const velActual=pozo.vel_actual ?? pozo.velocidad_actual ?? pozo.velocidad ?? pozo.rpm ??
+                  pozo.velocidad_rpm ?? null; const velOperacional=pozo.vel_operacional ?? pozo.velocidad_operacional ??
+                  pozo.vo ?? pozo.v_o ?? pozo.rpm_operacional ?? null; const hasVelActual=velActual !==null && velActual
+                  !==undefined && String(velActual).trim() !=='' ; const hasVelOperacional=velOperacional !==null &&
+                  velOperacional !==undefined && String(velOperacional).trim() !=='' ; const
+                  potencialActual=pozo.potencial !==null && pozo.potencial !==undefined && String(pozo.potencial).trim()
+                  !=='' ? pozo.potencial : '' ; %>
 
-                  <td class="px-4 py-3">
-                    <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold text-white"
-                      style="background-color: <%= pozo.estado_color || pozo.color_estado_mapa || '#033F73' %>">
-                      <%= pozo.estado || 'Sin estado' %>
-                    </span>
-                  </td>
+                  <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                    <td class="px-4 py-3">
+                      <div class="font-semibold text-slate-900 dark:text-white">
+                        <%= pozo.codigo || '—' %>
+                      </div>
+                      <div class="max-w-[220px] truncate text-xs text-slate-500 dark:text-slate-400">
+                        <%= pozo.yacimiento || 'Sin yacimiento' %>
+                      </div>
+                    </td>
 
-                  <td class="px-4 py-3">
-                    <span
-                      class="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
-                      Cat. <%= pozo.categoria || '-' %>
-                    </span>
-                  </td>
+                    <td class="px-4 py-3">
+                      <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold text-white"
+                        style="background-color: <%= pozo.estado_color || pozo.color_estado_mapa || '#033F73' %>">
+                        <%= pozo.estado || 'Sin estado' %>
+                      </span>
+                    </td>
 
-                  <td class="px-4 py-3 text-slate-700 dark:text-slate-300">
-                    <%= pozo.area || '—' %>
-                  </td>
+                    <td class="px-4 py-3">
+                      <span
+                        class="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                        Cat. <%= pozo.categoria || '-' %>
+                      </span>
+                    </td>
 
-                  <td class="px-4 py-3">
-                    <div class="font-medium text-slate-900 dark:text-white">
-                      <%= pozo.vel_actual || '—' %>
-                        <span class="text-xs text-slate-400">actual</span>
-                    </div>
-                    <div class="text-xs text-slate-500 dark:text-slate-400">
-                      <%= pozo.vel_operacional || '—' %> operacional
-                    </div>
-                  </td>
+                    <td class="px-4 py-3 text-slate-700 dark:text-slate-300">
+                      <%= pozo.area || '—' %>
+                    </td>
 
-                  <td class="px-4 py-3 text-slate-700 dark:text-slate-300">
-                    <%= pozo.variador || '—' %>
-                  </td>
+                    <!-- Potencial editable -->
+                    <td class="px-4 py-3">
+                      <div class="flex items-center gap-2">
+                        <span data-potencial-value class="font-semibold text-slate-900 dark:text-white">
+                          <%= potencialActual !=='' ? formatNumber(potencialActual, 2) : '—' %>
+                        </span>
 
-                  <td class="px-4 py-3 text-slate-700 dark:text-slate-300">
-                    <%= pozo.cabezal || '—' %>
-                  </td>
+                        <button type="button" data-edit-potencial data-pozo-id="<%= pozo.id %>"
+                          data-pozo-codigo="<%= pozo.codigo || '' %>" data-potencial="<%= potencialActual %>"
+                          class="inline-flex h-7 w-7 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 shadow-sm transition hover:bg-slate-100 hover:text-[#033F73] disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-sky-300"
+                          title="Editar potencial" aria-label="Editar potencial de <%= pozo.codigo || 'pozo' %>">
+                          <i class="fa-solid fa-pen text-[11px]"></i>
+                        </button>
+                      </div>
+                    </td>
 
-                  <td class="px-4 py-3 text-right">
-                    <a href="/pozos/<%= pozo.id %>"
-                      class="inline-flex items-center rounded-lg border border-slate-200 px-3 py-2 font-medium text-[#033F73] hover:bg-slate-100 dark:border-slate-700 dark:text-sky-300 dark:hover:bg-slate-800">
-                      Ver ficha
-                    </a>
-                  </td>
-                </tr>
-                <% }) %>
+                    <td class="px-4 py-3">
+                      <div class="flex flex-col gap-1">
+                        <div
+                          class="inline-flex w-fit items-center gap-1 rounded-lg bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                          <span class="text-slate-500 dark:text-slate-400">Actual:</span>
+                          <span>
+                            <%= hasVelActual ? formatNumber(velActual, 2) : '—' %>
+                          </span>
+                        </div>
+
+                        <div
+                          class="inline-flex w-fit items-center gap-1 rounded-lg bg-slate-50 px-2 py-1 text-xs font-medium text-slate-600 dark:bg-slate-800/60 dark:text-slate-300">
+                          <span class="text-slate-500 dark:text-slate-400">Operacional:</span>
+                          <span>
+                            <%= hasVelOperacional ? formatNumber(velOperacional, 2) : '—' %>
+                          </span>
+                        </div>
+                      </div>
+                    </td>
+
+                    <td class="px-4 py-3 text-slate-700 dark:text-slate-300">
+                      <%= pozo.variador || pozo.marca_vdf || '—' %>
+                    </td>
+
+                    <td class="px-4 py-3 text-slate-700 dark:text-slate-300">
+                      <%= pozo.cabezal || '—' %>
+                    </td>
+
+                    <td class="px-4 py-3 text-right">
+                      <a href="/pozos/<%= pozo.id %>"
+                        class="inline-flex items-center rounded-lg border border-slate-200 px-3 py-2 font-medium text-[#033F73] hover:bg-slate-100 dark:border-slate-700 dark:text-sky-300 dark:hover:bg-slate-800">
+                        Ver ficha
+                      </a>
+                    </td>
+                  </tr>
+                  <% }) %>
         </tbody>
       </table>
     </div>

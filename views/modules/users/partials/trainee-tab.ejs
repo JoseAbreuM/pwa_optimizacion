@@ -6,20 +6,25 @@
 </div>
 
 <div class="grid gap-4 lg:grid-cols-2">
-  <div class="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-700/50">
+
+  <!-- CARD ASIGNACIÓN -->
+  <div class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
     <div class="flex items-start gap-3">
+
       <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#033F73] text-white">
         <i class="fa-solid fa-user-graduate"></i>
       </div>
 
       <div class="min-w-0">
-        <p class="text-sm text-gray-500 dark:text-gray-400">Asignación actual</p>
+        <p class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
+          Asignación actual
+        </p>
 
         <p class="mt-1 truncate text-lg font-bold text-gray-900 dark:text-white">
           <%= traineeActual?.nombre || 'Sin trainee asignado' %>
         </p>
 
-        <p class="text-sm text-gray-500 dark:text-gray-400">
+        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
           CI: <%= traineeActual?.cedula || '-' %>
         </p>
 
@@ -28,31 +33,48 @@
           <%= traineeActual?.fecha_inicio ? new Date(traineeActual.fecha_inicio).toLocaleDateString('es-VE') : '-' %>
         </p>
       </div>
+
     </div>
   </div>
 
+  <!-- FORM -->
   <% if (currentUser?.canManageUsers) { %>
     <form action="/usuarios/trainee" method="post"
-      class="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
-      <h3 class="mb-3 font-semibold text-gray-900 dark:text-white">Cambiar trainee</h3>
+      class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
 
-      <div class="mb-3">
-        <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Nombre</label>
-        <input name="nombre" type="text" required
-          class="w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+      <h3 class="mb-4 font-semibold text-gray-900 dark:text-white">
+        Cambiar trainee
+      </h3>
+
+      <div class="grid gap-4">
+
+        <div>
+          <label class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
+            Nombre
+          </label>
+          <input name="nombre" type="text" required
+            class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-[#033F73] focus:ring-[#033F73] dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+        </div>
+
+        <div>
+          <label class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
+            Cédula
+          </label>
+          <input name="cedula" type="text"
+            class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-[#033F73] focus:ring-[#033F73] dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+        </div>
+
       </div>
 
-      <div class="mb-4">
-        <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Cédula</label>
-        <input name="cedula" type="text"
-          class="w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+      <div class="mt-4">
+        <button type="submit"
+          class="inline-flex items-center justify-center rounded-lg bg-[#033F73] px-4 py-2 text-sm font-semibold text-white hover:bg-[#023059]">
+          <i class="fa-solid fa-floppy-disk mr-2"></i>
+          Guardar cambio
+        </button>
       </div>
 
-      <button type="submit"
-        class="inline-flex items-center justify-center rounded-lg bg-[#033F73] px-4 py-2 text-sm font-semibold text-white hover:bg-[#023059]">
-        <i class="fa-solid fa-floppy-disk mr-2"></i>
-        Guardar cambio
-      </button>
     </form>
     <% } %>
+
 </div>

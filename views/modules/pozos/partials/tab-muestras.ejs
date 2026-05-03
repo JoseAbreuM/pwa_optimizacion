@@ -1,0 +1,95 @@
+<div class="space-y-4">
+
+  <section class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+    <div class="mb-4 flex items-start justify-between gap-3">
+      <div>
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">
+          Muestras
+        </h2>
+        <p class="text-sm text-slate-500 dark:text-slate-400">
+          Histórico de muestras registradas para este pozo.
+        </p>
+      </div>
+
+      <button type="button" class="rounded-lg bg-[#033F73] px-3 py-2 text-sm font-medium text-white hover:bg-[#022f56]">
+        Nueva muestra
+      </button>
+    </div>
+
+    <div class="overflow-x-auto">
+      <table id="tabla-muestras-pozo" class="w-full text-left text-sm text-slate-500 dark:text-slate-400">
+        <thead class="bg-slate-50 text-xs uppercase text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+          <tr>
+            <th class="px-4 py-3">Fecha</th>
+            <th class="px-4 py-3">AyS</th>
+            <th class="px-4 py-3">API</th>
+            <th class="px-4 py-3">Representativa</th>
+            <th class="px-4 py-3">Próx. muestra</th>
+            <th class="px-4 py-3">Acción</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          <% if (ultimasMuestras && ultimasMuestras.length) { %>
+            <% ultimasMuestras.forEach((muestra)=> { %>
+              <tr class="border-b bg-white dark:border-slate-700 dark:bg-slate-900">
+                <td class="px-4 py-3">
+                  <%= muestra.fecha || '—' %>
+                </td>
+
+                <td class="px-4 py-3">
+                  <%= muestra.ays || '—' %>
+                </td>
+
+                <td class="px-4 py-3">
+                  <%= muestra.api || '—' %>
+                </td>
+
+                <td class="px-4 py-3">
+                  <% if (muestra.representativa) { %>
+                    <span
+                      class="rounded-full bg-green-100 px-2 py-1 text-xs font-semibold text-green-700 dark:bg-green-900/30 dark:text-green-300">
+                      Sí
+                    </span>
+                    <% } else { %>
+                      <span
+                        class="rounded-full bg-red-100 px-2 py-1 text-xs font-semibold text-red-700 dark:bg-red-900/30 dark:text-red-300">
+                        No
+                      </span>
+                      <% } %>
+                </td>
+
+                <td class="px-4 py-3">
+                  <%= muestra.prox_muestra || '—' %>
+                </td>
+
+                <td class="px-4 py-3">
+                  <button type="button" class="font-medium text-[#033F73] hover:underline dark:text-sky-300">
+                    Editar
+                  </button>
+                </td>
+              </tr>
+              <% }) %>
+                <% } else { %>
+                  <tr>
+                    <td colspan="6" class="px-4 py-6 text-center text-slate-500 dark:text-slate-400">
+                      No hay muestras registradas.
+                    </td>
+                  </tr>
+                  <% } %>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section
+    class="rounded-2xl border border-dashed border-slate-300 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
+    <h2 class="text-lg font-semibold text-slate-900 dark:text-white">
+      Gráfica de muestras
+    </h2>
+    <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
+      Pendiente: gráfica usando solo muestras representativas.
+    </p>
+  </section>
+
+</div>

@@ -1,5 +1,37 @@
 const { pool } = require('../../config/db');
 
+async function getPotencialPorArea() {
+  const [rows] = await pool.query(`
+    SELECT
+      area,
+      potencial_total
+    FROM vw_dashboard_potencial_area
+    ORDER BY
+      CASE area
+        WHEN 'Bare Tradicional' THEN 1
+        WHEN 'Bare Este' THEN 2
+        WHEN 'Bare 6' THEN 3
+        WHEN 'Total Campo' THEN 99
+        ELSE 50
+      END
+  `);
+
+  const colorsByArea = {
+    'Bare Tradicional': '#16A34A',
+    'Bare Este': '#7C3AED',
+    'Bare 6': '#2563EB',
+    'Trilla': '#7C3AED',
+    'Asfaltada y Tigra': '#DC2626',
+    'Total Campo': '#033F73'
+  };
+
+  return {
+    labels: rows.map(row => row.area),
+    values: rows.map(row => Number(row.potencial_total || 0)),
+    colors: rows.map(row => colorsByArea[row.area] || '#64748B')
+  };
+}
+
 async function getDashboardData(currentUser) {
   const [[kpis]] = await pool.query(`
     SELECT * FROM vw_dashboard_kpis
@@ -61,6 +93,8 @@ async function getDashboardData(currentUser) {
     ORDER BY tvu_dias DESC
   `);
 
+  const potencialPorArea = await getPotencialPorArea();
+
   return {
     title: 'Dashboard',
     currentUser: currentUser || null,
@@ -71,10 +105,12 @@ async function getDashboardData(currentUser) {
     categorias,
     servicios,
     muestrasAlerta,
-    bombasCriticas
+    bombasCriticas,
+    potencialPorArea
   };
 }
 
 module.exports = {
-  getDashboardData
+  getDashboardData,
+  getPotencialPorArea
 };

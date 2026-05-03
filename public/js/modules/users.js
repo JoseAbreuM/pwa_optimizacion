@@ -11,7 +11,10 @@ function initUsersTables() {
 
   const tables = {};
 
-  if (document.getElementById('tabla-usuarios')) {
+  const usuariosTable = document.getElementById('tabla-usuarios');
+  const personalTable = document.getElementById('tabla-personal');
+
+  if (usuariosTable && !window.DataTable.isDataTable('#tabla-usuarios')) {
     tables.usuarios = new window.DataTable('#tabla-usuarios', {
       pageLength: 10,
       lengthMenu: [5, 10, 25, 50],
@@ -23,7 +26,7 @@ function initUsersTables() {
     });
   }
 
-  if (document.getElementById('tabla-personal')) {
+  if (personalTable && !window.DataTable.isDataTable('#tabla-personal')) {
     tables.personal = new window.DataTable('#tabla-personal', {
       pageLength: 10,
       lengthMenu: [5, 10, 25, 50],
@@ -43,9 +46,7 @@ function initUsersTabAdjustments() {
     tabButton.addEventListener('click', () => {
       setTimeout(() => {
         Object.values(window.usersTables || {}).forEach((table) => {
-          if (table && table.columns) {
-            table.columns.adjust();
-          }
+          if (table?.columns) table.columns.adjust();
         });
       }, 150);
     });

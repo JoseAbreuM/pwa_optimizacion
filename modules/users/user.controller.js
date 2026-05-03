@@ -39,7 +39,7 @@ async function renderCreateUserForm(req, res, options = {}) {
     userService.getPersonal()
   ]);
 
-  return res.render('users/crear', {
+  return res.render('modules/users/crear', {
     title: 'Crear usuario',
     pageTitle: 'Crear usuario',
     layout: 'layouts/mainLayout',
@@ -137,20 +137,120 @@ async function createUser(req, res, next) {
 }
 
 
-async function renderCreatePersonal(req, res) {
-  return res.status(501).send('Formulario de personal pendiente de implementar');
+async function renderCreatePersonalForm(req, res, options = {}) {
+  const departments = await userService.loadDepartments();
+
+  return res.render('modules/users/crear-personal', {
+    title: 'Crear personal',
+    pageTitle: 'Crear personal',
+    layout: 'layouts/mainLayout',
+    currentSection: 'usuarios',
+    currentUser: req.session.user,
+
+    departments,
+
+    error: options.error || null,
+    success: options.success || null,
+
+    formData: options.formData || {
+      nombre_completo: '',
+      cedula_tipo: 'V',
+      cedula_numero: '',
+      id_dept: '',
+      activo: 1
+    }
+  });
 }
 
-async function createPersonal(req, res) {
-  return res.status(501).send('Creación de personal pendiente de implementar');
+async function renderCreatePersonal(req, res, next) {
+  try {
+    return await renderCreatePersonalForm(req, res);
+  } catch (error) {
+    return next(error);
+  }
 }
 
-async function renderTrainee(req, res) {
-  return res.status(501).send('Gestión de trainee pendiente de implementar');
+async function createPersonal(req, res, next) {
+  const nombreCompleto = String(req.body.nombre_completo || '').trim();
+  const cedulaTipo = String(req.body.cedula_tipo || 'V').trim().toUpperCase();
+  const cedulaNumero = String(req.body.cedula_numero || '').trim();
+  const cedula = cedulaNumero ? `${cedulaTipo}-${cedulaNumero}` : '';
+
+  const idDept = req.body.id_dept ? Number(req.body.id_dept) : null;
+  const activo = req.body.activo === '0' ? 0 : 1;
+
+  const formData = {
+    nombre_completo: nombreCompleto,
+    cedula_tipo: cedulaTipo,
+    cedula_numero: cedulaNumero,
+    id_dept: idDept || '',
+    activo
+  };
+
+  try {
+    if (!req.session.user?.canManagePersonal) {
+      return res.status(403).render('errors/noAutorizado', {
+        title: 'Sin acceso',
+        currentUser: req.session.user
+      });
+    }
+
+    if (!nombreCompleto || !idDept || !cedulaNumero) {
+      return await renderCreatePersonalForm(req, res, {
+        error: 'Completa nombre, cédula y departamento.',
+        formData
+      });
+    }
+
+    await userService.createPersonal({
+      nombre_completo: nombreCompleto,
+      cedula,
+      id_dept: idDept,
+      activo
+    });
+
+    return res.redirect('/usuarios');
+  } catch (error) {
+    return next(error);
+  }
+}
+async function renderTrainee(req, res, next) {
+  try {
+    const traineeActual = await userService.getCurrentTraineeAssignment();
+
+    return res.render('modules/users/trainee', {
+      title: 'Trainee actual',
+      pageTitle: 'Trainee actual',
+      layout: 'layouts/mainLayout',
+      currentSection: 'usuarios',
+      currentUser: req.session.user,
+      traineeActual,
+      error: null,
+      success: null
+    });
+  } catch (error) {
+    return next(error);
+  }
 }
 
-async function updateTrainee(req, res) {
-  return res.status(501).send('Actualización de trainee pendiente de implementar');
+async function updateTrainee(req, res, next) {
+  const nombre = String(req.body.nombre || '').trim();
+  const cedula = String(req.body.cedula || '').trim();
+
+  try {
+    if (!nombre) {
+      return res.redirect('/usuarios');
+    }
+
+    await userService.updateTraineeAssignment({
+      nombre,
+      cedula
+    });
+
+    return res.redirect('/usuarios');
+  } catch (error) {
+    return next(error);
+  }
 }
 
 module.exports = {
