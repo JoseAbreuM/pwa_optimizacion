@@ -1,3 +1,5 @@
+const { port, sessionSecret, envPath } = require('./config/env');
+
 const path = require('path');
 const express = require('express');
 const cookieParser = require('cookie-parser');
@@ -6,7 +8,6 @@ const expressLayouts = require('express-ejs-layouts');
 
 const { registerModuleRoutes } = require('./modules');
 const { testConnection } = require('./config/db');
-const { port, sessionSecret, envPath } = require('./config/env');
 const { notFoundHandler, errorHandler } = require('./middleware/error');
 const viewHelpers = require('./utils/viewHelpers');
 
@@ -65,6 +66,7 @@ async function startServer() {
     app.listen(port, () => {
       console.log(`PetroField PWA ejecutandose en http://localhost:${port}`);
       console.log(`Conexion MySQL lista sobre la base de datos: ${dbName}`);
+      console.log(`Variables de entorno cargadas desde: ${envPath}`);
     });
   } catch (error) {
     console.error(`No fue posible conectar con MySQL. Revisa variables de entorno en ${envPath}.`);

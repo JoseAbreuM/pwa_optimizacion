@@ -602,17 +602,37 @@ async function getUltimoParametroByPozo(id) {
       id,
       id_pozo,
       fecha,
-      torque,
-      amp,
+
       freq,
       volts,
-      rpm,
-      hp,
+      amp,
+
       vel_operacional,
       vel_actual,
+      rpm,
+
+      torque,
       presion_casing,
       presion_tubing,
-      observacion
+
+      hp,
+
+      observacion,
+      diagnostico,
+
+      recomendacion,
+      recomendaciones,
+      ajustes_realizados,
+      comentario,
+
+      CONCAT_WS(
+        ' | ',
+        NULLIF(recomendaciones, ''),
+        NULLIF(ajustes_realizados, ''),
+        NULLIF(comentario, ''),
+        NULLIF(recomendacion, '')
+      ) AS recomendaciones_completas
+
     FROM parametros_diarios
     WHERE id_pozo = ?
     ORDER BY fecha DESC, id DESC
@@ -744,26 +764,50 @@ async function getBootstrapData() {
 async function getPozoTimeline(id) {
   const pozoId = Number(id);
 
-  const [parametros] = await pool.query(
-    `SELECT
-       fecha,
-       torque,
-       amp,
-       freq,
-       volts,
-       rpm,
-       hp,
-       vel_operacional,
-       vel_actual,
-       presion_casing,
-       presion_tubing,
-       observacion
-     FROM parametros_diarios
-     WHERE id_pozo = ?
-     ORDER BY fecha DESC, id DESC
-     LIMIT 10`,
-    [pozoId]
-  );
+ const [parametros] = await pool.query(
+  `SELECT
+     id,
+     id_pozo,
+     fecha,
+
+     freq,
+     volts,
+     amp,
+
+     vel_operacional,
+     vel_actual,
+     rpm,
+
+     torque,
+     presion_casing,
+     presion_tubing,
+
+     hp,
+
+     observacion,
+     diagnostico,
+
+     recomendacion,
+     recomendaciones,
+     ajustes_realizados,
+     comentario,
+
+     CONCAT_WS(
+       ' | ',
+       NULLIF(recomendaciones, ''),
+       NULLIF(ajustes_realizados, ''),
+       NULLIF(comentario, ''),
+       NULLIF(recomendacion, '')
+     ) AS recomendaciones_completas
+
+   FROM parametros_diarios
+   WHERE id_pozo = ?
+   ORDER BY fecha DESC, id DESC
+   LIMIT 100`,
+  [pozoId]
+);
+
+
 
   const [niveles] = await pool.query(
     `SELECT
