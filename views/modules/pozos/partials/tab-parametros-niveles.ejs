@@ -1,95 +1,155 @@
 <% const parametros=typeof historialParametros !=='undefined' ? historialParametros : (timeline?.parametros || []);
-  const niveles=typeof historialNiveles !=='undefined' ? historialNiveles : (timeline?.niveles || []); %>
+  const niveles=typeof historialNiveles !=='undefined' ? historialNiveles : (timeline?.niveles || []); const
+  comparativo=typeof comparativoParametrosNiveles !=='undefined' ? comparativoParametrosNiveles : (timeline?.comparativo
+  || []); const ultimoComparativo=comparativo && comparativo.length ? comparativo[0] : null; %>
 
-  <div class="space-y-4">
+  <div class="space-y-5">
 
-    <!-- Últimos parámetros -->
-    <section class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900">
-      <div class="mb-4 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h2 class="text-lg font-semibold text-slate-900 dark:text-white">
-            Últimos parámetros
-          </h2>
-          <p class="text-sm text-slate-500 dark:text-slate-400">
-            Último registro operativo cargado para este pozo.
-          </p>
+    <!-- =========================================================
+       RESUMEN PARAMETROS
+       ========================================================= -->
+    <section
+      class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900">
+      <div
+        class="border-b border-slate-100 bg-gradient-to-r from-blue-50 via-white to-slate-50 p-4 dark:border-slate-800 dark:from-blue-950/30 dark:via-slate-900 dark:to-slate-900">
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <div class="flex items-center gap-2">
+              <span
+                class="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">
+                <i class="fa-solid fa-sliders"></i>
+              </span>
+
+              <div>
+                <h2 class="text-lg font-semibold text-slate-900 dark:text-white">
+                  Últimos parámetros
+                </h2>
+                <p class="text-sm text-slate-500 dark:text-slate-400">
+                  Último registro operativo tomado desde la carga de parámetros.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <button type="button" data-pozo-open-modal="modal-historial-parametros"
+            class="inline-flex items-center justify-center gap-2 rounded-xl border border-blue-200 bg-white px-3 py-2 text-sm font-medium text-blue-700 shadow-sm hover:bg-blue-50 dark:border-blue-800 dark:bg-slate-900 dark:text-blue-300 dark:hover:bg-blue-950/40">
+            <i class="fa-solid fa-table-list"></i>
+            Ver histórico
+          </button>
         </div>
-
-        <button type="button" data-pozo-open-modal="modal-historial-parametros"
-          class="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800">
-          Ver histórico
-        </button>
       </div>
 
-      <% if (ultimoParametro) { %>
-        <div class="grid gap-2 sm:grid-cols-2 md:grid-cols-4 xl:grid-cols-8">
+      <div class="p-4">
+        <% if (ultimoParametro) { %>
+          <div class="grid gap-3 sm:grid-cols-2 md:grid-cols-4 xl:grid-cols-8">
 
-          <div class="rounded-xl bg-slate-50 px-3 py-2 dark:bg-slate-800">
-            <p class="text-[10px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Fecha</p>
-            <p class="mt-1 text-sm font-semibold text-slate-900 dark:text-white">
-              <%= formatDate(ultimoParametro.fecha) %>
-            </p>
-          </div>
+            <div
+              class="rounded-2xl border border-slate-100 bg-slate-50 px-3 py-3 dark:border-slate-700 dark:bg-slate-800/70">
+              <p class="text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Fecha</p>
+              <p class="mt-1 text-sm font-bold text-slate-900 dark:text-white">
+                <%= formatDate(ultimoParametro.fecha) %>
+              </p>
+            </div>
 
-          <div class="rounded-xl bg-slate-50 px-3 py-2 dark:bg-slate-800">
-            <p class="text-[10px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Torque</p>
-            <p class="mt-1 text-sm font-semibold text-slate-900 dark:text-white">
-              <%= formatNumber(ultimoParametro.torque, 2) %>
-            </p>
-          </div>
+            <div
+              class="rounded-2xl border border-orange-100 bg-orange-50 px-3 py-3 dark:border-orange-900/40 dark:bg-orange-950/20">
+              <p class="text-[10px] font-semibold uppercase tracking-wide text-orange-700 dark:text-orange-300">Torque
+              </p>
+              <p class="mt-1 text-sm font-bold text-slate-900 dark:text-white">
+                <%= formatNumber(ultimoParametro.torque, 2) %>
+              </p>
+            </div>
 
-          <div class="rounded-xl bg-slate-50 px-3 py-2 dark:bg-slate-800">
-            <p class="text-[10px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Amp</p>
-            <p class="mt-1 text-sm font-semibold text-slate-900 dark:text-white">
-              <%= formatNumber(ultimoParametro.amp, 2) %>
-            </p>
-          </div>
+            <div
+              class="rounded-2xl border border-amber-100 bg-amber-50 px-3 py-3 dark:border-amber-900/40 dark:bg-amber-950/20">
+              <p class="text-[10px] font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300">AMP</p>
+              <p class="mt-1 text-sm font-bold text-slate-900 dark:text-white">
+                <%= formatNumber(ultimoParametro.amp, 2) %>
+              </p>
+            </div>
 
-          <div class="rounded-xl bg-slate-50 px-3 py-2 dark:bg-slate-800">
-            <p class="text-[10px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Freq</p>
-            <p class="mt-1 text-sm font-semibold text-slate-900 dark:text-white">
-              <%= formatNumber(ultimoParametro.freq, 2) %>
-            </p>
-          </div>
+            <div
+              class="rounded-2xl border border-cyan-100 bg-cyan-50 px-3 py-3 dark:border-cyan-900/40 dark:bg-cyan-950/20">
+              <p class="text-[10px] font-semibold uppercase tracking-wide text-cyan-700 dark:text-cyan-300">Freq</p>
+              <p class="mt-1 text-sm font-bold text-slate-900 dark:text-white">
+                <%= formatNumber(ultimoParametro.freq, 2) %>
+              </p>
+            </div>
 
-          <div class="rounded-xl bg-slate-50 px-3 py-2 dark:bg-slate-800">
-            <p class="text-[10px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Volts</p>
-            <p class="mt-1 text-sm font-semibold text-slate-900 dark:text-white">
-              <%= formatNumber(ultimoParametro.volts, 2) %>
-            </p>
-          </div>
+            <div
+              class="rounded-2xl border border-purple-100 bg-purple-50 px-3 py-3 dark:border-purple-900/40 dark:bg-purple-950/20">
+              <p class="text-[10px] font-semibold uppercase tracking-wide text-purple-700 dark:text-purple-300">Volts
+              </p>
+              <p class="mt-1 text-sm font-bold text-slate-900 dark:text-white">
+                <%= formatNumber(ultimoParametro.volts, 2) %>
+              </p>
+            </div>
 
-          <div class="rounded-xl bg-slate-50 px-3 py-2 dark:bg-slate-800">
-            <p class="text-[10px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">HP</p>
-            <p class="mt-1 text-sm font-semibold text-slate-900 dark:text-white">
-              <%= formatNumber(ultimoParametro.hp, 2) %>
-            </p>
-          </div>
+            <div
+              class="rounded-2xl border border-emerald-100 bg-emerald-50 px-3 py-3 dark:border-emerald-900/40 dark:bg-emerald-950/20">
+              <p class="text-[10px] font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">HP</p>
+              <p class="mt-1 text-sm font-bold text-slate-900 dark:text-white">
+                <%= formatNumber(ultimoParametro.hp, 2) %>
+              </p>
+            </div>
 
-          <div class="rounded-xl bg-slate-50 px-3 py-2 dark:bg-slate-800">
-            <p class="text-[10px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">VO</p>
-            <p class="mt-1 text-sm font-semibold text-slate-900 dark:text-white">
-              <%= formatNumber(ultimoParametro.vel_operacional, 2) %>
-            </p>
-          </div>
+            <div
+              class="rounded-2xl border border-indigo-100 bg-indigo-50 px-3 py-3 dark:border-indigo-900/40 dark:bg-indigo-950/20">
+              <p class="text-[10px] font-semibold uppercase tracking-wide text-indigo-700 dark:text-indigo-300">VO</p>
+              <p class="mt-1 text-sm font-bold text-slate-900 dark:text-white">
+                <%= formatNumber(ultimoParametro.vel_operacional, 2) %>
+              </p>
+            </div>
 
-          <div class="rounded-xl bg-slate-50 px-3 py-2 dark:bg-slate-800">
-            <p class="text-[10px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Vel. actual
-            </p>
-            <p class="mt-1 text-sm font-semibold text-slate-900 dark:text-white">
-              <%= formatNumber(ultimoParametro.vel_actual, 2) %>
-            </p>
-          </div>
+            <div
+              class="rounded-2xl border border-sky-100 bg-sky-50 px-3 py-3 dark:border-sky-900/40 dark:bg-sky-950/20">
+              <p class="text-[10px] font-semibold uppercase tracking-wide text-sky-700 dark:text-sky-300">Vel. actual
+              </p>
+              <p class="mt-1 text-sm font-bold text-slate-900 dark:text-white">
+                <%= formatNumber(ultimoParametro.vel_actual, 2) %>
+              </p>
+            </div>
 
-        </div>
-        <% } else { %>
-          <div class="rounded-xl bg-yellow-50 p-4 text-sm text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-300">
-            No hay parámetros registrados para este pozo.
+            <div
+              class="rounded-2xl border border-rose-100 bg-rose-50 px-3 py-3 dark:border-rose-900/40 dark:bg-rose-950/20">
+              <p class="text-[10px] font-semibold uppercase tracking-wide text-rose-700 dark:text-rose-300">P. casing
+              </p>
+              <p class="mt-1 text-sm font-bold text-slate-900 dark:text-white">
+                <%= formatNumber(ultimoParametro.presion_casing, 2) %>
+              </p>
+            </div>
+
+            <div
+              class="rounded-2xl border border-teal-100 bg-teal-50 px-3 py-3 dark:border-teal-900/40 dark:bg-teal-950/20">
+              <p class="text-[10px] font-semibold uppercase tracking-wide text-teal-700 dark:text-teal-300">P. tubing
+              </p>
+              <p class="mt-1 text-sm font-bold text-slate-900 dark:text-white">
+                <%= formatNumber(ultimoParametro.presion_tubing, 2) %>
+              </p>
+            </div>
+
+            <div
+              class="rounded-2xl border border-slate-100 bg-slate-50 px-3 py-3 dark:border-slate-700 dark:bg-slate-800/70 sm:col-span-2 md:col-span-2 xl:col-span-6">
+              <p class="text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                Observación / recomendación</p>
+              <p class="mt-1 line-clamp-2 text-sm font-medium text-slate-800 dark:text-slate-200"
+                title="<%= fallback(ultimoParametro.recomendaciones_completas || ultimoParametro.observacion) %>">
+                <%= fallback(ultimoParametro.recomendaciones_completas || ultimoParametro.observacion) %>
+              </p>
+            </div>
+
           </div>
-          <% } %>
+          <% } else { %>
+            <div class="rounded-xl bg-yellow-50 p-4 text-sm text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-300">
+              No hay parámetros registrados para este pozo.
+            </div>
+            <% } %>
+      </div>
     </section>
 
-    <!-- Gráfica inteligente de parámetros -->
+    <!-- =========================================================
+       GRAFICA PARAMETROS
+       ========================================================= -->
     <section class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900">
       <div class="mb-4 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div>
@@ -110,6 +170,13 @@
             <option value="180">6 meses</option>
             <option value="all">Todo</option>
           </select>
+
+          <button type="button" data-export-chart="chart-parametros-pozo"
+            data-export-name="parametros-<%= pozo.codigo %>"
+            class="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700">
+            <i class="fa-solid fa-download"></i>
+            Exportar PNG
+          </button>
         </div>
       </div>
 
@@ -121,7 +188,7 @@
 
         <label class="inline-flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-800">
           <input type="checkbox" name="parametro-chart-field" value="amp">
-          Amp
+          AMP
         </label>
 
         <label class="inline-flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-800">
@@ -174,88 +241,156 @@
       </div>
     </section>
 
-    <!-- Última toma de nivel -->
-    <section class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900">
-      <div class="mb-4 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h2 class="text-lg font-semibold text-slate-900 dark:text-white">
-            Última toma de nivel
-          </h2>
-          <p class="text-sm text-slate-500 dark:text-slate-400">
-            Último registro de nivel cargado para este pozo.
-          </p>
-        </div>
+    <!-- =========================================================
+       RESUMEN NIVELES
+       ========================================================= -->
+    <section
+      class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900">
+      <div
+        class="border-b border-slate-100 bg-gradient-to-r from-emerald-50 via-white to-slate-50 p-4 dark:border-slate-800 dark:from-emerald-950/30 dark:via-slate-900 dark:to-slate-900">
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div class="flex items-center gap-2">
+            <span
+              class="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">
+              <i class="fa-solid fa-water"></i>
+            </span>
 
-        <button type="button" data-pozo-open-modal="modal-historial-niveles"
-          class="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800">
-          Ver histórico
-        </button>
+            <div>
+              <h2 class="text-lg font-semibold text-slate-900 dark:text-white">
+                Última toma de nivel
+              </h2>
+              <p class="text-sm text-slate-500 dark:text-slate-400">
+                Último registro cargado desde la base de niveles.
+              </p>
+            </div>
+          </div>
+
+          <button type="button" data-pozo-open-modal="modal-historial-niveles"
+            class="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-white px-3 py-2 text-sm font-medium text-emerald-700 shadow-sm hover:bg-emerald-50 dark:border-emerald-800 dark:bg-slate-900 dark:text-emerald-300 dark:hover:bg-emerald-950/40">
+            <i class="fa-solid fa-table-list"></i>
+            Ver histórico
+          </button>
+        </div>
       </div>
 
-      <% if (ultimoNivel) { %>
-        <div class="grid gap-2 sm:grid-cols-2 md:grid-cols-4 xl:grid-cols-7">
+      <div class="p-4">
+        <% if (ultimoNivel) { %>
+          <div class="grid gap-3 sm:grid-cols-2 md:grid-cols-4 xl:grid-cols-10">
 
-          <div class="rounded-xl bg-slate-50 px-3 py-2 dark:bg-slate-800">
-            <p class="text-[10px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Fecha</p>
-            <p class="mt-1 text-sm font-semibold text-slate-900 dark:text-white">
-              <%= formatDate(ultimoNivel.fecha) %>
-            </p>
-          </div>
+            <div
+              class="rounded-2xl border border-slate-100 bg-slate-50 px-3 py-3 dark:border-slate-700 dark:bg-slate-800/70">
+              <p class="text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Fecha</p>
+              <p class="mt-1 text-sm font-bold text-slate-900 dark:text-white">
+                <%= formatDate(ultimoNivel.fecha) %>
+              </p>
+            </div>
 
-          <div class="rounded-xl bg-slate-50 px-3 py-2 dark:bg-slate-800">
-            <p class="text-[10px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">NF pies</p>
-            <p class="mt-1 text-sm font-semibold text-slate-900 dark:text-white">
-              <%= formatNumber(ultimoNivel.nf_pies, 2) %>
-            </p>
-          </div>
+            <div
+              class="rounded-2xl border border-blue-100 bg-blue-50 px-3 py-3 dark:border-blue-900/40 dark:bg-blue-950/20">
+              <p class="text-[10px] font-semibold uppercase tracking-wide text-blue-700 dark:text-blue-300">NF pies</p>
+              <p class="mt-1 text-sm font-bold text-slate-900 dark:text-white">
+                <%= formatNumber(ultimoNivel.nf_pies, 2) %>
+              </p>
+            </div>
 
-          <div class="rounded-xl bg-slate-50 px-3 py-2 dark:bg-slate-800">
-            <p class="text-[10px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Sumergencia
-            </p>
-            <p class="mt-1 text-sm font-semibold text-slate-900 dark:text-white">
-              <%= formatNumber(ultimoNivel.sumergencia, 2) %>
-            </p>
-          </div>
+            <div
+              class="rounded-2xl border border-emerald-100 bg-emerald-50 px-3 py-3 dark:border-emerald-900/40 dark:bg-emerald-950/20">
+              <p class="text-[10px] font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">SUM
+              </p>
+              <p class="mt-1 text-sm font-bold text-slate-900 dark:text-white">
+                <%= formatNumber(ultimoNivel.sumergencia, 2) %>
+              </p>
+            </div>
 
-          <div class="rounded-xl bg-slate-50 px-3 py-2 dark:bg-slate-800">
-            <p class="text-[10px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">PIP</p>
-            <p class="mt-1 text-sm font-semibold text-slate-900 dark:text-white">
-              <%= formatNumber(ultimoNivel.pip, 2) %>
-            </p>
-          </div>
+            <div
+              class="rounded-2xl border border-cyan-100 bg-cyan-50 px-3 py-3 dark:border-cyan-900/40 dark:bg-cyan-950/20">
+              <p class="text-[10px] font-semibold uppercase tracking-wide text-cyan-700 dark:text-cyan-300">% Liq</p>
+              <p class="mt-1 text-sm font-bold text-slate-900 dark:text-white">
+                <%= formatNumber(ultimoNivel.porcentaje_liq, 2) %>
+              </p>
+            </div>
 
-          <div class="rounded-xl bg-slate-50 px-3 py-2 dark:bg-slate-800">
-            <p class="text-[10px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">PBHP</p>
-            <p class="mt-1 text-sm font-semibold text-slate-900 dark:text-white">
-              <%= formatNumber(ultimoNivel.pbhp, 2) %>
-            </p>
-          </div>
+            <div
+              class="rounded-2xl border border-indigo-100 bg-indigo-50 px-3 py-3 dark:border-indigo-900/40 dark:bg-indigo-950/20">
+              <p class="text-[10px] font-semibold uppercase tracking-wide text-indigo-700 dark:text-indigo-300">PIP</p>
+              <p class="mt-1 text-sm font-bold text-slate-900 dark:text-white">
+                <%= formatNumber(ultimoNivel.pip, 2) %>
+              </p>
+            </div>
 
-          <div class="rounded-xl bg-slate-50 px-3 py-2 dark:bg-slate-800">
-            <p class="text-[10px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Casing</p>
-            <p class="mt-1 text-sm font-semibold text-slate-900 dark:text-white">
-              <%= formatNumber(ultimoNivel.presion_casing, 2) %>
-            </p>
-          </div>
+            <div
+              class="rounded-2xl border border-purple-100 bg-purple-50 px-3 py-3 dark:border-purple-900/40 dark:bg-purple-950/20">
+              <p class="text-[10px] font-semibold uppercase tracking-wide text-purple-700 dark:text-purple-300">PBHP</p>
+              <p class="mt-1 text-sm font-bold text-slate-900 dark:text-white">
+                <%= formatNumber(ultimoNivel.pbhp, 2) %>
+              </p>
+            </div>
 
-          <div class="rounded-xl bg-slate-50 px-3 py-2 dark:bg-slate-800">
-            <p class="text-[10px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Diagnóstico
-            </p>
-            <p class="mt-1 truncate text-sm font-semibold text-slate-900 dark:text-white"
-              title="<%= fallback(ultimoNivel.diagnostico) %>">
-              <%= fallback(ultimoNivel.diagnostico) %>
-            </p>
-          </div>
+            <div
+              class="rounded-2xl border border-rose-100 bg-rose-50 px-3 py-3 dark:border-rose-900/40 dark:bg-rose-950/20">
+              <p class="text-[10px] font-semibold uppercase tracking-wide text-rose-700 dark:text-rose-300">Casing</p>
+              <p class="mt-1 text-sm font-bold text-slate-900 dark:text-white">
+                <%= formatNumber(ultimoNivel.presion_casing, 2) %>
+              </p>
+            </div>
 
-        </div>
-        <% } else { %>
-          <div class="rounded-xl bg-yellow-50 p-4 text-sm text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-300">
-            No hay tomas de nivel registradas para este pozo.
+            <div
+              class="rounded-2xl border border-teal-100 bg-teal-50 px-3 py-3 dark:border-teal-900/40 dark:bg-teal-950/20">
+              <p class="text-[10px] font-semibold uppercase tracking-wide text-teal-700 dark:text-teal-300">Tubing</p>
+              <p class="mt-1 text-sm font-bold text-slate-900 dark:text-white">
+                <%= formatNumber(ultimoNivel.presion_tubing, 2) %>
+              </p>
+            </div>
+
+            <div
+              class="rounded-2xl border border-orange-100 bg-orange-50 px-3 py-3 dark:border-orange-900/40 dark:bg-orange-950/20">
+              <p class="text-[10px] font-semibold uppercase tracking-wide text-orange-700 dark:text-orange-300">Torque
+              </p>
+              <p class="mt-1 text-sm font-bold text-slate-900 dark:text-white">
+                <%= formatNumber(ultimoNivel.torque, 2) %>
+              </p>
+            </div>
+
+            <div
+              class="rounded-2xl border border-amber-100 bg-amber-50 px-3 py-3 dark:border-amber-900/40 dark:bg-amber-950/20">
+              <p class="text-[10px] font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300">AMP</p>
+              <p class="mt-1 text-sm font-bold text-slate-900 dark:text-white">
+                <%= formatNumber(ultimoNivel.amp, 2) %>
+              </p>
+            </div>
+
+            <div
+              class="rounded-2xl border border-slate-100 bg-slate-50 px-3 py-3 dark:border-slate-700 dark:bg-slate-800/70 sm:col-span-2 md:col-span-2 xl:col-span-5">
+              <p class="text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                Diagnóstico</p>
+              <p class="mt-1 line-clamp-2 text-sm font-medium text-slate-800 dark:text-slate-200"
+                title="<%= fallback(ultimoNivel.diagnostico) %>">
+                <%= fallback(ultimoNivel.diagnostico) %>
+              </p>
+            </div>
+
+            <div
+              class="rounded-2xl border border-slate-100 bg-slate-50 px-3 py-3 dark:border-slate-700 dark:bg-slate-800/70 sm:col-span-2 md:col-span-2 xl:col-span-5">
+              <p class="text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                Recomendación ejecutada</p>
+              <p class="mt-1 line-clamp-2 text-sm font-medium text-slate-800 dark:text-slate-200"
+                title="<%= fallback(ultimoNivel.recomendacion_ejecutada || ultimoNivel.recomendacion) %>">
+                <%= fallback(ultimoNivel.recomendacion_ejecutada || ultimoNivel.recomendacion) %>
+              </p>
+            </div>
+
           </div>
-          <% } %>
+          <% } else { %>
+            <div class="rounded-xl bg-yellow-50 p-4 text-sm text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-300">
+              No hay tomas de nivel registradas para este pozo.
+            </div>
+            <% } %>
+      </div>
     </section>
 
-    <!-- Gráfica de niveles -->
+    <!-- =========================================================
+       GRAFICA NIVELES
+       ========================================================= -->
     <section class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900">
       <div class="mb-4 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div>
@@ -267,13 +402,21 @@
           </p>
         </div>
 
-        <select id="niveles-limite"
-          class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200">
-          <option value="3">Últimas 3</option>
-          <option value="5" selected>Últimas 5</option>
-          <option value="10">Últimas 10</option>
-          <option value="all">Todas</option>
-        </select>
+        <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <select id="niveles-limite"
+            class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200">
+            <option value="3">Últimas 3</option>
+            <option value="5" selected>Últimas 5</option>
+            <option value="10">Últimas 10</option>
+            <option value="all">Todas</option>
+          </select>
+
+          <button type="button" data-export-chart="chart-niveles-pozo" data-export-name="niveles-<%= pozo.codigo %>"
+            class="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-700">
+            <i class="fa-solid fa-download"></i>
+            Exportar PNG
+          </button>
+        </div>
       </div>
 
       <div class="mb-4 flex flex-wrap gap-2 text-sm">
@@ -285,6 +428,11 @@
         <label class="inline-flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-800">
           <input type="checkbox" name="nivel-chart-field" value="sumergencia">
           Sumergencia
+        </label>
+
+        <label class="inline-flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-800">
+          <input type="checkbox" name="nivel-chart-field" value="porcentaje_liq">
+          % Liq
         </label>
 
         <label class="inline-flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-800">
@@ -300,6 +448,31 @@
         <label class="inline-flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-800">
           <input type="checkbox" name="nivel-chart-field" value="presion_casing">
           P. casing
+        </label>
+
+        <label class="inline-flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-800">
+          <input type="checkbox" name="nivel-chart-field" value="presion_tubing">
+          P. tubing
+        </label>
+
+        <label class="inline-flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-800">
+          <input type="checkbox" name="nivel-chart-field" value="rpm">
+          RPM
+        </label>
+
+        <label class="inline-flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-800">
+          <input type="checkbox" name="nivel-chart-field" value="torque">
+          Torque
+        </label>
+
+        <label class="inline-flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-800">
+          <input type="checkbox" name="nivel-chart-field" value="amp">
+          AMP
+        </label>
+
+        <label class="inline-flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-800">
+          <input type="checkbox" name="nivel-chart-field" value="hp">
+          HP
         </label>
       </div>
 
@@ -317,31 +490,124 @@
       </div>
     </section>
 
-    <!-- Comparativa parámetros vs niveles -->
+    <!-- =========================================================
+       COMPARATIVO
+       ========================================================= -->
     <section class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900">
-      <h2 class="text-lg font-semibold text-slate-900 dark:text-white">
-        Comparativa parámetros vs niveles
-      </h2>
+      <div class="mb-4 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+          <h2 class="text-lg font-semibold text-slate-900 dark:text-white">
+            Comparativa parámetros vs niveles
+          </h2>
 
-      <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
-        Pendiente: comparación de presión casing, tubing o gas entre parámetros y tomas de nivel.
-      </p>
+          <p class="text-sm text-slate-500 dark:text-slate-400">
+            Contrasta la medición operativa diaria contra la medición tomada durante el nivel.
+          </p>
+        </div>
 
-      <div id="chart-comparativa-pozo"
-        class="mt-4 flex min-h-[260px] items-center justify-center rounded-xl border border-dashed border-slate-300 bg-white p-2 dark:border-slate-600 dark:bg-slate-900">
-        <p class="text-sm text-slate-500 dark:text-slate-400">
-          Comparativa pendiente por implementar.
-        </p>
+        <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <button type="button" data-pozo-open-modal="modal-comparativo-parametros-niveles"
+            class="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800">
+            <i class="fa-solid fa-table-columns"></i>
+            Ver comparativo
+          </button>
+
+          <button type="button" data-export-chart="chart-comparativa-pozo"
+            data-export-name="comparativo-<%= pozo.codigo %>"
+            class="inline-flex items-center justify-center gap-2 rounded-lg bg-violet-600 px-3 py-2 text-sm font-medium text-white hover:bg-violet-700">
+            <i class="fa-solid fa-download"></i>
+            Exportar PNG
+          </button>
+        </div>
       </div>
+
+      <script type="application/json"
+        id="comparativo-parametros-niveles-json"><%- JSON.stringify(comparativo || []) %></script>
+
+      <% if (ultimoComparativo) { %>
+        <div class="mb-4 grid gap-3 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6">
+
+          <div
+            class="rounded-2xl border border-slate-100 bg-slate-50 px-3 py-3 dark:border-slate-700 dark:bg-slate-800/70">
+            <p class="text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Fecha</p>
+            <p class="mt-1 text-sm font-bold text-slate-900 dark:text-white">
+              <%= formatDate(ultimoComparativo.fecha) %>
+            </p>
+          </div>
+
+          <div
+            class="rounded-2xl border border-blue-100 bg-blue-50 px-3 py-3 dark:border-blue-900/40 dark:bg-blue-950/20">
+            <p class="text-[10px] font-semibold uppercase tracking-wide text-blue-700 dark:text-blue-300">Dif. RPM</p>
+            <p class="mt-1 text-sm font-bold text-slate-900 dark:text-white">
+              <%= formatNumber(ultimoComparativo.dif_rpm, 2) %>
+            </p>
+          </div>
+
+          <div
+            class="rounded-2xl border border-orange-100 bg-orange-50 px-3 py-3 dark:border-orange-900/40 dark:bg-orange-950/20">
+            <p class="text-[10px] font-semibold uppercase tracking-wide text-orange-700 dark:text-orange-300">Dif.
+              Torque</p>
+            <p class="mt-1 text-sm font-bold text-slate-900 dark:text-white">
+              <%= formatNumber(ultimoComparativo.dif_torque, 2) %>
+            </p>
+          </div>
+
+          <div
+            class="rounded-2xl border border-amber-100 bg-amber-50 px-3 py-3 dark:border-amber-900/40 dark:bg-amber-950/20">
+            <p class="text-[10px] font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300">Dif. AMP</p>
+            <p class="mt-1 text-sm font-bold text-slate-900 dark:text-white">
+              <%= formatNumber(ultimoComparativo.dif_amp, 2) %>
+            </p>
+          </div>
+
+          <div
+            class="rounded-2xl border border-rose-100 bg-rose-50 px-3 py-3 dark:border-rose-900/40 dark:bg-rose-950/20">
+            <p class="text-[10px] font-semibold uppercase tracking-wide text-rose-700 dark:text-rose-300">Dif. Casing
+            </p>
+            <p class="mt-1 text-sm font-bold text-slate-900 dark:text-white">
+              <%= formatNumber(ultimoComparativo.dif_presion_casing, 2) %>
+            </p>
+          </div>
+
+          <div
+            class="rounded-2xl border border-teal-100 bg-teal-50 px-3 py-3 dark:border-teal-900/40 dark:bg-teal-950/20">
+            <p class="text-[10px] font-semibold uppercase tracking-wide text-teal-700 dark:text-teal-300">Dif. Tubing
+            </p>
+            <p class="mt-1 text-sm font-bold text-slate-900 dark:text-white">
+              <%= formatNumber(ultimoComparativo.dif_presion_tubing, 2) %>
+            </p>
+          </div>
+
+        </div>
+        <% } else { %>
+          <div
+            class="mb-4 rounded-xl bg-yellow-50 p-4 text-sm text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-300">
+            No hay registros comparables entre parámetros y niveles para este pozo.
+          </div>
+          <% } %>
+
+            <div id="chart-comparativa-pozo"
+              class="min-h-[300px] rounded-xl border border-dashed border-slate-300 bg-white p-2 dark:border-slate-600 dark:bg-slate-900">
+              <% if (!comparativo || !comparativo.length) { %>
+                <div class="flex min-h-[260px] items-center justify-center">
+                  <p class="text-sm text-slate-500 dark:text-slate-400">
+                    Gráfica comparativa pendiente.
+                  </p>
+                </div>
+                <% } %>
+            </div>
     </section>
 
-    <!-- Modal histórico parámetros -->
+    <!-- =========================================================
+       MODAL HISTORICO PARAMETROS
+       ========================================================= -->
     <div id="modal-historial-parametros"
       class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/60 p-4" role="dialog" aria-modal="true"
       aria-labelledby="modal-historial-parametros-title">
 
       <div class="max-h-[90vh] w-full max-w-7xl overflow-hidden rounded-2xl bg-white shadow-xl dark:bg-slate-900">
-        <div class="flex items-center justify-between border-b border-slate-200 p-4 dark:border-slate-700">
+        <div
+          class="flex items-center justify-between border-b border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800">
           <div>
             <h3 id="modal-historial-parametros-title" class="text-lg font-semibold text-slate-900 dark:text-white">
               Histórico de parámetros - <%= pozo.codigo %>
@@ -352,19 +618,20 @@
           </div>
 
           <button type="button" data-pozo-close-modal="modal-historial-parametros"
-            class="rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white">
+            class="rounded-lg p-2 text-slate-500 hover:bg-slate-200 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-white">
             ✕
           </button>
         </div>
 
-        <div class="p-4">
+        <div class="max-h-[75vh] overflow-auto p-4">
           <table id="tabla-historial-parametros-pozo"
-            class="w-full text-left text-sm text-slate-500 dark:text-slate-400">
-            <thead class="bg-slate-50 text-xs uppercase text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+            class="w-full min-w-[1200px] overflow-hidden rounded-xl text-left text-sm text-slate-600 dark:text-slate-300">
+            <thead
+              class="sticky top-0 z-10 bg-blue-50 text-xs uppercase text-blue-900 dark:bg-blue-950 dark:text-blue-200">
               <tr>
                 <th class="px-4 py-3">Fecha</th>
                 <th class="px-4 py-3">Torque</th>
-                <th class="px-4 py-3">Amp</th>
+                <th class="px-4 py-3">AMP</th>
                 <th class="px-4 py-3">Freq</th>
                 <th class="px-4 py-3">Volts</th>
                 <th class="px-4 py-3">HP</th>
@@ -372,14 +639,17 @@
                 <th class="px-4 py-3">Vel. actual</th>
                 <th class="px-4 py-3">P. casing</th>
                 <th class="px-4 py-3">P. tubing</th>
+                <th class="px-4 py-3">Observación</th>
+                <th class="px-4 py-3">Recomendación</th>
               </tr>
             </thead>
 
-            <tbody>
+            <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
               <% if (parametros && parametros.length) { %>
-                <% parametros.forEach((row)=> { %>
-                  <tr class="border-b bg-white dark:border-slate-700 dark:bg-slate-900">
-                    <td class="px-4 py-3">
+                <% parametros.forEach((row, index)=> { %>
+                  <tr
+                    class="<%= index % 2 === 0 ? 'bg-white dark:bg-slate-900' : 'bg-slate-50/80 dark:bg-slate-800/50' %> hover:bg-blue-50 dark:hover:bg-blue-950/30">
+                    <td class="whitespace-nowrap px-4 py-3 font-semibold text-slate-900 dark:text-white">
                       <%= formatDate(row.fecha) %>
                     </td>
                     <td class="px-4 py-3">
@@ -409,21 +679,37 @@
                     <td class="px-4 py-3">
                       <%= formatNumber(row.presion_tubing, 2) %>
                     </td>
+                    <td class="max-w-[320px] truncate px-4 py-3" title="<%= fallback(row.observacion) %>">
+                      <%= fallback(row.observacion) %>
+                    </td>
+                    <td class="max-w-[360px] truncate px-4 py-3"
+                      title="<%= fallback(row.recomendaciones_completas || row.recomendacion || row.recomendaciones) %>">
+                      <%= fallback(row.recomendaciones_completas || row.recomendacion || row.recomendaciones) %>
+                    </td>
                   </tr>
                   <% }) %>
-                    <% } %>
+                    <% } else { %>
+                      <tr>
+                        <td colspan="12" class="px-4 py-6 text-center text-slate-500 dark:text-slate-400">
+                          No hay parámetros registrados.
+                        </td>
+                      </tr>
+                      <% } %>
             </tbody>
           </table>
         </div>
       </div>
     </div>
 
-    <!-- Modal histórico niveles -->
+    <!-- =========================================================
+       MODAL HISTORICO NIVELES
+       ========================================================= -->
     <div id="modal-historial-niveles" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/60 p-4"
       role="dialog" aria-modal="true" aria-labelledby="modal-historial-niveles-title">
 
-      <div class="max-h-[90vh] w-full max-w-6xl overflow-hidden rounded-2xl bg-white shadow-xl dark:bg-slate-900">
-        <div class="flex items-center justify-between border-b border-slate-200 p-4 dark:border-slate-700">
+      <div class="max-h-[90vh] w-full max-w-7xl overflow-hidden rounded-2xl bg-white shadow-xl dark:bg-slate-900">
+        <div
+          class="flex items-center justify-between border-b border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800">
           <div>
             <h3 id="modal-historial-niveles-title" class="text-lg font-semibold text-slate-900 dark:text-white">
               Histórico de niveles - <%= pozo.codigo %>
@@ -434,30 +720,40 @@
           </div>
 
           <button type="button" data-pozo-close-modal="modal-historial-niveles"
-            class="rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white">
+            class="rounded-lg p-2 text-slate-500 hover:bg-slate-200 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-white">
             ✕
           </button>
         </div>
 
-        <div class="p-4">
-          <table id="tabla-historial-niveles-pozo" class="w-full text-left text-sm text-slate-500 dark:text-slate-400">
-            <thead class="bg-slate-50 text-xs uppercase text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+        <div class="max-h-[75vh] overflow-auto p-4">
+          <table id="tabla-historial-niveles-pozo"
+            class="w-full min-w-[1300px] overflow-hidden rounded-xl text-left text-sm text-slate-600 dark:text-slate-300">
+            <thead
+              class="sticky top-0 z-10 bg-emerald-50 text-xs uppercase text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200">
               <tr>
                 <th class="px-4 py-3">Fecha</th>
                 <th class="px-4 py-3">NF pies</th>
-                <th class="px-4 py-3">Sumergencia</th>
+                <th class="px-4 py-3">SUM</th>
+                <th class="px-4 py-3">% Liq</th>
                 <th class="px-4 py-3">PIP</th>
                 <th class="px-4 py-3">PBHP</th>
                 <th class="px-4 py-3">P. casing</th>
+                <th class="px-4 py-3">P. tubing</th>
+                <th class="px-4 py-3">RPM</th>
+                <th class="px-4 py-3">Torque</th>
+                <th class="px-4 py-3">AMP</th>
+                <th class="px-4 py-3">HP</th>
                 <th class="px-4 py-3">Diagnóstico</th>
+                <th class="px-4 py-3">Recomendación ejecutada</th>
               </tr>
             </thead>
 
-            <tbody>
+            <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
               <% if (niveles && niveles.length) { %>
-                <% niveles.forEach((row)=> { %>
-                  <tr class="border-b bg-white dark:border-slate-700 dark:bg-slate-900">
-                    <td class="px-4 py-3">
+                <% niveles.forEach((row, index)=> { %>
+                  <tr
+                    class="<%= index % 2 === 0 ? 'bg-white dark:bg-slate-900' : 'bg-slate-50/80 dark:bg-slate-800/50' %> hover:bg-emerald-50 dark:hover:bg-emerald-950/30">
+                    <td class="whitespace-nowrap px-4 py-3 font-semibold text-slate-900 dark:text-white">
                       <%= formatDate(row.fecha) %>
                     </td>
                     <td class="px-4 py-3">
@@ -465,6 +761,9 @@
                     </td>
                     <td class="px-4 py-3">
                       <%= formatNumber(row.sumergencia, 2) %>
+                    </td>
+                    <td class="px-4 py-3">
+                      <%= formatNumber(row.porcentaje_liq, 2) %>
                     </td>
                     <td class="px-4 py-3">
                       <%= formatNumber(row.pip, 2) %>
@@ -476,11 +775,173 @@
                       <%= formatNumber(row.presion_casing, 2) %>
                     </td>
                     <td class="px-4 py-3">
+                      <%= formatNumber(row.presion_tubing, 2) %>
+                    </td>
+                    <td class="px-4 py-3">
+                      <%= formatNumber(row.rpm, 2) %>
+                    </td>
+                    <td class="px-4 py-3">
+                      <%= formatNumber(row.torque, 2) %>
+                    </td>
+                    <td class="px-4 py-3">
+                      <%= formatNumber(row.amp, 2) %>
+                    </td>
+                    <td class="px-4 py-3">
+                      <%= formatNumber(row.hp, 2) %>
+                    </td>
+                    <td class="max-w-[320px] truncate px-4 py-3" title="<%= fallback(row.diagnostico) %>">
                       <%= fallback(row.diagnostico) %>
+                    </td>
+                    <td class="max-w-[360px] truncate px-4 py-3"
+                      title="<%= fallback(row.recomendacion_ejecutada || row.recomendacion) %>">
+                      <%= fallback(row.recomendacion_ejecutada || row.recomendacion) %>
                     </td>
                   </tr>
                   <% }) %>
-                    <% } %>
+                    <% } else { %>
+                      <tr>
+                        <td colspan="14" class="px-4 py-6 text-center text-slate-500 dark:text-slate-400">
+                          No hay niveles registrados.
+                        </td>
+                      </tr>
+                      <% } %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- =========================================================
+       MODAL COMPARATIVO
+       ========================================================= -->
+    <div id="modal-comparativo-parametros-niveles"
+      class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/60 p-4" role="dialog" aria-modal="true"
+      aria-labelledby="modal-comparativo-parametros-niveles-title">
+
+      <div class="max-h-[90vh] w-full max-w-7xl overflow-hidden rounded-2xl bg-white shadow-xl dark:bg-slate-900">
+        <div
+          class="flex items-center justify-between border-b border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800">
+          <div>
+            <h3 id="modal-comparativo-parametros-niveles-title"
+              class="text-lg font-semibold text-slate-900 dark:text-white">
+              Comparativo parámetros vs niveles - <%= pozo.codigo %>
+            </h3>
+            <p class="text-sm text-slate-500 dark:text-slate-400">
+              Diferencias entre ambas mediciones por fecha.
+            </p>
+          </div>
+
+          <button type="button" data-pozo-close-modal="modal-comparativo-parametros-niveles"
+            class="rounded-lg p-2 text-slate-500 hover:bg-slate-200 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-white">
+            ✕
+          </button>
+        </div>
+
+        <div class="max-h-[75vh] overflow-auto p-4">
+          <table id="tabla-comparativo-parametros-niveles"
+            class="w-full min-w-[1500px] overflow-hidden rounded-xl text-left text-sm text-slate-600 dark:text-slate-300">
+            <thead
+              class="sticky top-0 z-10 bg-violet-50 text-xs uppercase text-violet-900 dark:bg-violet-950 dark:text-violet-200">
+              <tr>
+                <th class="px-4 py-3">Fecha</th>
+                <th class="px-4 py-3">RPM param</th>
+                <th class="px-4 py-3">RPM nivel</th>
+                <th class="px-4 py-3">Dif RPM</th>
+                <th class="px-4 py-3">Torque param</th>
+                <th class="px-4 py-3">Torque nivel</th>
+                <th class="px-4 py-3">Dif torque</th>
+                <th class="px-4 py-3">AMP param</th>
+                <th class="px-4 py-3">AMP nivel</th>
+                <th class="px-4 py-3">Dif AMP</th>
+                <th class="px-4 py-3">HP param</th>
+                <th class="px-4 py-3">HP nivel</th>
+                <th class="px-4 py-3">Dif HP</th>
+                <th class="px-4 py-3">Casing param</th>
+                <th class="px-4 py-3">Casing nivel</th>
+                <th class="px-4 py-3">Dif casing</th>
+                <th class="px-4 py-3">Tubing param</th>
+                <th class="px-4 py-3">Tubing nivel</th>
+                <th class="px-4 py-3">Dif tubing</th>
+              </tr>
+            </thead>
+
+            <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+              <% if (comparativo && comparativo.length) { %>
+                <% comparativo.forEach((row, index)=> { %>
+                  <tr
+                    class="<%= index % 2 === 0 ? 'bg-white dark:bg-slate-900' : 'bg-slate-50/80 dark:bg-slate-800/50' %> hover:bg-violet-50 dark:hover:bg-violet-950/30">
+                    <td class="whitespace-nowrap px-4 py-3 font-semibold text-slate-900 dark:text-white">
+                      <%= formatDate(row.fecha) %>
+                    </td>
+
+                    <td class="px-4 py-3">
+                      <%= formatNumber(row.rpm_parametros, 2) %>
+                    </td>
+                    <td class="px-4 py-3">
+                      <%= formatNumber(row.rpm_nivel, 2) %>
+                    </td>
+                    <td class="px-4 py-3 font-semibold">
+                      <%= formatNumber(row.dif_rpm, 2) %>
+                    </td>
+
+                    <td class="px-4 py-3">
+                      <%= formatNumber(row.torque_parametros, 2) %>
+                    </td>
+                    <td class="px-4 py-3">
+                      <%= formatNumber(row.torque_nivel, 2) %>
+                    </td>
+                    <td class="px-4 py-3 font-semibold">
+                      <%= formatNumber(row.dif_torque, 2) %>
+                    </td>
+
+                    <td class="px-4 py-3">
+                      <%= formatNumber(row.amp_parametros, 2) %>
+                    </td>
+                    <td class="px-4 py-3">
+                      <%= formatNumber(row.amp_nivel, 2) %>
+                    </td>
+                    <td class="px-4 py-3 font-semibold">
+                      <%= formatNumber(row.dif_amp, 2) %>
+                    </td>
+
+                    <td class="px-4 py-3">
+                      <%= formatNumber(row.hp_parametros, 2) %>
+                    </td>
+                    <td class="px-4 py-3">
+                      <%= formatNumber(row.hp_nivel, 2) %>
+                    </td>
+                    <td class="px-4 py-3 font-semibold">
+                      <%= formatNumber(row.dif_hp, 2) %>
+                    </td>
+
+                    <td class="px-4 py-3">
+                      <%= formatNumber(row.casing_parametros, 2) %>
+                    </td>
+                    <td class="px-4 py-3">
+                      <%= formatNumber(row.casing_nivel, 2) %>
+                    </td>
+                    <td class="px-4 py-3 font-semibold">
+                      <%= formatNumber(row.dif_presion_casing, 2) %>
+                    </td>
+
+                    <td class="px-4 py-3">
+                      <%= formatNumber(row.tubing_parametros, 2) %>
+                    </td>
+                    <td class="px-4 py-3">
+                      <%= formatNumber(row.tubing_nivel, 2) %>
+                    </td>
+                    <td class="px-4 py-3 font-semibold">
+                      <%= formatNumber(row.dif_presion_tubing, 2) %>
+                    </td>
+                  </tr>
+                  <% }) %>
+                    <% } else { %>
+                      <tr>
+                        <td colspan="19" class="px-4 py-6 text-center text-slate-500 dark:text-slate-400">
+                          No hay datos comparables.
+                        </td>
+                      </tr>
+                      <% } %>
             </tbody>
           </table>
         </div>

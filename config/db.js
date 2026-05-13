@@ -11,13 +11,6 @@ const pool = mysql.createPool({
   queueLimit: 0
 });
 
-console.log('Configuración DB cargada:', {
-  host: process.env.DB_HOST || 'localhost',
-  port: Number(process.env.DB_PORT || 3306),
-  user: process.env.DB_USER || 'root',
-  database: process.env.DB_NAME || 'pwa_opti'
-});
-
 async function testConnection() {
   const connection = await pool.getConnection();
 
@@ -33,7 +26,7 @@ async function testConnection() {
 
     const tablas = [
       'pozos',
-      'estados_pozo',
+      'estado_pozo',
       'cabezales',
       'vdfs',
       'metodos_levantamiento',

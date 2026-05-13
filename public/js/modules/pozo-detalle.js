@@ -1,6 +1,7 @@
 (() => {
   let parametrosChart = null;
   let nivelesChart = null;
+  let comparativoChart = null;
   let surveyChart = null;
 
   function init() {
@@ -12,6 +13,8 @@
     initSurveyChart();
     initParametrosChart();
     initNivelesChart();
+    initComparativoChart();
+    initChartExports();
   }
 
   function initTabs() {
@@ -35,19 +38,16 @@
           targetPanel.classList.remove('hidden');
         }
 
-        /**
-         * ApexCharts a veces calcula mal el ancho si se renderiza
-         * dentro de un tab oculto. Al abrir un tab, forzamos recalculo seguro.
-         */
         setTimeout(() => {
           window.dispatchEvent(new Event('resize'));
 
           safeResizeChart(parametrosChart);
           safeResizeChart(nivelesChart);
+          safeResizeChart(comparativoChart);
           safeResizeChart(surveyChart);
 
           adjustVisibleDataTables();
-        }, 80);
+        }, 100);
       });
     });
   }
@@ -55,18 +55,22 @@
   function safeResizeChart(chart) {
     if (!chart) return;
 
-    if (typeof chart.resize === 'function') {
-      chart.resize();
-      return;
-    }
+    try {
+      if (typeof chart.resize === 'function') {
+        chart.resize();
+        return;
+      }
 
-    if (typeof chart.updateOptions === 'function') {
-      chart.updateOptions({}, false, true);
-      return;
-    }
+      if (typeof chart.updateOptions === 'function') {
+        chart.updateOptions({}, false, true);
+        return;
+      }
 
-    if (typeof chart.render === 'function') {
-      chart.render();
+      if (typeof chart.render === 'function') {
+        chart.render();
+      }
+    } catch (error) {
+      console.warn('No se pudo redimensionar la gráfica:', error);
     }
   }
 
@@ -140,13 +144,9 @@
     modal.classList.add('flex');
     document.body.classList.add('overflow-hidden');
 
-    /**
-     * DataTables dentro de modales necesita recalcular columnas
-     * cuando el modal pasa de hidden a visible.
-     */
     setTimeout(() => {
       adjustVisibleDataTables();
-    }, 120);
+    }, 150);
   }
 
   function closeModal(modalId) {
@@ -167,19 +167,27 @@
     initSurveyTable();
 
     initDataTable('#tabla-historial-parametros-pozo', {
-      scrollY: '360px',
+      scrollY: '380px',
       scrollX: true,
       pageLength: 10,
       ordering: true,
-      expectedColumns: 10
+      expectedColumns: 12
     });
 
     initDataTable('#tabla-historial-niveles-pozo', {
-      scrollY: '320px',
+      scrollY: '380px',
       scrollX: true,
       pageLength: 10,
       ordering: true,
-      expectedColumns: 7
+      expectedColumns: 14
+    });
+
+    initDataTable('#tabla-comparativo-parametros-niveles', {
+      scrollY: '380px',
+      scrollX: true,
+      pageLength: 10,
+      ordering: true,
+      expectedColumns: 19
     });
   }
 
@@ -232,17 +240,11 @@
     const expectedColumns =
       options.expectedColumns || document.querySelectorAll(`${selector} thead th`).length;
 
-    /**
-     * Evita el error:
-     * Requested unknown parameter '1' for row 0, column 1
-     *
-     * Esto ocurre cuando DataTables intenta procesar una fila vacía con colspan.
-     */
     if (!tableHasValidBodyRows(selector, expectedColumns)) return;
 
     new window.DataTable(selector, {
       pageLength: options.pageLength || 10,
-      lengthMenu: options.lengthMenu || [5, 10, 25, 50],
+      lengthMenu: options.lengthMenu || [5, 10, 25, 50, 100],
       searching: options.searching ?? true,
       ordering: options.ordering ?? true,
       paging: options.paging ?? true,
@@ -471,6 +473,7 @@
 
     const options = {
       chart: {
+        id: 'survey-pozo',
         type: 'line',
         height: 320,
         zoom: { enabled: true },
@@ -606,6 +609,42 @@
     render();
   }
 
+  function initComparativoChart() {
+    const chartEl = document.getElementById('chart-comparativa-pozo');
+    const dataEl = document.getElementById('comparativo-parametros-niveles-json');
+
+    if (!chartEl || !dataEl) return;
+
+    if (typeof window.ApexCharts === 'undefined') {
+      renderChartMessage(chartEl, 'ApexCharts no está cargado en el layout.');
+      return;
+    }
+
+    const comparativo = readJsonData(dataEl, []);
+
+    if (!Array.isArray(comparativo) || !comparativo.length) {
+      renderChartMessage(chartEl, 'No hay datos comparables para graficar.');
+      destroyChart('comparativo');
+      return;
+    }
+
+    renderMultiSeriesChart({
+      chartEl,
+      chartRefName: 'comparativo',
+      rows: comparativo,
+      selectedFields: [
+        'dif_rpm',
+        'dif_torque',
+        'dif_amp',
+        'dif_presion_casing',
+        'dif_presion_tubing'
+      ],
+      daysLimit: 'all',
+      fieldLabels: getComparativoLabels(),
+      emptyMessage: 'No hay diferencias válidas para graficar.'
+    });
+  }
+
   function renderMultiSeriesChart({
     chartEl,
     chartRefName,
@@ -658,6 +697,7 @@
 
     const options = {
       chart: {
+        id: chartRefName,
         type: 'line',
         height: 320,
         zoom: { enabled: true },
@@ -690,11 +730,20 @@
       },
       tooltip: {
         shared: true,
-        intersect: false
+        intersect: false,
+        y: {
+          formatter: (value) => {
+            const number = Number(value);
+            return Number.isFinite(number) ? number.toFixed(2) : value;
+          }
+        }
       },
       legend: {
         position: 'top',
         horizontalAlign: 'left'
+      },
+      noData: {
+        text: 'Sin datos'
       }
     };
 
@@ -710,6 +759,10 @@
     if (chartRefName === 'niveles') {
       nivelesChart = chart;
     }
+
+    if (chartRefName === 'comparativo') {
+      comparativoChart = chart;
+    }
   }
 
   function destroyChart(chartRefName) {
@@ -722,6 +775,106 @@
       nivelesChart.destroy();
       nivelesChart = null;
     }
+
+    if (chartRefName === 'comparativo' && comparativoChart) {
+      comparativoChart.destroy();
+      comparativoChart = null;
+    }
+  }
+
+  function initChartExports() {
+    document.querySelectorAll('[data-export-chart]').forEach((button) => {
+      button.addEventListener('click', async () => {
+        const chartId = button.dataset.exportChart;
+        const exportName = button.dataset.exportName || 'grafica-pozo';
+
+        const chart = getChartByElementId(chartId);
+
+        if (!chart) {
+          showToast('No hay una gráfica disponible para exportar.', 'error');
+          return;
+        }
+
+        await exportApexChart(chart, exportName);
+      });
+    });
+  }
+
+  function getChartByElementId(chartId) {
+    if (chartId === 'chart-parametros-pozo') return parametrosChart;
+    if (chartId === 'chart-niveles-pozo') return nivelesChart;
+    if (chartId === 'chart-comparativa-pozo') return comparativoChart;
+    if (chartId === 'chart-survey-pozo') return surveyChart;
+
+    return null;
+  }
+
+  async function exportApexChart(chart, filename) {
+    try {
+      if (!chart || typeof chart.dataURI !== 'function') {
+        throw new Error('La gráfica no soporta exportación.');
+      }
+
+      const result = await chart.dataURI();
+
+      if (!result || !result.imgURI) {
+        throw new Error('No se pudo generar la imagen.');
+      }
+
+      const link = document.createElement('a');
+      link.href = result.imgURI;
+      link.download = `${sanitizeFilename(filename)}.png`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+
+      showToast('Gráfica exportada correctamente.', 'success');
+    } catch (error) {
+      console.error(error);
+      showToast(error.message || 'No se pudo exportar la gráfica.', 'error');
+    }
+  }
+
+  function sanitizeFilename(value) {
+    return String(value || 'grafica')
+      .trim()
+      .replace(/[^\w\-]+/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '')
+      .toLowerCase();
+  }
+
+  function showToast(message, type = 'info') {
+    const toast = document.createElement('div');
+
+    const baseClasses = [
+      'fixed',
+      'right-4',
+      'top-4',
+      'z-[9999]',
+      'rounded-xl',
+      'px-4',
+      'py-3',
+      'text-sm',
+      'font-medium',
+      'shadow-lg'
+    ];
+
+    const typeClasses =
+      type === 'success'
+        ? ['bg-emerald-600', 'text-white']
+        : type === 'error'
+          ? ['bg-red-600', 'text-white']
+          : ['bg-slate-800', 'text-white'];
+
+    toast.className = [...baseClasses, ...typeClasses].join(' ');
+    toast.textContent = message;
+
+    document.body.appendChild(toast);
+
+    setTimeout(() => {
+      toast.remove();
+    }, 2600);
   }
 
   function filterRowsByDays(rows, daysLimit) {
@@ -730,13 +883,15 @@
     const days = Number(daysLimit);
     if (!Number.isFinite(days)) return rows;
 
-    const now = new Date();
-    const minDate = new Date(now);
-    minDate.setDate(now.getDate() - days);
+    const orderedRows = sortRowsByDateAsc(rows);
+    const lastDate = parseDate(orderedRows[orderedRows.length - 1]?.fecha) || new Date();
 
-    return rows.filter((row) => {
-      const date = parseDate(row.fecha);
-      return date && date >= minDate;
+    const minDate = new Date(lastDate);
+    minDate.setDate(lastDate.getDate() - days);
+
+    return orderedRows.filter((row) => {
+      const rowDate = parseDate(row.fecha);
+      return rowDate && rowDate >= minDate;
     });
   }
 
@@ -751,7 +906,19 @@
   function parseDate(value) {
     if (!value) return null;
 
-    const date = new Date(value);
+    if (value instanceof Date) {
+      return Number.isNaN(value.getTime()) ? null : value;
+    }
+
+    const text = String(value);
+
+    if (/^\d{4}-\d{2}-\d{2}/.test(text)) {
+      const [year, month, day] = text.slice(0, 10).split('-').map(Number);
+      const date = new Date(year, month - 1, day);
+      return Number.isNaN(date.getTime()) ? null : date;
+    }
+
+    const date = new Date(text);
     if (Number.isNaN(date.getTime())) return null;
 
     return date;
@@ -771,7 +938,18 @@
   function parseChartNumber(value) {
     if (value === null || value === undefined || value === '') return null;
 
-    const number = Number(value);
+    if (typeof value === 'number') {
+      return Number.isFinite(value) ? value : null;
+    }
+
+    const clean = String(value)
+      .trim()
+      .replace(',', '.')
+      .replace(/[^0-9.\-]/g, '');
+
+    if (!clean) return null;
+
+    const number = Number(clean);
     return Number.isFinite(number) ? number : null;
   }
 
@@ -790,6 +968,7 @@
     try {
       return JSON.parse(element.textContent || '[]');
     } catch (error) {
+      console.warn('No se pudo leer JSON embebido:', error);
       return fallbackValue;
     }
   }
@@ -797,12 +976,13 @@
   function getParametroLabels() {
     return {
       torque: 'Torque',
-      amp: 'Amp',
+      amp: 'AMP',
       freq: 'Freq',
       volts: 'Volts',
       hp: 'HP',
       vel_operacional: 'VO',
       vel_actual: 'Vel. actual',
+      rpm: 'RPM',
       presion_casing: 'P. casing',
       presion_tubing: 'P. tubing'
     };
@@ -812,9 +992,26 @@
     return {
       nf_pies: 'NF pies',
       sumergencia: 'Sumergencia',
+      porcentaje_liq: '% Liq',
       pip: 'PIP',
       pbhp: 'PBHP',
-      presion_casing: 'P. casing'
+      presion_casing: 'P. casing',
+      presion_tubing: 'P. tubing',
+      rpm: 'RPM',
+      torque: 'Torque',
+      amp: 'AMP',
+      hp: 'HP'
+    };
+  }
+
+  function getComparativoLabels() {
+    return {
+      dif_rpm: 'Dif. RPM',
+      dif_torque: 'Dif. Torque',
+      dif_amp: 'Dif. AMP',
+      dif_hp: 'Dif. HP',
+      dif_presion_casing: 'Dif. casing',
+      dif_presion_tubing: 'Dif. tubing'
     };
   }
 
@@ -844,5 +1041,9 @@
     };
   }
 
-  document.addEventListener('DOMContentLoaded', init);
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
 })();

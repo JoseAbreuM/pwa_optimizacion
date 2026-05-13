@@ -40,6 +40,9 @@ async function list(req, res, next) {
  * - Historial de bombas
  * - Último parámetro
  * - Último nivel
+ * - Histórico de parámetros
+ * - Histórico de niveles
+ * - Comparativo parámetros vs niveles
  * - Últimas muestras
  * - Timeline compacto
  * - Survey activo
@@ -61,6 +64,9 @@ async function detail(req, res, next) {
       historialBombas,
       ultimoParametro,
       ultimoNivel,
+      historialParametros,
+      historialNiveles,
+      comparativoParametrosNiveles,
       ultimasMuestras,
       timeline,
       survey
@@ -69,6 +75,9 @@ async function detail(req, res, next) {
       pozoService.getHistorialBombasByPozo(pozo.id),
       pozoService.getUltimoParametroByPozo(pozo.id),
       pozoService.getUltimoNivelByPozo(pozo.id),
+      pozoService.getHistorialParametrosByPozo(pozo.id),
+      pozoService.getHistorialNivelesByPozo(pozo.id),
+      pozoService.getComparativoParametrosNivelesByPozo(pozo.id),
       pozoService.getUltimasMuestrasByPozo(pozo.id, 10),
       pozoService.getPozoTimeline(pozo.id),
       pozoService.getSurveyActivoByPozo(pozo.id)
@@ -77,25 +86,36 @@ async function detail(req, res, next) {
     /**
      * Regla operacional:
      * Las velocidades vigentes salen del último parámetro registrado.
-     * Si todavía no existe un parámetro con velocidades, se usa el dato
-     * guardado en pozos como respaldo.
+     * No salen de niveles, porque niveles queda como medición separada.
      */
     const velocidades = {
       operacional: ultimoParametro?.vel_operacional ?? pozo.vel_operacional ?? null,
-      actual: ultimoParametro?.vel_actual ?? pozo.vel_actual ?? pozo.rpm ?? null
+      actual:
+        ultimoParametro?.vel_actual ??
+        ultimoParametro?.rpm ??
+        pozo.vel_actual ??
+        pozo.rpm ??
+        null
     };
 
     return res.render('modules/pozos/detalle', {
       title: `Pozo ${pozo.codigo}`,
       pozo,
+
       bombaActual,
       historialBombas,
+
       ultimoParametro,
       ultimoNivel,
+      historialParametros,
+      historialNiveles,
+      comparativoParametrosNiveles,
+
       ultimasMuestras,
       timeline,
       survey,
       velocidades,
+
       currentSection: 'pozos',
       layout: 'layouts/mainLayout',
       pageScript: '/js/modules/pozo-detalle.js'
@@ -146,6 +166,9 @@ async function detailApi(req, res, next) {
       historialBombas,
       ultimoParametro,
       ultimoNivel,
+      historialParametros,
+      historialNiveles,
+      comparativoParametrosNiveles,
       ultimasMuestras,
       timeline,
       survey
@@ -154,24 +177,42 @@ async function detailApi(req, res, next) {
       pozoService.getHistorialBombasByPozo(pozo.id),
       pozoService.getUltimoParametroByPozo(pozo.id),
       pozoService.getUltimoNivelByPozo(pozo.id),
+      pozoService.getHistorialParametrosByPozo(pozo.id),
+      pozoService.getHistorialNivelesByPozo(pozo.id),
+      pozoService.getComparativoParametrosNivelesByPozo(pozo.id),
       pozoService.getUltimasMuestrasByPozo(pozo.id, 10),
       pozoService.getPozoTimeline(pozo.id),
       pozoService.getSurveyActivoByPozo(pozo.id)
     ]);
 
+    /**
+     * Igual que en la vista:
+     * velocidades vigentes vienen de parámetros, no de niveles.
+     */
     const velocidades = {
       operacional: ultimoParametro?.vel_operacional ?? pozo.vel_operacional ?? null,
-      actual: ultimoParametro?.vel_actual ?? pozo.vel_actual ?? pozo.rpm ?? null
+      actual:
+        ultimoParametro?.vel_actual ??
+        ultimoParametro?.rpm ??
+        pozo.vel_actual ??
+        pozo.rpm ??
+        null
     };
 
     return res.json({
       ok: true,
       data: {
         pozo,
+
         bombaActual,
         historialBombas,
+
         ultimoParametro,
         ultimoNivel,
+        historialParametros,
+        historialNiveles,
+        comparativoParametrosNiveles,
+
         ultimasMuestras,
         timeline,
         survey,
