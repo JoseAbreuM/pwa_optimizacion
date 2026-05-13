@@ -1,21 +1,11 @@
-const db = require('../../config/db');
+const { pool } = require('../../config/db');
 
 /**
  * Ejecuta una consulta usando el pool actual.
  */
 async function query(sql, params = []) {
-  const [rows] = await db.query(sql, params);
+  const [rows] = await pool.query(sql, params);
   return rows;
-}
-
-/**
- * Convierte valores vacíos a null.
- */
-function nullable(value) {
-  if (value === undefined || value === null) return null;
-
-  const text = String(value).trim();
-  return text === '' ? null : text;
 }
 
 /**
@@ -29,28 +19,6 @@ function toNumber(value) {
 }
 
 /**
- * Convierte una fecha a formato YYYY-MM-DD si es posible.
- */
-function toDateOnly(value) {
-  if (!value) return null;
-
-  if (value instanceof Date && !Number.isNaN(value.getTime())) {
-    return value.toISOString().slice(0, 10);
-  }
-
-  const text = String(value).trim();
-
-  if (/^\d{4}-\d{2}-\d{2}/.test(text)) {
-    return text.slice(0, 10);
-  }
-
-  const date = new Date(text);
-  if (Number.isNaN(date.getTime())) return null;
-
-  return date.toISOString().slice(0, 10);
-}
-
-/**
  * Normaliza texto para búsquedas LIKE.
  */
 function like(value) {
@@ -59,6 +27,9 @@ function like(value) {
 
 /**
  * Listado principal de pozos.
+ *
+ * Usa la vista real:
+ * - vw_pozos_listado
  */
 async function listPozos(filters = {}) {
   const where = [];
@@ -66,14 +37,20 @@ async function listPozos(filters = {}) {
 
   if (filters.search) {
     where.push(`(
-      p.codigo LIKE ?
-      OR p.nombre LIKE ?
-      OR p.area LIKE ?
-      OR p.yacimiento LIKE ?
-      OR p.zona LIKE ?
+      codigo LIKE ?
+      OR area LIKE ?
+      OR yacimiento LIKE ?
+      OR estado LIKE ?
+      OR metodo_levantamiento LIKE ?
+      OR cabezal LIKE ?
+      OR variador LIKE ?
+      OR servicio_asignado LIKE ?
     )`);
 
     params.push(
+      like(filters.search),
+      like(filters.search),
+      like(filters.search),
       like(filters.search),
       like(filters.search),
       like(filters.search),
@@ -83,12 +60,12 @@ async function listPozos(filters = {}) {
   }
 
   if (filters.area) {
-    where.push('p.area = ?');
+    where.push('area = ?');
     params.push(filters.area);
   }
 
   if (filters.estado) {
-    where.push(`COALESCE(ep.nombre, p.estado) = ?`);
+    where.push('estado = ?');
     params.push(filters.estado);
   }
 
@@ -97,69 +74,33 @@ async function listPozos(filters = {}) {
   return query(
     `
     SELECT
-      p.id,
-      p.codigo,
-      p.nombre,
-      p.categoria,
-      p.area,
-      p.zona,
-      p.yacimiento,
-      p.potencial,
-      p.latitud,
-      p.longitud,
-      p.coord_x,
-      p.coord_y,
-      p.diagrama,
-      p.visible,
-      p.vista_mapa,
-      p.vista_diagrama,
-      p.fecha_arranque,
-      p.vel_operacional,
-      p.vel_actual,
-      p.rpm,
-      p.alto_corte_agua,
-      p.nota_operativa,
-      p.causa_diferido,
-
-      COALESCE(ep.nombre, p.estado) AS estado,
-      COALESCE(cb.nombre, p.cabezal) AS cabezal,
-      COALESCE(vd.nombre, p.variador) AS variador,
-      COALESCE(ml.nombre, p.metodo_levantamiento) AS metodo_levantamiento,
-
-      bh.marca AS bomba_marca,
-      bh.modelo AS bomba_modelo,
-      bh.serial_rotor,
-      bh.serial_estator,
-      bh.fecha_inst AS bomba_fecha_instalacion,
-      DATEDIFF(CURDATE(), bh.fecha_inst) AS bomba_tvu_dias
-
-    FROM pozos p
-    LEFT JOIN estados_pozo ep
-      ON ep.id = p.estado_id
-    LEFT JOIN cabezales_bombeo cb
-      ON cb.id = p.cabezal_id
-    LEFT JOIN variadores vd
-      ON vd.id = p.variador_id
-    LEFT JOIN metodos_levantamiento ml
-      ON ml.id = p.metodo_levantamiento_id
-    LEFT JOIN (
-      SELECT b1.*
-      FROM bombas_historial b1
-      INNER JOIN (
-        SELECT pozo_id, MAX(COALESCE(fecha_inst, '1900-01-01')) AS max_fecha
-        FROM bombas_historial
-        GROUP BY pozo_id
-      ) ult
-        ON ult.pozo_id = b1.pozo_id
-       AND ult.max_fecha = COALESCE(b1.fecha_inst, '1900-01-01')
-    ) bh
-      ON bh.pozo_id = p.id
-
+      id,
+      codigo,
+      categoria,
+      area,
+      yacimiento,
+      potencial,
+      latitud,
+      longitud,
+      vel_actual,
+      vel_operacional,
+      color_estado_mapa,
+      estado,
+      metodo_levantamiento,
+      cabezal,
+      variador,
+      ultima_parametrizacion,
+      ultimo_nivel,
+      ultima_muestra,
+      prox_muestra,
+      servicio_asignado,
+      tipo_servicio,
+      subtipo_servicio
+    FROM vw_pozos_listado
     ${whereSql}
-
     ORDER BY
-      p.area ASC,
-      p.codigo ASC
+      area ASC,
+      codigo ASC
     `,
     params
   );
@@ -173,17 +114,17 @@ async function getFilterOptions() {
     query(`
       SELECT DISTINCT area
       FROM pozos
-      WHERE area IS NOT NULL AND area <> ''
+      WHERE area IS NOT NULL
+        AND area <> ''
       ORDER BY area ASC
     `),
 
     query(`
-      SELECT DISTINCT COALESCE(ep.nombre, p.estado) AS estado
-      FROM pozos p
-      LEFT JOIN estados_pozo ep ON ep.id = p.estado_id
-      WHERE COALESCE(ep.nombre, p.estado) IS NOT NULL
-        AND COALESCE(ep.nombre, p.estado) <> ''
-      ORDER BY estado ASC
+      SELECT DISTINCT nombre AS estado
+      FROM estado_pozo
+      WHERE nombre IS NOT NULL
+        AND nombre <> ''
+      ORDER BY nombre ASC
     `)
   ]);
 
@@ -195,29 +136,16 @@ async function getFilterOptions() {
 
 /**
  * Detalle base del pozo.
+ *
+ * Usa la vista real:
+ * - vw_pozo_ficha_general
  */
 async function getPozoById(id) {
   const rows = await query(
     `
-    SELECT
-      p.*,
-
-      COALESCE(ep.nombre, p.estado) AS estado,
-      COALESCE(cb.nombre, p.cabezal) AS cabezal,
-      COALESCE(vd.nombre, p.variador) AS variador,
-      COALESCE(ml.nombre, p.metodo_levantamiento) AS metodo_levantamiento
-
-    FROM pozos p
-    LEFT JOIN estados_pozo ep
-      ON ep.id = p.estado_id
-    LEFT JOIN cabezales_bombeo cb
-      ON cb.id = p.cabezal_id
-    LEFT JOIN variadores vd
-      ON vd.id = p.variador_id
-    LEFT JOIN metodos_levantamiento ml
-      ON ml.id = p.metodo_levantamiento_id
-
-    WHERE p.id = ? OR p.codigo = ?
+    SELECT *
+    FROM vw_pozo_ficha_general
+    WHERE id = ? OR codigo = ?
     LIMIT 1
     `,
     [id, id]
@@ -227,20 +155,32 @@ async function getPozoById(id) {
 }
 
 /**
- * Bomba vigente:
- * se toma la más reciente por fecha_inst.
+ * Bomba vigente del pozo.
+ *
+ * Usa la vista real:
+ * - vw_pozo_bomba_actual
  */
 async function getBombaActualByPozo(pozoId) {
   const rows = await query(
     `
     SELECT
-      b.*,
-      DATEDIFF(CURDATE(), b.fecha_inst) AS tvu_dias
-    FROM bombas_historial b
-    WHERE b.pozo_id = ?
-    ORDER BY
-      b.fecha_inst DESC,
-      b.id DESC
+      id_pozo,
+      codigo,
+      categoria,
+      estado_pozo,
+      metodo,
+      marca,
+      modelo,
+      serial,
+      fecha_inst,
+      fecha_falla,
+      tvu,
+      tvu AS tvu_dias,
+      estatus,
+      observaciones,
+      fuente_actual
+    FROM vw_pozo_bomba_actual
+    WHERE id_pozo = ?
     LIMIT 1
     `,
     [pozoId]
@@ -251,18 +191,32 @@ async function getBombaActualByPozo(pozoId) {
 
 /**
  * Histórico de bombas del pozo.
+ *
+ * Usa la vista real:
+ * - vw_pozo_bombas_historial
  */
 async function getHistorialBombasByPozo(pozoId) {
   return query(
     `
     SELECT
-      b.*,
-      DATEDIFF(CURDATE(), b.fecha_inst) AS tvu_dias
-    FROM bombas_historial b
-    WHERE b.pozo_id = ?
+      id_pozo,
+      codigo,
+      id,
+      metodo,
+      marca,
+      modelo,
+      serial,
+      fecha_inst,
+      fecha_falla,
+      tvu,
+      tvu AS tvu_dias,
+      estatus,
+      observaciones
+    FROM vw_pozo_bombas_historial
+    WHERE id_pozo = ?
     ORDER BY
-      b.fecha_inst DESC,
-      b.id DESC
+      fecha_inst DESC,
+      id DESC
     `,
     [pozoId]
   );
@@ -270,16 +224,37 @@ async function getHistorialBombasByPozo(pozoId) {
 
 /**
  * Último parámetro operativo.
+ *
+ * Usa la vista real:
+ * - vw_ultimo_parametro_pozo
  */
 async function getUltimoParametroByPozo(pozoId) {
   const rows = await query(
     `
-    SELECT *
-    FROM parametros_historial
-    WHERE pozo_id = ?
-    ORDER BY
-      fecha DESC,
-      id DESC
+    SELECT
+      id,
+      id_pozo,
+      fecha,
+      torque,
+      amp,
+      freq,
+      volts,
+      rpm,
+      hp,
+      vel_operacional,
+      vel_actual,
+      presion_casing,
+      presion_tubing,
+      observacion,
+      diagnostico,
+      recomendacion,
+      recomendaciones,
+      comentario,
+      COALESCE(recomendaciones, recomendacion, comentario, observacion) AS recomendaciones_completas,
+      sync_status,
+      uuid_local
+    FROM vw_ultimo_parametro_pozo
+    WHERE id_pozo = ?
     LIMIT 1
     `,
     [pozoId]
@@ -290,16 +265,16 @@ async function getUltimoParametroByPozo(pozoId) {
 
 /**
  * Último nivel.
+ *
+ * Usa la vista real:
+ * - vw_ultimo_nivel_pozo
  */
 async function getUltimoNivelByPozo(pozoId) {
   const rows = await query(
     `
     SELECT *
-    FROM niveles_historial
-    WHERE pozo_id = ?
-    ORDER BY
-      fecha DESC,
-      id DESC
+    FROM vw_ultimo_nivel_pozo
+    WHERE id_pozo = ?
     LIMIT 1
     `,
     [pozoId]
@@ -310,13 +285,44 @@ async function getUltimoNivelByPozo(pozoId) {
 
 /**
  * Histórico de parámetros.
+ *
+ * Tabla real:
+ * - parametros_diarios
  */
 async function getHistorialParametrosByPozo(pozoId) {
   return query(
     `
-    SELECT *
-    FROM parametros_historial
-    WHERE pozo_id = ?
+    SELECT
+      id,
+      uuid_local,
+      id_pozo,
+      fecha,
+      torque,
+      amp,
+      freq,
+      volts,
+      rpm,
+      hp,
+      vel_operacional,
+      vel_actual,
+      pip,
+      pbhp,
+      presion_casing,
+      presion_tubing,
+      nf_pies,
+      porcentaje_liq,
+      diagnostico,
+      recomendacion,
+      recomendaciones,
+      ajustes_realizados,
+      comentario,
+      observacion,
+      COALESCE(recomendaciones, recomendacion, comentario, observacion) AS recomendaciones_completas,
+      sync_status,
+      id_personal,
+      id_usuario_carga
+    FROM parametros_diarios
+    WHERE id_pozo = ?
     ORDER BY
       fecha DESC,
       id DESC
@@ -327,13 +333,41 @@ async function getHistorialParametrosByPozo(pozoId) {
 
 /**
  * Histórico de niveles.
+ *
+ * Tabla real:
+ * - tomas_nivel
  */
 async function getHistorialNivelesByPozo(pozoId) {
   return query(
     `
-    SELECT *
-    FROM niveles_historial
-    WHERE pozo_id = ?
+    SELECT
+      id,
+      id_pozo,
+      fecha,
+      nf_pies,
+      sumergencia,
+      porcentaje_liq,
+      pip,
+      pbhp,
+      presion_casing,
+      presion_tubing,
+      torque,
+      amp,
+      freq,
+      volts,
+      rpm,
+      hp,
+      diagnostico,
+      observacion,
+      comentario,
+      recomendacion_ejecutada,
+      recomendacion,
+      sync_status,
+      id_personal,
+      uuid_local,
+      id_usuario_carga
+    FROM tomas_nivel
+    WHERE id_pozo = ?
     ORDER BY
       fecha DESC,
       id DESC
@@ -343,50 +377,20 @@ async function getHistorialNivelesByPozo(pozoId) {
 }
 
 /**
- * Comparativo entre parámetros y niveles por fecha.
+ * Comparativo entre parámetros y niveles.
  *
- * Une por pozo y fecha. Si tus registros no coinciden exactamente por fecha,
- * luego podemos cambiar esto a búsqueda por fecha más cercana.
+ * Usa la vista real:
+ * - vw_comparativo_parametros_niveles
  */
 async function getComparativoParametrosNivelesByPozo(pozoId) {
   return query(
     `
     SELECT
-      COALESCE(n.fecha, p.fecha) AS fecha,
-
-      p.rpm AS parametro_rpm,
-      n.rpm AS nivel_rpm,
-      (n.rpm - p.rpm) AS dif_rpm,
-
-      p.torque AS parametro_torque,
-      n.torque AS nivel_torque,
-      (n.torque - p.torque) AS dif_torque,
-
-      p.amp AS parametro_amp,
-      n.amp AS nivel_amp,
-      (n.amp - p.amp) AS dif_amp,
-
-      p.hp AS parametro_hp,
-      n.hp AS nivel_hp,
-      (n.hp - p.hp) AS dif_hp,
-
-      p.presion_casing AS parametro_presion_casing,
-      n.presion_casing AS nivel_presion_casing,
-      (n.presion_casing - p.presion_casing) AS dif_presion_casing,
-
-      p.presion_tubing AS parametro_presion_tubing,
-      n.presion_tubing AS nivel_presion_tubing,
-      (n.presion_tubing - p.presion_tubing) AS dif_presion_tubing
-
-    FROM niveles_historial n
-    LEFT JOIN parametros_historial p
-      ON p.pozo_id = n.pozo_id
-     AND DATE(p.fecha) = DATE(n.fecha)
-
-    WHERE n.pozo_id = ?
-
+      *
+    FROM vw_comparativo_parametros_niveles
+    WHERE id_pozo = ?
     ORDER BY
-      COALESCE(n.fecha, p.fecha) DESC
+      fecha DESC
     `,
     [pozoId]
   );
@@ -394,13 +398,27 @@ async function getComparativoParametrosNivelesByPozo(pozoId) {
 
 /**
  * Últimas muestras asociadas al pozo.
+ *
+ * Usa la vista real:
+ * - vw_pozo_muestras_historial
  */
 async function getUltimasMuestrasByPozo(pozoId, limit = 10) {
   return query(
     `
-    SELECT *
-    FROM muestras_historial
-    WHERE pozo_id = ?
+    SELECT
+      id_pozo,
+      codigo,
+      id,
+      fecha,
+      ays,
+      api,
+      representativa,
+      prox_muestra,
+      sync_status,
+      id_personal,
+      uuid_local
+    FROM vw_pozo_muestras_historial
+    WHERE id_pozo = ?
     ORDER BY
       fecha DESC,
       id DESC
@@ -435,7 +453,13 @@ async function getPozoTimeline(pozoId) {
       tipo: 'parametro',
       fecha: row.fecha,
       titulo: 'Parámetro operativo',
-      descripcion: row.observacion || row.recomendaciones_completas || null,
+      descripcion:
+        row.recomendaciones_completas ||
+        row.recomendaciones ||
+        row.recomendacion ||
+        row.comentario ||
+        row.observacion ||
+        null,
       data: row
     });
   });
@@ -445,7 +469,13 @@ async function getPozoTimeline(pozoId) {
       tipo: 'nivel',
       fecha: row.fecha,
       titulo: 'Toma de nivel',
-      descripcion: row.diagnostico || row.recomendacion_ejecutada || row.recomendacion || null,
+      descripcion:
+        row.diagnostico ||
+        row.recomendacion_ejecutada ||
+        row.recomendacion ||
+        row.comentario ||
+        row.observacion ||
+        null,
       data: row
     });
   });
@@ -455,7 +485,7 @@ async function getPozoTimeline(pozoId) {
       tipo: 'bomba',
       fecha: row.fecha_inst,
       titulo: 'Bomba instalada',
-      descripcion: [row.marca, row.modelo, row.serial_rotor].filter(Boolean).join(' · '),
+      descripcion: [row.marca, row.modelo, row.serial].filter(Boolean).join(' · '),
       data: row
     });
   });
@@ -465,7 +495,7 @@ async function getPozoTimeline(pozoId) {
       tipo: 'muestra',
       fecha: row.fecha,
       titulo: 'Muestra',
-      descripcion: row.observacion || null,
+      descripcion: row.prox_muestra ? `Próxima muestra: ${row.prox_muestra}` : null,
       data: row
     });
   });
@@ -535,21 +565,38 @@ async function getBootstrapData(pozoId) {
 
 /**
  * Survey activo.
+ *
+ * Tabla real:
+ * - pozo_survey
  */
 async function getSurveyActivoByPozo(pozoId) {
-  const rows = await query(
+  return query(
     `
-    SELECT *
-    FROM surveys_pozo
-    WHERE pozo_id = ?
+    SELECT
+      id,
+      id_pozo,
+      fila_orden,
+      md,
+      tvd,
+      x_offset,
+      y_offset,
+      delta_x,
+      delta_y,
+      azimut,
+      lote_carga,
+      raw_payload,
+      activo,
+      created_at,
+      updated_at
+    FROM pozo_survey
+    WHERE id_pozo = ?
       AND activo = 1
     ORDER BY
-      id DESC
+      fila_orden ASC,
+      id ASC
     `,
     [pozoId]
   );
-
-  return rows;
 }
 
 /**
@@ -603,6 +650,9 @@ function parseSurveyText(pastedText) {
 
 /**
  * Reemplaza el survey activo del pozo.
+ *
+ * Tabla real:
+ * - pozo_survey
  */
 async function replaceSurveyActivoByPozo(pozoId, pastedText) {
   const rows = parseSurveyText(pastedText);
@@ -611,42 +661,47 @@ async function replaceSurveyActivoByPozo(pozoId, pastedText) {
     throw new Error('No se detectaron filas válidas en el survey pegado.');
   }
 
-  const conn = await db.getConnection();
+  const conn = await pool.getConnection();
 
   try {
     await conn.beginTransaction();
 
     await conn.query(
       `
-      UPDATE surveys_pozo
+      UPDATE pozo_survey
       SET activo = 0
-      WHERE pozo_id = ?
+      WHERE id_pozo = ?
       `,
       [pozoId]
     );
 
-    for (const row of rows) {
+    for (const [index, row] of rows.entries()) {
       await conn.query(
         `
-        INSERT INTO surveys_pozo (
-          pozo_id,
+        INSERT INTO pozo_survey (
+          id_pozo,
+          fila_orden,
           md,
           tvd,
           x_offset,
           y_offset,
           azimut,
+          lote_carga,
           activo,
-          created_at
+          created_at,
+          updated_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, 1, NOW())
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, NOW(), NOW())
         `,
         [
           pozoId,
+          index + 1,
           row.md,
           row.tvd,
           row.x_offset,
           row.y_offset,
-          row.azimut
+          row.azimut,
+          `manual-${Date.now()}`
         ]
       );
     }
@@ -674,7 +729,7 @@ async function updatePozoPotencial(id, potencial) {
     throw new Error('Potencial inválido.');
   }
 
-  const [result] = await db.query(
+  const [result] = await pool.query(
     `
     UPDATE pozos
     SET
