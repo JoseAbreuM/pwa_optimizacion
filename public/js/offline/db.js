@@ -1,23 +1,35 @@
 (() => {
-  if (window.PetroOfflineStore) return;
+  if (window.PetroDB) return;
 
-  const dbName = 'petrofield-offline';
-  const dbVersion = 1;
+  const DB_NAME = 'petrofield-offline';
+  const DB_VERSION = 2;
+  const STORES = [
+    { name: 'metadata', options: { keyPath: 'key' } },
+    { name: 'dashboard', options: { keyPath: 'key' } },
+    { name: 'pozos', options: { keyPath: 'id' } },
+    { name: 'pozo_detalles', options: { keyPath: 'id' } },
+    { name: 'parametros', options: { keyPath: 'id' } },
+    { name: 'niveles', options: { keyPath: 'id' } },
+    { name: 'muestras', options: { keyPath: 'id' } },
+    { name: 'bombas', options: { keyPath: 'id' } },
+    { name: 'servicios', options: { keyPath: 'id' } },
+    { name: 'mapa_pozos', options: { keyPath: 'id' } },
+    { name: 'survey', options: { keyPath: 'id' } },
+    { name: 'queue', options: { keyPath: 'id', autoIncrement: true } }
+  ];
 
-  function openDb() {
+  function openDB() {
     return new Promise((resolve, reject) => {
-      const request = indexedDB.open(dbName, dbVersion);
+      const request = indexedDB.open(DB_NAME, DB_VERSION);
 
       request.onupgradeneeded = event => {
         const db = event.target.result;
 
-        if (!db.objectStoreNames.contains('bootstrap')) {
-          db.createObjectStore('bootstrap', { keyPath: 'id' });
-        }
-
-        if (!db.objectStoreNames.contains('queue')) {
-          db.createObjectStore('queue', { keyPath: 'id', autoIncrement: true });
-        }
+        STORES.forEach((store) => {
+          if (!db.objectStoreNames.contains(store.name)) {
+            db.createObjectStore(store.name, store.options);
+          }
+        });
       };
 
       request.onsuccess = () => resolve(request.result);
@@ -33,56 +45,114 @@
     });
   }
 
-  async function saveBootstrap(data) {
-    const db = await openDb();
-    const tx = db.transaction('bootstrap', 'readwrite');
-    tx.objectStore('bootstrap').put({ id: 'latest', data, savedAt: Date.now() });
-    return waitTx(tx);
+  async function withStore(storeName, mode, callback) {
+    const db = await openDB();
+    const tx = db.transaction(storeName, mode);
+    const store = tx.objectStore(storeName);
+    const result = await callback(store);
+    await waitTx(tx);
+    return result;
   }
 
-  async function getBootstrap() {
-    const db = await openDb();
-    const tx = db.transaction('bootstrap', 'readonly');
-    const store = tx.objectStore('bootstrap');
-
-    return new Promise(resolve => {
-      const req = store.get('latest');
-      req.onsuccess = () => resolve(req.result?.data || null);
-      req.onerror = () => resolve(null);
+  async function put(storeName, value) {
+    return withStore(storeName, 'readwrite', (store) => {
+      store.put(value);
+      return Promise.resolve(value);
     });
   }
 
-  async function enqueueOperation(operation) {
-    const db = await openDb();
-    const tx = db.transaction('queue', 'readwrite');
-    tx.objectStore('queue').add({ ...operation, createdAt: Date.now() });
-    return waitTx(tx);
-  }
-
-  async function getQueue() {
-    const db = await openDb();
-    const tx = db.transaction('queue', 'readonly');
-    const store = tx.objectStore('queue');
-
-    return new Promise(resolve => {
-      const req = store.getAll();
-      req.onsuccess = () => resolve(req.result || []);
-      req.onerror = () => resolve([]);
+  async function putMany(storeName, values = []) {
+    if (!Array.isArray(values) || values.length === 0) return [];
+    return withStore(storeName, 'readwrite', (store) => {
+      values.forEach((value) => store.put(value));
+      return Promise.resolve(values);
     });
   }
 
-  async function clearQueueItem(id) {
-    const db = await openDb();
-    const tx = db.transaction('queue', 'readwrite');
-    tx.objectStore('queue').delete(id);
-    return waitTx(tx);
+  async function get(storeName, key) {
+    return withStore(storeName, 'readonly', (store) => {
+      return new Promise((resolve) => {
+        const request = store.get(key);
+        request.onsuccess = () => resolve(request.result || null);
+        request.onerror = () => resolve(null);
+      });
+    });
   }
 
-  window.PetroOfflineStore = {
-    saveBootstrap,
-    getBootstrap,
-    enqueueOperation,
-    getQueue,
-    clearQueueItem
+  async function getAll(storeName) {
+    return withStore(storeName, 'readonly', (store) => {
+      return new Promise((resolve) => {
+        const request = store.getAll();
+        request.onsuccess = () => resolve(request.result || []);
+        request.onerror = () => resolve([]);
+      });
+    });
+  }
+
+  async function deleteEntry(storeName, key) {
+    return withStore(storeName, 'readwrite', (store) => {
+      store.delete(key);
+      return Promise.resolve(true);
+    });
+  }
+
+  async function clear(storeName) {
+    return withStore(storeName, 'readwrite', (store) => {
+      store.clear();
+      return Promise.resolve(true);
+    });
+  }
+
+  async function getMetadata(key) {
+    const record = await get('metadata', key);
+    return record ? record.value : null;
+  }
+
+  async function setMetadata(key, value) {
+    return put('metadata', { key, value });
+  }
+
+  async function addQueueOperation(operation) {
+    const payload = {
+      ...operation,
+      createdAt: operation.createdAt || new Date().toISOString(),
+      status: operation.status || 'pending'
+    };
+
+    return withStore('queue', 'readwrite', (store) => {
+      store.add(payload);
+      return Promise.resolve(payload);
+    });
+  }
+
+  async function getPendingQueue() {
+    const all = await getAll('queue');
+    return all.filter((item) => item.status !== 'synced');
+  }
+
+  async function markQueueOperationSynced(id) {
+    const item = await get('queue', id);
+    if (!item) return null;
+    return put('queue', { ...item, status: 'synced', syncedAt: new Date().toISOString() });
+  }
+
+  async function removeQueueOperation(id) {
+    return deleteEntry('queue', id);
+  }
+
+  window.PetroDB = {
+    openDB,
+    put,
+    putMany,
+    get,
+    getAll,
+    delete: deleteEntry,
+    clear,
+    getMetadata,
+    setMetadata,
+    addQueueOperation,
+    getPendingQueue,
+    markQueueOperationSynced,
+    removeQueueOperation
   };
 })();

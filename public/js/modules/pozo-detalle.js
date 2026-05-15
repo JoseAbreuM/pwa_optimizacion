@@ -259,28 +259,59 @@
       throw new Error('No se pudo identificar la muestra.');
     }
 
-    const response = await fetch(`/pozos/${pozoId}/muestras/${muestraId}/representativa`, {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        representativa
-      })
-    });
-
-    const result = await response.json().catch(() => ({}));
-
-    if (!response.ok || result.ok === false) {
-      throw new Error(result.message || 'No se pudo actualizar la muestra.');
+    if (!navigator.onLine) {
+      await enqueueOfflineMuestraUpdate(pozoId, muestraId, representativa);
+      return;
     }
 
-    showToast(
-      representativa
-        ? 'Muestra añadida a la gráfica.'
-        : 'Muestra quitada de la gráfica.',
-      'success'
-    );
+    try {
+      const response = await fetch(`/pozos/${pozoId}/muestras/${muestraId}/representativa`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          representativa
+        })
+      });
+
+      const result = await response.json().catch(() => ({}));
+
+      if (!response.ok || result.ok === false) {
+        throw new Error(result.message || 'No se pudo actualizar la muestra.');
+      }
+
+      showToast(
+        representativa
+          ? 'Muestra añadida a la gráfica.'
+          : 'Muestra quitada de la gráfica.',
+        'success'
+      );
+    } catch (error) {
+      if (!navigator.onLine || error instanceof TypeError) {
+        await enqueueOfflineMuestraUpdate(pozoId, muestraId, representativa);
+        return;
+      }
+
+      throw error;
+    }
+  }
+
+  async function enqueueOfflineMuestraUpdate(pozoId, muestraId, representativa) {
+    if (!window.PetroSync || typeof window.PetroSync.enqueueOperation !== 'function') {
+      throw new Error('Funcionalidad offline no disponible.');
+    }
+
+    await window.PetroSync.enqueueOperation({
+      type: 'MUESTRA_REPRESENTATIVA_UPDATE',
+      payload: {
+        id_pozo: Number(pozoId),
+        id_muestra: Number(muestraId),
+        representativa
+      }
+    });
+
+    showToast('Sin conexión: cambio guardado para sincronizar.', 'success');
   }
 
   function initMuestrasChart() {
