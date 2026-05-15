@@ -701,30 +701,71 @@ async function getPozoById(id) {
 
 /**
  * Bomba vigente del pozo.
+ *
+ * Regla TVU:
+ * - Si la bomba no tiene fecha_falla, el TVU se calcula contra CURDATE().
+ * - Si la bomba tiene fecha_falla, el TVU queda fijo hasta la fecha de falla.
+ * - Para pozos activos, se prioriza la última bomba sin fecha_falla.
  */
 async function getBombaActualByPozo(pozoId) {
   const rows = await query(
     `
     SELECT
-      id_pozo,
-      codigo,
-      categoria,
-      estado_pozo,
-      metodo,
-      marca,
-      modelo,
-      serial,
-      serial AS serial_rotor,
+      b.id,
+      b.id_pozo,
+      p.codigo,
+      p.categoria,
+      ep.nombre AS estado_pozo,
+
+      ml.nombre AS metodo,
+
+      b.marca,
+      b.modelo,
+      b.serial,
+      b.serial AS serial_rotor,
       NULL AS serial_estator,
-      fecha_inst,
-      fecha_falla,
-      tvu,
-      tvu AS tvu_dias,
-      estatus,
-      observaciones,
-      fuente_actual
-    FROM vw_pozo_bomba_actual
-    WHERE id_pozo = ?
+
+      b.fecha_inst,
+      b.fecha_falla,
+
+      CASE
+        WHEN b.fecha_inst IS NULL THEN NULL
+        WHEN b.fecha_inst > CURDATE() THEN 0
+        WHEN b.fecha_falla IS NOT NULL THEN DATEDIFF(b.fecha_falla, b.fecha_inst)
+        ELSE DATEDIFF(CURDATE(), b.fecha_inst)
+      END AS tvu,
+
+      CASE
+        WHEN b.fecha_inst IS NULL THEN NULL
+        WHEN b.fecha_inst > CURDATE() THEN 0
+        WHEN b.fecha_falla IS NOT NULL THEN DATEDIFF(b.fecha_falla, b.fecha_inst)
+        ELSE DATEDIFF(CURDATE(), b.fecha_inst)
+      END AS tvu_dias,
+
+      b.estatus,
+      b.observaciones,
+
+      CASE
+        WHEN b.fecha_falla IS NULL THEN 'BOMBAS_HISTORIAL_ACTIVA'
+        ELSE 'BOMBAS_HISTORIAL_FALLADA'
+      END AS fuente_actual
+
+    FROM bombas_historial b
+    INNER JOIN pozos p
+      ON p.id = b.id_pozo
+    LEFT JOIN estado_pozo ep
+      ON ep.id = p.id_estado
+    LEFT JOIN metodos_levantamiento ml
+      ON ml.id = b.id_metodo
+
+    WHERE b.id_pozo = ?
+      AND b.fecha_inst IS NOT NULL
+
+    ORDER BY
+      CASE WHEN b.fecha_falla IS NULL THEN 0 ELSE 1 END ASC,
+      b.fecha_inst DESC,
+      b.id DESC
+
     LIMIT 1
     `,
     [pozoId]
@@ -735,31 +776,58 @@ async function getBombaActualByPozo(pozoId) {
 
 /**
  * Histórico de bombas del pozo.
+ *
+ * TVU calculado dinámicamente:
+ * - Si fecha_falla existe: fecha_falla - fecha_inst.
+ * - Si fecha_falla no existe: CURDATE() - fecha_inst.
  */
 async function getHistorialBombasByPozo(pozoId) {
   return query(
     `
     SELECT
-      id_pozo,
-      codigo,
-      id,
-      metodo,
-      marca,
-      modelo,
-      serial,
-      serial AS serial_rotor,
+      b.id_pozo,
+      p.codigo,
+      b.id,
+
+      ml.nombre AS metodo,
+
+      b.marca,
+      b.modelo,
+      b.serial,
+      b.serial AS serial_rotor,
       NULL AS serial_estator,
-      fecha_inst,
-      fecha_falla,
-      tvu,
-      tvu AS tvu_dias,
-      estatus,
-      observaciones
-    FROM vw_pozo_bombas_historial
-    WHERE id_pozo = ?
+
+      b.fecha_inst,
+      b.fecha_falla,
+
+      CASE
+        WHEN b.fecha_inst IS NULL THEN NULL
+        WHEN b.fecha_inst > CURDATE() THEN 0
+        WHEN b.fecha_falla IS NOT NULL THEN DATEDIFF(b.fecha_falla, b.fecha_inst)
+        ELSE DATEDIFF(CURDATE(), b.fecha_inst)
+      END AS tvu,
+
+      CASE
+        WHEN b.fecha_inst IS NULL THEN NULL
+        WHEN b.fecha_inst > CURDATE() THEN 0
+        WHEN b.fecha_falla IS NOT NULL THEN DATEDIFF(b.fecha_falla, b.fecha_inst)
+        ELSE DATEDIFF(CURDATE(), b.fecha_inst)
+      END AS tvu_dias,
+
+      b.estatus,
+      b.observaciones
+
+    FROM bombas_historial b
+    INNER JOIN pozos p
+      ON p.id = b.id_pozo
+    LEFT JOIN metodos_levantamiento ml
+      ON ml.id = b.id_metodo
+
+    WHERE b.id_pozo = ?
+
     ORDER BY
-      fecha_inst DESC,
-      id DESC
+      b.fecha_inst DESC,
+      b.id DESC
     `,
     [pozoId]
   );
@@ -1110,7 +1178,7 @@ async function getComparativoParametrosNivelesByPozo(pozoId) {
 /**
  * Últimas muestras asociadas al pozo.
  */
-async function getUltimasMuestrasByPozo(pozoId, limit = 10) {
+async function getUltimasMuestrasByPozo(pozoId, limit = 500) {
   const columns = await getExistingColumns('muestras_fluido');
 
   const selectSql = buildSafeSelect(columns, [
@@ -1866,6 +1934,18 @@ function normalizeMotorConfig(value) {
   text = text.replace(/^(\d+)(?:\.0+)?x(\d+)(?:\.0+)?$/i, '$1x$2');
 
   return text;
+}
+
+async function updateMuestraRepresentativa({ pozoId, muestraId, representativa }) {
+  await query(
+    `
+    UPDATE muestras_fluido
+    SET representativa = ?
+    WHERE id = ?
+      AND id_pozo = ?
+    `,
+    [representativa ? 1 : 0, muestraId, pozoId]
+  );
 }
 
 module.exports = {

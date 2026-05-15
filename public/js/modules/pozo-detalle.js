@@ -3,6 +3,7 @@
   let nivelesChart = null;
   let comparativoChart = null;
   let surveyChart = null;
+  let muestrasChart = null;
 
   function init() {
     initTabs();
@@ -14,6 +15,8 @@
     initParametrosChart();
     initNivelesChart();
     initComparativoChart();
+    initMuestrasTable();
+    initMuestrasChart();
     initChartExports();
   }
 
@@ -45,6 +48,7 @@
           safeResizeChart(nivelesChart);
           safeResizeChart(comparativoChart);
           safeResizeChart(surveyChart);
+          safeResizeChart(muestrasChart);
 
           adjustVisibleDataTables();
         }, 100);
@@ -199,6 +203,222 @@
       ordering: true,
       expectedColumns: 9
     });
+  }
+
+  function initMuestrasTable() {
+    const selector = '#tabla-muestras-pozo';
+
+    initDataTable(selector, {
+      scrollY: null,
+      scrollX: true,
+      pageLength: 10,
+      ordering: true,
+      expectedColumns: 6
+    });
+
+    document.querySelectorAll('[data-muestra-representativa]').forEach((input) => {
+      const label = input.closest('label');
+      const text = label?.querySelector('span:last-child');
+
+      input.addEventListener('change', async () => {
+        const previousValue = !input.checked;
+
+        updateMuestraSwitchLabel(input, text);
+
+        try {
+          await updateMuestraRepresentativa(input);
+          renderMuestrasChart();
+        } catch (error) {
+          input.checked = previousValue;
+          updateMuestraSwitchLabel(input, text);
+          renderMuestrasChart();
+
+          console.error(error);
+          showToast(error.message || 'No se pudo actualizar la muestra.', 'error');
+        }
+      });
+    });
+  }
+
+  function updateMuestraSwitchLabel(input, textEl) {
+    if (!textEl) return;
+
+    textEl.textContent = input.checked ? 'Sí' : 'No';
+
+    textEl.classList.toggle('text-emerald-700', input.checked);
+    textEl.classList.toggle('dark:text-emerald-300', input.checked);
+  }
+
+  async function updateMuestraRepresentativa(input) {
+    const muestraId = input.dataset.muestraId;
+    const pozoId = input.dataset.pozoId;
+    const representativa = Boolean(input.checked);
+
+    if (!muestraId || !pozoId) {
+      throw new Error('No se pudo identificar la muestra.');
+    }
+
+    const response = await fetch(`/pozos/${pozoId}/muestras/${muestraId}/representativa`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        representativa
+      })
+    });
+
+    const result = await response.json().catch(() => ({}));
+
+    if (!response.ok || result.ok === false) {
+      throw new Error(result.message || 'No se pudo actualizar la muestra.');
+    }
+
+    showToast(
+      representativa
+        ? 'Muestra añadida a la gráfica.'
+        : 'Muestra quitada de la gráfica.',
+      'success'
+    );
+  }
+
+  function initMuestrasChart() {
+    const chartEl = document.getElementById('chart-muestras-pozo');
+
+    if (!chartEl) return;
+
+    if (typeof window.ApexCharts === 'undefined') {
+      renderChartMessage(chartEl, 'ApexCharts no está cargado en el layout.');
+      return;
+    }
+
+    renderMuestrasChart();
+  }
+
+  function renderMuestrasChart() {
+    const chartEl = document.getElementById('chart-muestras-pozo');
+    if (!chartEl) return;
+
+    if (typeof window.ApexCharts === 'undefined') {
+      renderChartMessage(chartEl, 'ApexCharts no está cargado en el layout.');
+      return;
+    }
+
+    const rows = getMuestrasRowsFromTable()
+      .filter((row) => row.representativa && row.fecha && Number.isFinite(row.ays))
+      .sort((a, b) => {
+        const dateA = parseDate(a.fecha)?.getTime() || 0;
+        const dateB = parseDate(b.fecha)?.getTime() || 0;
+        return dateA - dateB;
+      });
+
+    if (!rows.length) {
+      renderChartMessage(
+        chartEl,
+        'Marca una o más muestras como representativas para graficar % AyS.'
+      );
+      destroyChart('muestras');
+      return;
+    }
+
+    const data = rows.map((row) => ({
+      x: normalizeDateLabel(row.fecha),
+      y: row.ays
+    }));
+
+    chartEl.innerHTML = '';
+
+    const theme = getChartTheme();
+
+    const options = {
+      chart: {
+        id: 'muestras',
+        type: 'line',
+        height: 320,
+        foreColor: theme.foreColor,
+        background: 'transparent',
+        zoom: { enabled: true },
+        toolbar: { show: true }
+      },
+      theme: {
+        mode: theme.mode
+      },
+      series: [
+        {
+          name: '% AyS',
+          data
+        }
+      ],
+      stroke: {
+        curve: 'smooth',
+        width: 3
+      },
+      markers: {
+        size: 5
+      },
+      grid: {
+        borderColor: theme.gridColor,
+        strokeDashArray: 4
+      },
+      xaxis: {
+        type: 'category',
+        labels: {
+          rotate: -45
+        }
+      },
+      yaxis: {
+        title: {
+          text: '% AyS'
+        },
+        labels: {
+          formatter: (value) => {
+            const number = Number(value);
+            return Number.isFinite(number) ? `${number.toFixed(1)}%` : value;
+          }
+        }
+      },
+      tooltip: {
+        theme: theme.mode,
+        shared: true,
+        intersect: false,
+        y: {
+          formatter: (value) => {
+            const number = Number(value);
+            return Number.isFinite(number) ? `${number.toFixed(2)}%` : value;
+          }
+        }
+      },
+      legend: {
+        position: 'top',
+        horizontalAlign: 'left',
+        labels: {
+          colors: theme.foreColor
+        }
+      },
+      noData: {
+        text: 'Sin datos',
+        style: {
+          color: theme.foreColor
+        }
+      }
+    };
+
+    destroyChart('muestras');
+
+    muestrasChart = new window.ApexCharts(chartEl, options);
+    muestrasChart.render();
+  }
+
+  function getMuestrasRowsFromTable() {
+    return Array.from(document.querySelectorAll('[data-muestra-representativa]'))
+      .map((input) => ({
+        id: input.dataset.muestraId,
+        pozoId: input.dataset.pozoId,
+        fecha: input.dataset.fecha,
+        ays: parseChartNumber(input.dataset.ays),
+        representativa: input.checked
+      }))
+      .filter((row) => row.id && row.fecha);
   }
 
   function initSurveyTable() {
@@ -618,254 +838,254 @@
     render();
   }
 
-function initComparativoChart() {
-  const chartEl = document.getElementById('chart-comparativa-pozo');
-  const dataEl = document.getElementById('comparativo-parametros-niveles-json');
-  const fechaSelect = document.getElementById('comparativo-fecha-select');
+  function initComparativoChart() {
+    const chartEl = document.getElementById('chart-comparativa-pozo');
+    const dataEl = document.getElementById('comparativo-parametros-niveles-json');
+    const fechaSelect = document.getElementById('comparativo-fecha-select');
 
-  if (!chartEl || !dataEl) return;
+    if (!chartEl || !dataEl) return;
 
-  if (typeof window.ApexCharts === 'undefined') {
-    renderChartMessage(chartEl, 'ApexCharts no está cargado en el layout.');
-    return;
-  }
-
-  const comparativo = readJsonData(dataEl, []);
-
-  if (!Array.isArray(comparativo) || !comparativo.length) {
-    renderChartMessage(chartEl, 'No hay datos comparables para graficar.');
-    destroyChart('comparativo');
-    return;
-  }
-
-  syncComparativoFechaSelect(fechaSelect, comparativo);
-
-  const render = () => {
-    const selectedDate = fechaSelect?.value || getComparativoDateKey(comparativo[0]);
-    const selectedRow =
-      getComparativoRowByDate(comparativo, selectedDate) ||
-      comparativo[0];
-
-    updateComparativoResumen(selectedRow);
-    renderComparativoChartByRow(chartEl, selectedRow);
-  };
-
-  if (fechaSelect) {
-    fechaSelect.addEventListener('change', render);
-  }
-
-  render();
-}
-
-function syncComparativoFechaSelect(select, rows) {
-  if (!select || !Array.isArray(rows) || !rows.length) return;
-
-  const existingOptions = Array.from(select.options).filter((option) => option.value);
-
-  if (existingOptions.length) return;
-
-  rows.forEach((row, index) => {
-    const dateKey = getComparativoDateKey(row);
-    if (!dateKey) return;
-
-    const option = document.createElement('option');
-    option.value = dateKey;
-    option.textContent = normalizeDateLabel(row.fecha_nivel || row.fecha);
-
-    if (index === 0) {
-      option.selected = true;
+    if (typeof window.ApexCharts === 'undefined') {
+      renderChartMessage(chartEl, 'ApexCharts no está cargado en el layout.');
+      return;
     }
 
-    select.appendChild(option);
-  });
-}
+    const comparativo = readJsonData(dataEl, []);
 
-function getComparativoDateKey(row) {
-  if (!row) return '';
+    if (!Array.isArray(comparativo) || !comparativo.length) {
+      renderChartMessage(chartEl, 'No hay datos comparables para graficar.');
+      destroyChart('comparativo');
+      return;
+    }
 
-  const rawDate = row.fecha_nivel || row.fecha;
-  const date = parseDate(rawDate);
+    syncComparativoFechaSelect(fechaSelect, comparativo);
 
-  if (!date) return '';
+    const render = () => {
+      const selectedDate = fechaSelect?.value || getComparativoDateKey(comparativo[0]);
+      const selectedRow =
+        getComparativoRowByDate(comparativo, selectedDate) ||
+        comparativo[0];
 
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
+      updateComparativoResumen(selectedRow);
+      renderComparativoChartByRow(chartEl, selectedRow);
+    };
 
-  return `${year}-${month}-${day}`;
-}
+    if (fechaSelect) {
+      fechaSelect.addEventListener('change', render);
+    }
 
-function getComparativoRowByDate(rows, selectedDate) {
-  if (!Array.isArray(rows) || !selectedDate) return null;
-
-  return rows.find((row) => getComparativoDateKey(row) === selectedDate) || null;
-}
-
-function updateComparativoResumen(row) {
-  if (!row) return;
-
-  setTextById(
-    'comparativo-resumen-fecha',
-    normalizeDateLabel(row.fecha_nivel || row.fecha)
-  );
-
-  setTextById(
-    'comparativo-resumen-dif-rpm',
-    formatChartValue(row.dif_rpm)
-  );
-
-  setTextById(
-    'comparativo-resumen-dif-torque',
-    formatChartValue(row.dif_torque)
-  );
-
-  setTextById(
-    'comparativo-resumen-dif-amp',
-    formatChartValue(row.dif_amp)
-  );
-
-  setTextById(
-    'comparativo-resumen-dif-hp',
-    formatChartValue(row.dif_hp)
-  );
-
-  setTextById(
-    'comparativo-resumen-dif-casing',
-    formatChartValue(row.dif_presion_casing)
-  );
-
-  setTextById(
-    'comparativo-resumen-dif-tubing',
-    formatChartValue(row.dif_presion_tubing)
-  );
-}
-
-function setTextById(id, value) {
-  const element = document.getElementById(id);
-  if (!element) return;
-
-  const text = value === null || value === undefined || value === '' ? '—' : String(value);
-
-  element.textContent = text;
-  element.setAttribute('title', text);
-}
-
-function formatChartValue(value) {
-  const number = parseChartNumber(value);
-  return Number.isFinite(number) ? number.toFixed(2) : '—';
-}
-
-function renderComparativoChartByRow(chartEl, row) {
-  if (!row) {
-    renderChartMessage(chartEl, 'No hay datos comparables para la fecha seleccionada.');
-    destroyChart('comparativo');
-    return;
+    render();
   }
 
-  const labels = getComparativoLabels();
+  function syncComparativoFechaSelect(select, rows) {
+    if (!select || !Array.isArray(rows) || !rows.length) return;
 
-  const fields = [
-    'dif_rpm',
-    'dif_torque',
-    'dif_amp',
-    'dif_hp',
-    'dif_presion_casing',
-    'dif_presion_tubing'
-  ];
+    const existingOptions = Array.from(select.options).filter((option) => option.value);
 
-  const data = fields
-    .map((field) => ({
-      x: labels[field] || field,
-      y: parseChartNumber(row[field])
-    }))
-    .filter((point) => Number.isFinite(point.y));
+    if (existingOptions.length) return;
 
-  if (!data.length) {
-    renderChartMessage(chartEl, 'No hay diferencias válidas para la fecha seleccionada.');
-    destroyChart('comparativo');
-    return;
+    rows.forEach((row, index) => {
+      const dateKey = getComparativoDateKey(row);
+      if (!dateKey) return;
+
+      const option = document.createElement('option');
+      option.value = dateKey;
+      option.textContent = normalizeDateLabel(row.fecha_nivel || row.fecha);
+
+      if (index === 0) {
+        option.selected = true;
+      }
+
+      select.appendChild(option);
+    });
   }
 
-  chartEl.innerHTML = '';
+  function getComparativoDateKey(row) {
+    if (!row) return '';
 
-  const theme = getChartTheme();
+    const rawDate = row.fecha_nivel || row.fecha;
+    const date = parseDate(rawDate);
 
-  const options = {
-    chart: {
-      id: 'comparativo',
-      type: 'bar',
-      height: 320,
-      foreColor: theme.foreColor,
-      background: 'transparent',
-      toolbar: { show: true }
-    },
-    theme: {
-      mode: theme.mode
-    },
-    series: [
-      {
-        name: `Diferencias ${normalizeDateLabel(row.fecha_nivel || row.fecha)}`,
-        data
-      }
-    ],
-    plotOptions: {
-      bar: {
-        borderRadius: 6,
-        columnWidth: '48%',
-        distributed: false
-      }
-    },
-    dataLabels: {
-      enabled: true,
-      formatter: (value) => {
-        const number = Number(value);
-        return Number.isFinite(number) ? number.toFixed(2) : value;
-      }
-    },
-    grid: {
-      borderColor: theme.gridColor,
-      strokeDashArray: 4
-    },
-    xaxis: {
-      type: 'category',
-      labels: {
-        rotate: -20,
-        trim: true
-      }
-    },
-    yaxis: {
-      labels: {
-        formatter: (value) => {
-          const number = Number(value);
-          return Number.isFinite(number) ? number.toFixed(0) : value;
+    if (!date) return '';
+
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+
+    return `${year}-${month}-${day}`;
+  }
+
+  function getComparativoRowByDate(rows, selectedDate) {
+    if (!Array.isArray(rows) || !selectedDate) return null;
+
+    return rows.find((row) => getComparativoDateKey(row) === selectedDate) || null;
+  }
+
+  function updateComparativoResumen(row) {
+    if (!row) return;
+
+    setTextById(
+      'comparativo-resumen-fecha',
+      normalizeDateLabel(row.fecha_nivel || row.fecha)
+    );
+
+    setTextById(
+      'comparativo-resumen-dif-rpm',
+      formatChartValue(row.dif_rpm)
+    );
+
+    setTextById(
+      'comparativo-resumen-dif-torque',
+      formatChartValue(row.dif_torque)
+    );
+
+    setTextById(
+      'comparativo-resumen-dif-amp',
+      formatChartValue(row.dif_amp)
+    );
+
+    setTextById(
+      'comparativo-resumen-dif-hp',
+      formatChartValue(row.dif_hp)
+    );
+
+    setTextById(
+      'comparativo-resumen-dif-casing',
+      formatChartValue(row.dif_presion_casing)
+    );
+
+    setTextById(
+      'comparativo-resumen-dif-tubing',
+      formatChartValue(row.dif_presion_tubing)
+    );
+  }
+
+  function setTextById(id, value) {
+    const element = document.getElementById(id);
+    if (!element) return;
+
+    const text = value === null || value === undefined || value === '' ? '—' : String(value);
+
+    element.textContent = text;
+    element.setAttribute('title', text);
+  }
+
+  function formatChartValue(value) {
+    const number = parseChartNumber(value);
+    return Number.isFinite(number) ? number.toFixed(2) : '—';
+  }
+
+  function renderComparativoChartByRow(chartEl, row) {
+    if (!row) {
+      renderChartMessage(chartEl, 'No hay datos comparables para la fecha seleccionada.');
+      destroyChart('comparativo');
+      return;
+    }
+
+    const labels = getComparativoLabels();
+
+    const fields = [
+      'dif_rpm',
+      'dif_torque',
+      'dif_amp',
+      'dif_hp',
+      'dif_presion_casing',
+      'dif_presion_tubing'
+    ];
+
+    const data = fields
+      .map((field) => ({
+        x: labels[field] || field,
+        y: parseChartNumber(row[field])
+      }))
+      .filter((point) => Number.isFinite(point.y));
+
+    if (!data.length) {
+      renderChartMessage(chartEl, 'No hay diferencias válidas para la fecha seleccionada.');
+      destroyChart('comparativo');
+      return;
+    }
+
+    chartEl.innerHTML = '';
+
+    const theme = getChartTheme();
+
+    const options = {
+      chart: {
+        id: 'comparativo',
+        type: 'bar',
+        height: 320,
+        foreColor: theme.foreColor,
+        background: 'transparent',
+        toolbar: { show: true }
+      },
+      theme: {
+        mode: theme.mode
+      },
+      series: [
+        {
+          name: `Diferencias ${normalizeDateLabel(row.fecha_nivel || row.fecha)}`,
+          data
         }
-      }
-    },
-    tooltip: {
-      theme: theme.mode,
-      y: {
+      ],
+      plotOptions: {
+        bar: {
+          borderRadius: 6,
+          columnWidth: '48%',
+          distributed: false
+        }
+      },
+      dataLabels: {
+        enabled: true,
         formatter: (value) => {
           const number = Number(value);
           return Number.isFinite(number) ? number.toFixed(2) : value;
         }
+      },
+      grid: {
+        borderColor: theme.gridColor,
+        strokeDashArray: 4
+      },
+      xaxis: {
+        type: 'category',
+        labels: {
+          rotate: -20,
+          trim: true
+        }
+      },
+      yaxis: {
+        labels: {
+          formatter: (value) => {
+            const number = Number(value);
+            return Number.isFinite(number) ? number.toFixed(0) : value;
+          }
+        }
+      },
+      tooltip: {
+        theme: theme.mode,
+        y: {
+          formatter: (value) => {
+            const number = Number(value);
+            return Number.isFinite(number) ? number.toFixed(2) : value;
+          }
+        }
+      },
+      legend: {
+        show: false
+      },
+      noData: {
+        text: 'Sin datos',
+        style: {
+          color: theme.foreColor
+        }
       }
-    },
-    legend: {
-      show: false
-    },
-    noData: {
-      text: 'Sin datos',
-      style: {
-        color: theme.foreColor
-      }
-    }
-  };
+    };
 
-  destroyChart('comparativo');
+    destroyChart('comparativo');
 
-  comparativoChart = new window.ApexCharts(chartEl, options);
-  comparativoChart.render();
-}
+    comparativoChart = new window.ApexCharts(chartEl, options);
+    comparativoChart.render();
+  }
 
   function renderMultiSeriesChart({
     chartEl,
@@ -1028,6 +1248,11 @@ function renderComparativoChartByRow(chartEl, row) {
       comparativoChart.destroy();
       comparativoChart = null;
     }
+
+    if (chartRefName === 'muestras' && muestrasChart) {
+      muestrasChart.destroy();
+      muestrasChart = null;
+    }
   }
 
   function initChartExports() {
@@ -1060,6 +1285,7 @@ function renderComparativoChartByRow(chartEl, row) {
     if (text.includes('nivel')) return 'niveles';
     if (text.includes('comparativ')) return 'comparativo';
     if (text.includes('survey')) return 'survey';
+    if (text.includes('muestra')) return 'muestras';
 
     return 'grafica';
   }
@@ -1071,7 +1297,7 @@ function renderComparativoChartByRow(chartEl, row) {
     if (match) return match[0].toUpperCase();
 
     return text
-      .replace(/^(parametros|niveles|comparativo|survey)-/i, '')
+      .replace(/^(parametros|niveles|comparativo|survey|muestras)-/i, '')
       .trim()
       .toUpperCase();
   }
@@ -1106,14 +1332,22 @@ function renderComparativoChartByRow(chartEl, row) {
       return `Gráfica de niveles: ${selected || 'sin selección'} · ${limiteLabel}`;
     }
 
- if (kind === 'comparativo') {
-  const selectedDate = getSelectValue('comparativo-fecha-select');
-  const label = selectedDate
-    ? normalizeDateLabel(selectedDate)
-    : 'fecha seleccionada';
+    if (kind === 'comparativo') {
+      const selectedDate = getSelectValue('comparativo-fecha-select');
+      const label = selectedDate
+        ? normalizeDateLabel(selectedDate)
+        : 'fecha seleccionada';
 
-  return `Comparativa parámetros vs niveles · Toma de nivel: ${label}`;
-}
+      return `Comparativa parámetros vs niveles · Toma de nivel: ${label}`;
+    }
+
+    if (kind === 'muestras') {
+      const total = getMuestrasRowsFromTable()
+        .filter((row) => row.representativa && Number.isFinite(row.ays))
+        .length;
+
+      return `Gráfica de muestras representativas · % AyS en el tiempo · ${total} muestra(s) seleccionada(s)`;
+    }
 
     if (kind === 'survey') {
       return 'Gráfica de trayectoria / survey';
@@ -1127,6 +1361,7 @@ function renderComparativoChartByRow(chartEl, row) {
     if (chartId === 'chart-niveles-pozo') return nivelesChart;
     if (chartId === 'chart-comparativa-pozo') return comparativoChart;
     if (chartId === 'chart-survey-pozo') return surveyChart;
+    if (chartId === 'chart-muestras-pozo') return muestrasChart;
 
     return null;
   }

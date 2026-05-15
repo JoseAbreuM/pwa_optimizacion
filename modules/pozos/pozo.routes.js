@@ -28,6 +28,8 @@ router.get('/data', ensureAuthenticated, pozoController.listApi);
  */
 router.patch('/:id/potencial', ensureAuthenticated, pozoController.actualizarPotencialPozo);
 
+
+router.patch('/:id/muestras/:muestraId/representativa', ensureAuthenticated, pozoController.updateMuestraRepresentativa);
 /**
  * Alias para actualizar potencial.
  *

@@ -116,6 +116,8 @@ async function listApi(req, res, next) {
  */
 async function detail(req, res, next) {
   try {
+    setNoCacheHeaders(res);
+
     const bootstrap = await pozoService.getBootstrapData(req.params.id);
 
     if (!bootstrap || !bootstrap.pozo) {
@@ -644,6 +646,36 @@ function getDuplicateStats(rows = []) {
   };
 }
 
+async function updateMuestraRepresentativa(req, res, next) {
+  try {
+    const pozoId = Number(req.params.id);
+    const muestraId = Number(req.params.muestraId);
+    const representativa = Boolean(req.body.representativa);
+
+    if (!pozoId || !muestraId) {
+      return res.status(400).json({
+        ok: false,
+        message: 'Datos de muestra inválidos.'
+      });
+    }
+
+    await pozoService.updateMuestraRepresentativa({
+      pozoId,
+      muestraId,
+      representativa
+    });
+
+    return res.json({
+      ok: true,
+      message: representativa
+        ? 'Muestra marcada como representativa.'
+        : 'Muestra quitada de la gráfica.'
+    });
+  } catch (error) {
+    return next(error);
+  }
+}
+
 module.exports = {
   list,
   detail,
@@ -652,5 +684,6 @@ module.exports = {
   getSurvey,
   updateSurvey,
   actualizarPotencialPozo,
+  updateMuestraRepresentativa,
   __debugListPozos
 };
