@@ -57,10 +57,55 @@ self.addEventListener('fetch', event => {
   ) {
     event.respondWith(
       fetch(event.request)
-        .then(response => response)
+        .then((response) => {
+          if (response && response.status === 200) {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+          }
+          return response;
+        })
         .catch(async () => {
           const cached = await caches.match(event.request, { ignoreSearch: true });
-          return cached || caches.match('/login') || new Response('<h1>Sin conexión</h1><p>Necesitas internet para ver esta página.</p>', { headers: { 'Content-Type': 'text/html' } });
+          return cached || caches.match('/login') || new Response(`
+            <!DOCTYPE html>
+            <html lang="es">
+            <head>
+              <meta charset="UTF-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <title>Sin conexión</title>
+              <style>
+                body {
+                  font-family: Arial, sans-serif;
+                  min-height: 100vh;
+                  margin: 0;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  background: #0f172a;
+                  color: #e2e8f0;
+                  text-align: center;
+                  padding: 24px;
+                }
+                .card {
+                  max-width: 420px;
+                  border: 1px solid #334155;
+                  border-radius: 16px;
+                  padding: 24px;
+                  background: #111827;
+                }
+              </style>
+            </head>
+            <body>
+              <div class="card">
+                <h1>Sin conexión</h1>
+                <p>Necesitas internet para ver esta página por primera vez.</p>
+                <p>Cuando recuperes conexión, la PWA actualizará los datos automáticamente.</p>
+              </div>
+            </body>
+            </html>
+          `, {
+            headers: { 'Content-Type': 'text/html; charset=UTF-8' }
+          });
         })
     );
     return;

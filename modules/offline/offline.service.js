@@ -27,7 +27,24 @@ async function getExistingColumns(tableName) {
 }
 
 async function buildOfflineSnapshot(currentUser) {
-  const dashboardSource = await dashboardService.getDashboardData(currentUser);
+  let dashboardSource = {
+    kpis: null,
+    categorias: [],
+    servicios: [],
+    muestrasAlerta: [],
+    bombasCriticas: [],
+    potencialPorArea: {
+      labels: [],
+      values: [],
+      colors: []
+    }
+  };
+
+  try {
+    dashboardSource = await dashboardService.getDashboardData(currentUser);
+  } catch (error) {
+    console.warn('[OFFLINE/SNAPSHOT] No se pudo cargar dashboard:', error.message || error);
+  }
 
   const dashboard = {
     kpis: dashboardSource.kpis || null,
@@ -35,7 +52,11 @@ async function buildOfflineSnapshot(currentUser) {
     servicios: dashboardSource.servicios || [],
     muestrasAlerta: dashboardSource.muestrasAlerta || [],
     bombasCriticas: dashboardSource.bombasCriticas || [],
-    potencialPorArea: dashboardSource.potencialPorArea || {}
+    potencialPorArea: dashboardSource.potencialPorArea || {
+      labels: [],
+      values: [],
+      colors: []
+    }
   };
 
   const pozos = await safeQuery(
@@ -49,13 +70,6 @@ async function buildOfflineSnapshot(currentUser) {
     []
   );
 
-  const pozoDetalles = {};
-  pozos.forEach((pozo) => {
-    if (pozo && pozo.id != null) {
-      pozoDetalles[pozo.id] = { pozo };
-    }
-  });
-
   const [parametros, niveles, muestras, bombas, servicios, mapaPozos, survey] = await Promise.all([
     safeQuery('SELECT * FROM parametros_diarios ORDER BY fecha DESC, id DESC', [], []),
     safeQuery('SELECT * FROM tomas_nivel ORDER BY fecha DESC, id DESC', [], []),
@@ -65,6 +79,23 @@ async function buildOfflineSnapshot(currentUser) {
     safeQuery('SELECT * FROM vw_mapa_pozos_sync ORDER BY id ASC', [], []),
     safeQuery('SELECT * FROM survey WHERE activo = 1 ORDER BY id DESC', [], [])
   ]);
+
+  const pozoDetalles = {};
+
+  pozos.forEach((pozo) => {
+    if (pozo && pozo.id != null) {
+      const id = Number(pozo.id);
+      pozoDetalles[id] = {
+        id,
+        pozo,
+        parametros: Array.isArray(parametros) ? parametros.filter((row) => Number(row.id_pozo) === id) : [],
+        niveles: Array.isArray(niveles) ? niveles.filter((row) => Number(row.id_pozo) === id) : [],
+        muestras: Array.isArray(muestras) ? muestras.filter((row) => Number(row.id_pozo) === id) : [],
+        bombas: Array.isArray(bombas) ? bombas.filter((row) => Number(row.id_pozo) === id) : [],
+        survey: Array.isArray(survey) ? survey.filter((row) => Number(row.id_pozo) === id) : []
+      };
+    }
+  });
 
   return {
     version: new Date().toISOString(),

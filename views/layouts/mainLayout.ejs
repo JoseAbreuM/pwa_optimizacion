@@ -83,7 +83,6 @@
 
       <!-- Scripts offline/core -->
       <script src="/js/offline/db.js"></script>
-      <script src="/js/offline/store.js"></script>
       <script src="/js/offline/sync.js"></script>
       <script src="/js/offline/status.js"></script>
       <script src="/js/core/ui.js"></script>
@@ -92,9 +91,9 @@
       <script src="/js/app-theme.js"></script>
 
       <!-- Script específico de cada página -->
-      <% if (typeof pageScript !=='undefined' && pageScript) { %>
+      <% if (typeof pageScript !== 'undefined' && pageScript) { %>
         <script src="<%= pageScript %>"></script>
-        <% } %>
+      <% } %>
 
 </body>
 

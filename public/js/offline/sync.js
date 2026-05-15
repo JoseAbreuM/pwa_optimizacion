@@ -43,8 +43,23 @@
   async function saveSnapshot(snapshot = {}) {
     if (!db || !snapshot) return;
 
+    const storesToRefresh = [
+      'dashboard',
+      'pozos',
+      'pozo_detalles',
+      'parametros',
+      'niveles',
+      'muestras',
+      'bombas',
+      'servicios',
+      'mapa_pozos',
+      'survey'
+    ];
+
+    await Promise.all(storesToRefresh.map((store) => db.clear(store)));
+
     await Promise.all([
-      db.put('dashboard', { key: 'main', ...snapshot.dashboard }),
+      db.put('dashboard', { key: 'main', ...(snapshot.dashboard || {}) }),
       db.putMany('pozos', Array.isArray(snapshot.pozos) ? snapshot.pozos : []),
       db.putMany('pozo_detalles', snapshot.pozoDetalles && typeof snapshot.pozoDetalles === 'object'
         ? Object.values(snapshot.pozoDetalles)
