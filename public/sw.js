@@ -12,6 +12,8 @@ const FILES_TO_CACHE = [
   '/js/offline/sync.js',
   '/js/offline/status.js',
   '/js/modules/pozos.js',
+  '/js/modules/pozo-detalle.js',
+  '/js/modules/dashboard.js',
   '/js/modules/muestras.js',
   '/js/modules/parametros.js',
   '/js/modules/niveles.js',
@@ -86,12 +88,23 @@ self.addEventListener('fetch', event => {
                   text-align: center;
                   padding: 24px;
                 }
+
                 .card {
                   max-width: 420px;
                   border: 1px solid #334155;
                   border-radius: 16px;
                   padding: 24px;
                   background: #111827;
+                }
+
+                h1 {
+                  margin-top: 0;
+                  font-size: 1.5rem;
+                }
+
+                p {
+                  color: #cbd5e1;
+                  line-height: 1.5;
                 }
               </style>
             </head>

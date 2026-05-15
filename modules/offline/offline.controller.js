@@ -34,7 +34,11 @@ async function syncOfflineOperations(req, res, next) {
 async function getBootstrapData(req, res, next) {
   try {
     const snapshot = await offlineService.buildOfflineSnapshot(req.session.user);
-    return res.json(snapshot);
+    return res.json({
+      ok: true,
+      snapshot,
+      ...snapshot
+    });
   } catch (error) {
     return next(error);
   }

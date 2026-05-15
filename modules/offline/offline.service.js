@@ -156,6 +156,13 @@ async function applyMuestraRepresentativa(payload = {}) {
     [representativa ? 1 : 0, id_muestra, id_pozo]
   );
 
+  if (!result || result.affectedRows === 0) {
+    return {
+      ok: false,
+      message: 'No se encontró la muestra para este pozo.'
+    };
+  }
+
   return {
     ok: true,
     affectedRows: result.affectedRows,
