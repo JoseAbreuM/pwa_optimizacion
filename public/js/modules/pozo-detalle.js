@@ -297,6 +297,7 @@
 
   function renderMuestrasChart() {
     const chartEl = document.getElementById('chart-muestras-pozo');
+
     if (!chartEl) return;
 
     if (typeof window.ApexCharts === 'undefined') {
@@ -363,14 +364,29 @@
       xaxis: {
         type: 'category',
         labels: {
-          rotate: -45
+          rotate: -45,
+          style: {
+            colors: theme.foreColor
+          }
+        },
+        axisBorder: {
+          color: theme.gridColor
+        },
+        axisTicks: {
+          color: theme.gridColor
         }
       },
       yaxis: {
         title: {
-          text: '% AyS'
+          text: '% AyS',
+          style: {
+            color: theme.foreColor
+          }
         },
         labels: {
+          style: {
+            colors: theme.foreColor
+          },
           formatter: (value) => {
             const number = Number(value);
             return Number.isFinite(number) ? `${number.toFixed(1)}%` : value;

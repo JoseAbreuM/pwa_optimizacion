@@ -1937,7 +1937,7 @@ function normalizeMotorConfig(value) {
 }
 
 async function updateMuestraRepresentativa({ pozoId, muestraId, representativa }) {
-  await query(
+  const [result] = await pool.query(
     `
     UPDATE muestras_fluido
     SET representativa = ?
@@ -1946,6 +1946,11 @@ async function updateMuestraRepresentativa({ pozoId, muestraId, representativa }
     `,
     [representativa ? 1 : 0, muestraId, pozoId]
   );
+
+  return {
+    affectedRows: result.affectedRows,
+    representativa: representativa ? 1 : 0
+  };
 }
 
 module.exports = {
@@ -1972,5 +1977,7 @@ module.exports = {
   getSurveyActivoByPozo,
   replaceSurveyActivoByPozo,
 
-  updatePozoPotencial
+  updatePozoPotencial,
+
+  updateMuestraRepresentativa
 };

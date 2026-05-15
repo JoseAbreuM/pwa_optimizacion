@@ -650,29 +650,47 @@ async function updateMuestraRepresentativa(req, res, next) {
   try {
     const pozoId = Number(req.params.id);
     const muestraId = Number(req.params.muestraId);
-    const representativa = Boolean(req.body.representativa);
 
-    if (!pozoId || !muestraId) {
+    const representativa =
+      req.body?.representativa === true ||
+      req.body?.representativa === 1 ||
+      req.body?.representativa === '1' ||
+      req.body?.representativa === 'true';
+
+    if (!Number.isInteger(pozoId) || pozoId <= 0 || !Number.isInteger(muestraId) || muestraId <= 0) {
       return res.status(400).json({
         ok: false,
         message: 'Datos de muestra inválidos.'
       });
     }
 
-    await pozoService.updateMuestraRepresentativa({
+    const result = await pozoService.updateMuestraRepresentativa({
       pozoId,
       muestraId,
       representativa
     });
 
+    if (!result || result.affectedRows < 1) {
+      return res.status(404).json({
+        ok: false,
+        message: 'No se encontró la muestra para este pozo.'
+      });
+    }
+
     return res.json({
       ok: true,
+      representativa,
       message: representativa
         ? 'Muestra marcada como representativa.'
         : 'Muestra quitada de la gráfica.'
     });
   } catch (error) {
-    return next(error);
+    console.error('[POZO/MUESTRA/REPRESENTATIVA] Error:', error);
+
+    return res.status(500).json({
+      ok: false,
+      message: error.message || 'No se pudo actualizar la muestra.'
+    });
   }
 }
 

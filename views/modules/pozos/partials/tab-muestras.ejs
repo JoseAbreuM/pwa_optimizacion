@@ -2,7 +2,8 @@
   muestras=ultimasMuestras; } else if (typeof timeline !=='undefined' && timeline && Array.isArray(timeline.muestras)) {
   muestras=timeline.muestras; } %>
 
-  <div id="tab-muestras-pozo" class="space-y-4">
+  <div id="tab-muestras-pozo"
+    class="space-y-4 rounded-2xl bg-slate-50 p-3 text-slate-900 dark:bg-slate-950 dark:text-slate-100 sm:p-4">
 
     <!-- =========================================================
    TABLA MUESTRAS
@@ -28,7 +29,7 @@
 
       <script type="application/json" id="muestras-data-json"><%- JSON.stringify(muestras || []) %></script>
 
-      <div class="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700">
+      <div class="overflow-x-auto rounded-xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900">
         <table id="tabla-muestras-pozo"
           class="w-full min-w-[900px] text-left text-sm text-slate-600 dark:text-slate-300">
           <thead class="bg-slate-50 text-xs uppercase text-slate-700 dark:bg-slate-800 dark:text-slate-300">
@@ -129,22 +130,94 @@
         </button>
       </div>
 
-      <div id="chart-muestras-pozo"
-        class="min-h-[320px] rounded-xl border border-dashed border-slate-300 bg-slate-50 p-2 dark:border-slate-600 dark:bg-slate-950/40">
-        <% if (!muestras || !muestras.length) { %>
-          <div class="flex min-h-[300px] items-center justify-center">
-            <p class="text-sm text-slate-500 dark:text-slate-400">
-              No hay muestras disponibles para graficar.
-            </p>
-          </div>
-          <% } else { %>
+      <div
+        class="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-2 dark:border-slate-600 dark:bg-slate-950/70">
+        <div id="chart-muestras-pozo"
+          class="min-h-[320px] rounded-lg bg-white text-slate-700 dark:bg-slate-950 dark:text-slate-200">
+          <% if (!muestras || !muestras.length) { %>
             <div class="flex min-h-[300px] items-center justify-center">
               <p class="text-sm text-slate-500 dark:text-slate-400">
-                Marca una o más muestras como representativas para graficar % AyS.
+                No hay muestras disponibles para graficar.
               </p>
             </div>
-            <% } %>
+            <% } else { %>
+              <div class="flex min-h-[300px] items-center justify-center">
+                <p class="text-sm text-slate-500 dark:text-slate-400">
+                  Marca una o más muestras como representativas para graficar % AyS.
+                </p>
+              </div>
+              <% } %>
+        </div>
       </div>
     </section>
 
   </div>
+
+  <style>
+    html.dark #tab-muestras-pozo {
+      background-color: rgb(2 6 23);
+      color: rgb(226 232 240);
+    }
+
+    html.dark #tab-muestras-pozo section {
+      background-color: rgb(15 23 42);
+      border-color: rgb(51 65 85);
+    }
+
+    html.dark #tab-muestras-pozo .bg-white {
+      background-color: rgb(15 23 42);
+    }
+
+    html.dark #tab-muestras-pozo .bg-slate-50 {
+      background-color: rgb(15 23 42);
+    }
+
+    html.dark #tab-muestras-pozo table,
+    html.dark #tab-muestras-pozo tbody,
+    html.dark #tab-muestras-pozo tr {
+      background-color: transparent;
+    }
+
+    html.dark #chart-muestras-pozo {
+      background-color: rgb(2 6 23);
+      color: rgb(226 232 240);
+    }
+
+    html.dark #chart-muestras-pozo .apexcharts-canvas,
+    html.dark #chart-muestras-pozo svg {
+      background-color: transparent !important;
+    }
+
+    html.dark #chart-muestras-pozo .apexcharts-title-text,
+    html.dark #chart-muestras-pozo .apexcharts-text,
+    html.dark #chart-muestras-pozo .apexcharts-xaxis-label,
+    html.dark #chart-muestras-pozo .apexcharts-yaxis-label,
+    html.dark #chart-muestras-pozo .apexcharts-legend-text {
+      fill: rgb(203 213 225) !important;
+      color: rgb(203 213 225) !important;
+    }
+
+    html.dark #chart-muestras-pozo .apexcharts-gridline {
+      stroke: rgb(51 65 85) !important;
+    }
+
+    html.dark #chart-muestras-pozo .apexcharts-tooltip,
+    html.dark #chart-muestras-pozo .apexcharts-tooltip-title {
+      background-color: rgb(15 23 42) !important;
+      border-color: rgb(51 65 85) !important;
+      color: rgb(226 232 240) !important;
+    }
+
+    html.dark #chart-muestras-pozo .apexcharts-tooltip-text,
+    html.dark #chart-muestras-pozo .apexcharts-tooltip-text-y-label,
+    html.dark #chart-muestras-pozo .apexcharts-tooltip-text-y-value {
+      color: rgb(226 232 240) !important;
+    }
+
+    html.dark #tab-muestras-pozo input,
+    html.dark #tab-muestras-pozo select {
+      background-color: rgb(15 23 42);
+      color: rgb(226 232 240);
+      border-color: rgb(71 85 105);
+    }
+  </style>
