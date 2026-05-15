@@ -213,7 +213,8 @@
       scrollX: true,
       pageLength: 10,
       ordering: true,
-      expectedColumns: 6
+      expectedColumns: 6,
+      order: [[0, 'desc']]
     });
 
     document.querySelectorAll('[data-muestra-representativa]').forEach((input) => {
@@ -308,8 +309,9 @@
     const rows = getMuestrasRowsFromTable()
       .filter((row) => row.representativa && row.fecha && Number.isFinite(row.ays))
       .sort((a, b) => {
-        const dateA = parseDate(a.fecha)?.getTime() || 0;
-        const dateB = parseDate(b.fecha)?.getTime() || 0;
+        const dateA = parseDateKey(a.fecha)?.getTime() || 0;
+        const dateB = parseDateKey(b.fecha)?.getTime() || 0;
+
         return dateA - dateB;
       });
 
@@ -489,6 +491,7 @@
       scrollY: options.scrollY || null,
       scrollCollapse: true,
       autoWidth: false,
+      order: options.order || [],
       columnDefs: [
         {
           targets: '_all',
@@ -920,7 +923,7 @@
     if (!row) return '';
 
     const rawDate = row.fecha_nivel || row.fecha;
-    const date = parseDate(rawDate);
+    const date = parseDateKey(rawDate);
 
     if (!date) return '';
 
@@ -1537,21 +1540,21 @@
     if (!Number.isFinite(days)) return rows;
 
     const orderedRows = sortRowsByDateAsc(rows);
-    const lastDate = parseDate(orderedRows[orderedRows.length - 1]?.fecha) || new Date();
+    const lastDate = parseDateKey(orderedRows[orderedRows.length - 1]?.fecha) || new Date();
 
     const minDate = new Date(lastDate);
     minDate.setDate(lastDate.getDate() - days);
 
     return orderedRows.filter((row) => {
-      const rowDate = parseDate(row.fecha);
+      const rowDate = parseDateKey(row.fecha);
       return rowDate && rowDate >= minDate;
     });
   }
 
   function sortRowsByDateAsc(rows) {
     return [...rows].sort((a, b) => {
-      const dateA = parseDate(a.fecha)?.getTime() || 0;
-      const dateB = parseDate(b.fecha)?.getTime() || 0;
+      const dateA = parseDateKey(a.fecha)?.getTime() || 0;
+      const dateB = parseDateKey(b.fecha)?.getTime() || 0;
       return dateA - dateB;
     });
   }
@@ -1577,8 +1580,23 @@
     return date;
   }
 
+  function parseDateKey(value) {
+    if (!value) return null;
+
+    const text = String(value).trim();
+
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(text)) {
+      return parseDate(value);
+    }
+
+    const [year, month, day] = text.split('-').map(Number);
+    const date = new Date(year, month - 1, day);
+
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+
   function normalizeDateLabel(value) {
-    const date = parseDate(value);
+    const date = parseDateKey(value);
     if (!date) return '';
 
     return date.toLocaleDateString('es-VE', {

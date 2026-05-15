@@ -1,6 +1,12 @@
 <% var muestras=[]; if (typeof ultimasMuestras !=='undefined' && Array.isArray(ultimasMuestras)) {
   muestras=ultimasMuestras; } else if (typeof timeline !=='undefined' && timeline && Array.isArray(timeline.muestras)) {
-  muestras=timeline.muestras; } %>
+  muestras=timeline.muestras; } function getDateKey(value) { if (!value) return '' ; if (value instanceof Date &&
+  !Number.isNaN(value.getTime())) { var year=value.getFullYear(); var month=String(value.getMonth() + 1).padStart(2, '0'
+  ); var day=String(value.getDate()).padStart(2, '0' ); return year + '-' + month + '-' + day; } var
+  text=String(value).trim(); var isoMatch=text.match(/^(\d{4}-\d{2}-\d{2})/); if (isoMatch) return isoMatch[1]; var
+  parsed=new Date(text); if (!Number.isNaN(parsed.getTime())) { var parsedYear=parsed.getFullYear(); var
+  parsedMonth=String(parsed.getMonth() + 1).padStart(2, '0' ); var parsedDay=String(parsed.getDate()).padStart(2, '0' );
+  return parsedYear + '-' + parsedMonth + '-' + parsedDay; } return '' ; } %>
 
   <div id="tab-muestras-pozo"
     class="space-y-4 rounded-2xl bg-slate-50 p-3 text-slate-900 dark:bg-slate-950 dark:text-slate-100 sm:p-4">
@@ -45,9 +51,8 @@
 
           <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
             <% if (muestras && muestras.length) { %>
-              <% muestras.forEach(function(muestra, index) { var fechaRaw=muestra.fecha || '' ; var fechaIso=fechaRaw ?
-                String(fechaRaw).slice(0, 10) : '' ; var proxRaw=muestra.prox_muestra || '' ; var proxIso=proxRaw ?
-                String(proxRaw).slice(0, 10) : '' ; var isRepresentativa=muestra.representativa===true ||
+              <% muestras.forEach(function(muestra, index) { var fechaIso=getDateKey(muestra.fecha); var
+                proxIso=getDateKey(muestra.prox_muestra); var isRepresentativa=muestra.representativa===true ||
                 muestra.representativa===1 || muestra.representativa==='1' || muestra.representativa==='true' ; %>
                 <tr
                   class="<%= index % 2 === 0 ? 'bg-white dark:bg-slate-900' : 'bg-slate-50/70 dark:bg-slate-800/40' %> hover:bg-slate-50 dark:hover:bg-slate-800/70">
