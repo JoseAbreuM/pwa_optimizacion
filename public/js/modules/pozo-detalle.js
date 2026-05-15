@@ -187,7 +187,7 @@
       scrollX: true,
       pageLength: 10,
       ordering: true,
-      expectedColumns: 19
+      expectedColumns: 20
     });
   }
 
@@ -471,13 +471,20 @@
 
     chartEl.innerHTML = '';
 
+    const theme = getChartTheme();
+
     const options = {
       chart: {
         id: 'survey-pozo',
         type: 'line',
         height: 320,
+        foreColor: theme.foreColor,
+        background: 'transparent',
         zoom: { enabled: true },
         toolbar: { show: true }
+      },
+      theme: {
+        mode: theme.mode
       },
       series: [
         {
@@ -493,6 +500,7 @@
         size: 4
       },
       grid: {
+        borderColor: theme.gridColor,
         strokeDashArray: 4
       },
       xaxis: {
@@ -509,6 +517,7 @@
         }
       },
       tooltip: {
+        theme: theme.mode,
         custom: ({ seriesIndex, dataPointIndex, w }) => {
           const point = w.config.series[seriesIndex].data[dataPointIndex];
 
@@ -609,41 +618,254 @@
     render();
   }
 
-  function initComparativoChart() {
-    const chartEl = document.getElementById('chart-comparativa-pozo');
-    const dataEl = document.getElementById('comparativo-parametros-niveles-json');
+function initComparativoChart() {
+  const chartEl = document.getElementById('chart-comparativa-pozo');
+  const dataEl = document.getElementById('comparativo-parametros-niveles-json');
+  const fechaSelect = document.getElementById('comparativo-fecha-select');
 
-    if (!chartEl || !dataEl) return;
+  if (!chartEl || !dataEl) return;
 
-    if (typeof window.ApexCharts === 'undefined') {
-      renderChartMessage(chartEl, 'ApexCharts no está cargado en el layout.');
-      return;
-    }
-
-    const comparativo = readJsonData(dataEl, []);
-
-    if (!Array.isArray(comparativo) || !comparativo.length) {
-      renderChartMessage(chartEl, 'No hay datos comparables para graficar.');
-      destroyChart('comparativo');
-      return;
-    }
-
-    renderMultiSeriesChart({
-      chartEl,
-      chartRefName: 'comparativo',
-      rows: comparativo,
-      selectedFields: [
-        'dif_rpm',
-        'dif_torque',
-        'dif_amp',
-        'dif_presion_casing',
-        'dif_presion_tubing'
-      ],
-      daysLimit: 'all',
-      fieldLabels: getComparativoLabels(),
-      emptyMessage: 'No hay diferencias válidas para graficar.'
-    });
+  if (typeof window.ApexCharts === 'undefined') {
+    renderChartMessage(chartEl, 'ApexCharts no está cargado en el layout.');
+    return;
   }
+
+  const comparativo = readJsonData(dataEl, []);
+
+  if (!Array.isArray(comparativo) || !comparativo.length) {
+    renderChartMessage(chartEl, 'No hay datos comparables para graficar.');
+    destroyChart('comparativo');
+    return;
+  }
+
+  syncComparativoFechaSelect(fechaSelect, comparativo);
+
+  const render = () => {
+    const selectedDate = fechaSelect?.value || getComparativoDateKey(comparativo[0]);
+    const selectedRow =
+      getComparativoRowByDate(comparativo, selectedDate) ||
+      comparativo[0];
+
+    updateComparativoResumen(selectedRow);
+    renderComparativoChartByRow(chartEl, selectedRow);
+  };
+
+  if (fechaSelect) {
+    fechaSelect.addEventListener('change', render);
+  }
+
+  render();
+}
+
+function syncComparativoFechaSelect(select, rows) {
+  if (!select || !Array.isArray(rows) || !rows.length) return;
+
+  const existingOptions = Array.from(select.options).filter((option) => option.value);
+
+  if (existingOptions.length) return;
+
+  rows.forEach((row, index) => {
+    const dateKey = getComparativoDateKey(row);
+    if (!dateKey) return;
+
+    const option = document.createElement('option');
+    option.value = dateKey;
+    option.textContent = normalizeDateLabel(row.fecha_nivel || row.fecha);
+
+    if (index === 0) {
+      option.selected = true;
+    }
+
+    select.appendChild(option);
+  });
+}
+
+function getComparativoDateKey(row) {
+  if (!row) return '';
+
+  const rawDate = row.fecha_nivel || row.fecha;
+  const date = parseDate(rawDate);
+
+  if (!date) return '';
+
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+
+  return `${year}-${month}-${day}`;
+}
+
+function getComparativoRowByDate(rows, selectedDate) {
+  if (!Array.isArray(rows) || !selectedDate) return null;
+
+  return rows.find((row) => getComparativoDateKey(row) === selectedDate) || null;
+}
+
+function updateComparativoResumen(row) {
+  if (!row) return;
+
+  setTextById(
+    'comparativo-resumen-fecha',
+    normalizeDateLabel(row.fecha_nivel || row.fecha)
+  );
+
+  setTextById(
+    'comparativo-resumen-dif-rpm',
+    formatChartValue(row.dif_rpm)
+  );
+
+  setTextById(
+    'comparativo-resumen-dif-torque',
+    formatChartValue(row.dif_torque)
+  );
+
+  setTextById(
+    'comparativo-resumen-dif-amp',
+    formatChartValue(row.dif_amp)
+  );
+
+  setTextById(
+    'comparativo-resumen-dif-hp',
+    formatChartValue(row.dif_hp)
+  );
+
+  setTextById(
+    'comparativo-resumen-dif-casing',
+    formatChartValue(row.dif_presion_casing)
+  );
+
+  setTextById(
+    'comparativo-resumen-dif-tubing',
+    formatChartValue(row.dif_presion_tubing)
+  );
+}
+
+function setTextById(id, value) {
+  const element = document.getElementById(id);
+  if (!element) return;
+
+  const text = value === null || value === undefined || value === '' ? '—' : String(value);
+
+  element.textContent = text;
+  element.setAttribute('title', text);
+}
+
+function formatChartValue(value) {
+  const number = parseChartNumber(value);
+  return Number.isFinite(number) ? number.toFixed(2) : '—';
+}
+
+function renderComparativoChartByRow(chartEl, row) {
+  if (!row) {
+    renderChartMessage(chartEl, 'No hay datos comparables para la fecha seleccionada.');
+    destroyChart('comparativo');
+    return;
+  }
+
+  const labels = getComparativoLabels();
+
+  const fields = [
+    'dif_rpm',
+    'dif_torque',
+    'dif_amp',
+    'dif_hp',
+    'dif_presion_casing',
+    'dif_presion_tubing'
+  ];
+
+  const data = fields
+    .map((field) => ({
+      x: labels[field] || field,
+      y: parseChartNumber(row[field])
+    }))
+    .filter((point) => Number.isFinite(point.y));
+
+  if (!data.length) {
+    renderChartMessage(chartEl, 'No hay diferencias válidas para la fecha seleccionada.');
+    destroyChart('comparativo');
+    return;
+  }
+
+  chartEl.innerHTML = '';
+
+  const theme = getChartTheme();
+
+  const options = {
+    chart: {
+      id: 'comparativo',
+      type: 'bar',
+      height: 320,
+      foreColor: theme.foreColor,
+      background: 'transparent',
+      toolbar: { show: true }
+    },
+    theme: {
+      mode: theme.mode
+    },
+    series: [
+      {
+        name: `Diferencias ${normalizeDateLabel(row.fecha_nivel || row.fecha)}`,
+        data
+      }
+    ],
+    plotOptions: {
+      bar: {
+        borderRadius: 6,
+        columnWidth: '48%',
+        distributed: false
+      }
+    },
+    dataLabels: {
+      enabled: true,
+      formatter: (value) => {
+        const number = Number(value);
+        return Number.isFinite(number) ? number.toFixed(2) : value;
+      }
+    },
+    grid: {
+      borderColor: theme.gridColor,
+      strokeDashArray: 4
+    },
+    xaxis: {
+      type: 'category',
+      labels: {
+        rotate: -20,
+        trim: true
+      }
+    },
+    yaxis: {
+      labels: {
+        formatter: (value) => {
+          const number = Number(value);
+          return Number.isFinite(number) ? number.toFixed(0) : value;
+        }
+      }
+    },
+    tooltip: {
+      theme: theme.mode,
+      y: {
+        formatter: (value) => {
+          const number = Number(value);
+          return Number.isFinite(number) ? number.toFixed(2) : value;
+        }
+      }
+    },
+    legend: {
+      show: false
+    },
+    noData: {
+      text: 'Sin datos',
+      style: {
+        color: theme.foreColor
+      }
+    }
+  };
+
+  destroyChart('comparativo');
+
+  comparativoChart = new window.ApexCharts(chartEl, options);
+  comparativoChart.render();
+}
 
   function renderMultiSeriesChart({
     chartEl,
@@ -695,13 +917,20 @@
 
     chartEl.innerHTML = '';
 
+    const theme = getChartTheme();
+
     const options = {
       chart: {
         id: chartRefName,
         type: 'line',
         height: 320,
+        foreColor: theme.foreColor,
+        background: 'transparent',
         zoom: { enabled: true },
         toolbar: { show: true }
+      },
+      theme: {
+        mode: theme.mode
       },
       series,
       stroke: {
@@ -712,6 +941,7 @@
         size: 4
       },
       grid: {
+        borderColor: theme.gridColor,
         strokeDashArray: 4
       },
       xaxis: {
@@ -729,6 +959,7 @@
         }
       },
       tooltip: {
+        theme: theme.mode,
         shared: true,
         intersect: false,
         y: {
@@ -740,10 +971,16 @@
       },
       legend: {
         position: 'top',
-        horizontalAlign: 'left'
+        horizontalAlign: 'left',
+        labels: {
+          colors: theme.foreColor
+        }
       },
       noData: {
-        text: 'Sin datos'
+        text: 'Sin datos',
+        style: {
+          color: theme.foreColor
+        }
       }
     };
 
@@ -763,6 +1000,17 @@
     if (chartRefName === 'comparativo') {
       comparativoChart = chart;
     }
+  }
+
+  function getChartTheme() {
+    const isDark = document.documentElement.classList.contains('dark');
+
+    return {
+      isDark,
+      mode: isDark ? 'dark' : 'light',
+      foreColor: isDark ? '#cbd5e1' : '#334155',
+      gridColor: isDark ? '#334155' : '#e2e8f0'
+    };
   }
 
   function destroyChart(chartRefName) {
@@ -787,6 +1035,8 @@
       button.addEventListener('click', async () => {
         const chartId = button.dataset.exportChart;
         const exportName = button.dataset.exportName || 'grafica-pozo';
+        const exportKind = button.dataset.exportKind || detectExportKind(chartId, exportName);
+        const pozoCodigo = button.dataset.exportPozo || extractPozoCodigo(exportName);
 
         const chart = getChartByElementId(chartId);
 
@@ -795,9 +1045,81 @@
           return;
         }
 
-        await exportApexChart(chart, exportName);
+        await exportApexChart(chart, exportName, {
+          pozoCodigo,
+          subtitle: buildExportSubtitle(exportKind)
+        });
       });
     });
+  }
+
+  function detectExportKind(chartId, exportName) {
+    const text = `${chartId || ''} ${exportName || ''}`.toLowerCase();
+
+    if (text.includes('parametro')) return 'parametros';
+    if (text.includes('nivel')) return 'niveles';
+    if (text.includes('comparativ')) return 'comparativo';
+    if (text.includes('survey')) return 'survey';
+
+    return 'grafica';
+  }
+
+  function extractPozoCodigo(exportName) {
+    const text = String(exportName || '');
+
+    const match = text.match(/MFB-\d{3,5}/i);
+    if (match) return match[0].toUpperCase();
+
+    return text
+      .replace(/^(parametros|niveles|comparativo|survey)-/i, '')
+      .trim()
+      .toUpperCase();
+  }
+
+  function buildExportSubtitle(kind) {
+    if (kind === 'parametros') {
+      const selected = getCheckedValues('parametro-chart-field')
+        .map((field) => getParametroLabels()[field] || field)
+        .join(', ');
+
+      const periodo = getSelectValue('parametros-periodo');
+
+      const periodoLabel = {
+        '7': '1 semana',
+        '30': '1 mes',
+        '90': '3 meses',
+        '180': '6 meses',
+        all: 'todo el histórico'
+      }[periodo] || periodo;
+
+      return `Gráfica de parámetros: ${selected || 'sin selección'} · Periodo: ${periodoLabel}`;
+    }
+
+    if (kind === 'niveles') {
+      const selected = getCheckedValues('nivel-chart-field')
+        .map((field) => getNivelLabels()[field] || field)
+        .join(', ');
+
+      const limite = getSelectValue('niveles-limite');
+      const limiteLabel = limite === 'all' ? 'todas las tomas' : `últimas ${limite} tomas`;
+
+      return `Gráfica de niveles: ${selected || 'sin selección'} · ${limiteLabel}`;
+    }
+
+ if (kind === 'comparativo') {
+  const selectedDate = getSelectValue('comparativo-fecha-select');
+  const label = selectedDate
+    ? normalizeDateLabel(selectedDate)
+    : 'fecha seleccionada';
+
+  return `Comparativa parámetros vs niveles · Toma de nivel: ${label}`;
+}
+
+    if (kind === 'survey') {
+      return 'Gráfica de trayectoria / survey';
+    }
+
+    return 'Gráfica del pozo';
   }
 
   function getChartByElementId(chartId) {
@@ -809,7 +1131,7 @@
     return null;
   }
 
-  async function exportApexChart(chart, filename) {
+  async function exportApexChart(chart, filename, meta = {}) {
     try {
       if (!chart || typeof chart.dataURI !== 'function') {
         throw new Error('La gráfica no soporta exportación.');
@@ -821,8 +1143,56 @@
         throw new Error('No se pudo generar la imagen.');
       }
 
+      const image = await loadImage(result.imgURI);
+
+      const padding = 40;
+      const headerHeight = 112;
+      const footerHeight = 28;
+
+      const canvas = document.createElement('canvas');
+
+      canvas.width = Math.max(image.width + padding * 2, 920);
+      canvas.height = image.height + headerHeight + footerHeight;
+
+      const ctx = canvas.getContext('2d');
+
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.fillStyle = '#0f172a';
+      ctx.font = '700 26px Arial, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      ctx.fillText(meta.pozoCodigo || 'Pozo', canvas.width / 2, 26);
+
+      ctx.fillStyle = '#334155';
+      ctx.font = '500 15px Arial, sans-serif';
+      wrapCanvasText(
+        ctx,
+        meta.subtitle || 'Gráfica del pozo',
+        canvas.width / 2,
+        62,
+        canvas.width - padding * 2,
+        20
+      );
+
+      const chartX = Math.round((canvas.width - image.width) / 2);
+      ctx.drawImage(image, chartX, headerHeight);
+
+      ctx.fillStyle = '#64748b';
+      ctx.font = '12px Arial, sans-serif';
+      ctx.textAlign = 'right';
+      ctx.textBaseline = 'alphabetic';
+      ctx.fillText(
+        `Exportado: ${new Date().toLocaleDateString('es-VE')}`,
+        canvas.width - padding,
+        canvas.height - 10
+      );
+
+      const finalUri = canvas.toDataURL('image/png');
+
       const link = document.createElement('a');
-      link.href = result.imgURI;
+      link.href = finalUri;
       link.download = `${sanitizeFilename(filename)}.png`;
       document.body.appendChild(link);
       link.click();
@@ -832,6 +1202,38 @@
     } catch (error) {
       console.error(error);
       showToast(error.message || 'No se pudo exportar la gráfica.', 'error');
+    }
+  }
+
+  function loadImage(src) {
+    return new Promise((resolve, reject) => {
+      const image = new Image();
+      image.onload = () => resolve(image);
+      image.onerror = reject;
+      image.src = src;
+    });
+  }
+
+  function wrapCanvasText(ctx, text, x, y, maxWidth, lineHeight) {
+    const words = String(text || '').split(' ');
+    let line = '';
+    let currentY = y;
+
+    words.forEach((word) => {
+      const testLine = line ? `${line} ${word}` : word;
+      const metrics = ctx.measureText(testLine);
+
+      if (metrics.width > maxWidth && line) {
+        ctx.fillText(line, x, currentY);
+        line = word;
+        currentY += lineHeight;
+      } else {
+        line = testLine;
+      }
+    });
+
+    if (line) {
+      ctx.fillText(line, x, currentY);
     }
   }
 

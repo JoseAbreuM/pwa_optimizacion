@@ -1,143 +1,141 @@
-<% const parametros=typeof historialParametros !=='undefined' ? historialParametros : (timeline?.parametros || []);
-  const niveles=typeof historialNiveles !=='undefined' ? historialNiveles : (timeline?.niveles || []); const
-  comparativo=typeof comparativoParametrosNiveles !=='undefined' ? comparativoParametrosNiveles : (timeline?.comparativo
-  || []); const ultimoComparativo=comparativo && comparativo.length ? comparativo[0] : null; %>
+<% var parametros=[]; if (typeof historialParametros !=='undefined' && Array.isArray(historialParametros)) {
+  parametros=historialParametros; } else if (typeof timeline !=='undefined' && timeline &&
+  Array.isArray(timeline.parametros)) { parametros=timeline.parametros; } var niveles=[]; if (typeof historialNiveles
+  !=='undefined' && Array.isArray(historialNiveles)) { niveles=historialNiveles; } else if (typeof timeline
+  !=='undefined' && timeline && Array.isArray(timeline.niveles)) { niveles=timeline.niveles; } var comparativo=[]; if
+  (typeof comparativoParametrosNiveles !=='undefined' && Array.isArray(comparativoParametrosNiveles)) {
+  comparativo=comparativoParametrosNiveles; } else if (typeof timeline !=='undefined' && timeline &&
+  Array.isArray(timeline.comparativo)) { comparativo=timeline.comparativo; } var ultimoComparativo=comparativo &&
+  comparativo.length ? comparativo[0] : null; var
+  cardClass='min-w-0 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 shadow-sm dark:border-slate-700 dark:bg-slate-800/80'
+  ; var labelClass='truncate text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400' ; var
+  valueClass='mt-0.5 truncate text-sm font-bold text-slate-900 dark:text-white' ; var
+  chipClass='inline-flex min-w-0 items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs shadow-sm dark:border-slate-700 dark:bg-slate-900/80'
+  ; var chipLabelClass='shrink-0 font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400' ; var
+  chipValueClass='min-w-0 truncate text-right font-bold text-slate-900 dark:text-white' ; var
+  checkboxClass='inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-slate-700 shadow-sm transition hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800'
+  ; %>
 
-  <div class="space-y-5">
+  <div id="tab-parametros-niveles"
+    class="space-y-5 rounded-2xl bg-slate-50 p-3 text-slate-900 dark:bg-slate-950 dark:text-slate-100 sm:p-4">
 
     <!-- =========================================================
-       RESUMEN PARAMETROS
-       ========================================================= -->
+   RESUMEN PARAMETROS COMPACTO
+   ========================================================= -->
     <section
       class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900">
-      <div
-        class="border-b border-slate-100 bg-gradient-to-r from-blue-50 via-white to-slate-50 p-4 dark:border-slate-800 dark:from-blue-950/30 dark:via-slate-900 dark:to-slate-900">
-        <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <div class="flex items-center gap-2">
-              <span
-                class="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">
-                <i class="fa-solid fa-sliders"></i>
-              </span>
+      <div class="border-b border-slate-100 bg-slate-50 px-3 py-2 dark:border-slate-800 dark:bg-slate-800/70">
+        <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div class="flex min-w-0 items-center gap-2">
+            <span
+              class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">
+              <i class="fa-solid fa-sliders text-sm"></i>
+            </span>
 
-              <div>
-                <h2 class="text-lg font-semibold text-slate-900 dark:text-white">
-                  Últimos parámetros
-                </h2>
-                <p class="text-sm text-slate-500 dark:text-slate-400">
-                  Último registro operativo tomado desde la carga de parámetros.
-                </p>
-              </div>
+            <div class="min-w-0">
+              <h2 class="truncate text-sm font-semibold text-slate-900 dark:text-white">
+                Último registro operativo
+              </h2>
+              <p class="truncate text-[11px] text-slate-500 dark:text-slate-400">
+                Parámetros diarios del pozo.
+              </p>
             </div>
           </div>
 
           <button type="button" data-pozo-open-modal="modal-historial-parametros"
-            class="inline-flex items-center justify-center gap-2 rounded-xl border border-blue-200 bg-white px-3 py-2 text-sm font-medium text-blue-700 shadow-sm hover:bg-blue-50 dark:border-blue-800 dark:bg-slate-900 dark:text-blue-300 dark:hover:bg-blue-950/40">
+            class="inline-flex items-center justify-center gap-2 rounded-lg border border-blue-200 bg-white px-3 py-1.5 text-xs font-semibold text-blue-700 shadow-sm hover:bg-blue-50 dark:border-blue-800 dark:bg-slate-900 dark:text-blue-300 dark:hover:bg-blue-950/40">
             <i class="fa-solid fa-table-list"></i>
-            Ver histórico
+            Histórico
           </button>
         </div>
       </div>
 
-      <div class="p-4">
-        <% if (ultimoParametro) { %>
-          <div class="grid gap-3 sm:grid-cols-2 md:grid-cols-4 xl:grid-cols-8">
+      <div class="p-3">
+        <% if (typeof ultimoParametro !=='undefined' && ultimoParametro) { %>
+          <div
+            class="flex flex-col gap-3 rounded-xl border border-slate-200 bg-slate-100/80 p-3 dark:border-slate-700 dark:bg-slate-900/80">
 
-            <div
-              class="rounded-2xl border border-slate-100 bg-slate-50 px-3 py-3 dark:border-slate-700 dark:bg-slate-800/70">
-              <p class="text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Fecha</p>
-              <p class="mt-1 text-sm font-bold text-slate-900 dark:text-white">
-                <%= formatDate(ultimoParametro.fecha) %>
-              </p>
+            <div class="grid gap-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5 2xl:grid-cols-10">
+              <div class="<%= chipClass %>">
+                <span class="<%= chipLabelClass %>">Fecha</span>
+                <span class="<%= chipValueClass %>">
+                  <%= fallback(formatDate(ultimoParametro.fecha)) %>
+                </span>
+              </div>
+
+              <div class="<%= chipClass %>">
+                <span class="<%= chipLabelClass %>">Torque</span>
+                <span class="<%= chipValueClass %>">
+                  <%= fallback(formatNumber(ultimoParametro.torque, 2)) %>
+                </span>
+              </div>
+
+              <div class="<%= chipClass %>">
+                <span class="<%= chipLabelClass %>">AMP</span>
+                <span class="<%= chipValueClass %>">
+                  <%= fallback(formatNumber(ultimoParametro.amp, 2)) %>
+                </span>
+              </div>
+
+              <div class="<%= chipClass %>">
+                <span class="<%= chipLabelClass %>">Freq</span>
+                <span class="<%= chipValueClass %>">
+                  <%= fallback(formatNumber(ultimoParametro.freq, 2)) %>
+                </span>
+              </div>
+
+              <div class="<%= chipClass %>">
+                <span class="<%= chipLabelClass %>">Volts</span>
+                <span class="<%= chipValueClass %>">
+                  <%= fallback(formatNumber(ultimoParametro.volts, 2)) %>
+                </span>
+              </div>
+
+              <div class="<%= chipClass %>">
+                <span class="<%= chipLabelClass %>">HP</span>
+                <span class="<%= chipValueClass %>">
+                  <%= fallback(formatNumber(ultimoParametro.hp, 2)) %>
+                </span>
+              </div>
+
+              <div class="<%= chipClass %>">
+                <span class="<%= chipLabelClass %>">VO</span>
+                <span class="<%= chipValueClass %>">
+                  <%= fallback(formatNumber(ultimoParametro.vel_operacional, 2)) %>
+                </span>
+              </div>
+
+              <div class="<%= chipClass %>">
+                <span class="<%= chipLabelClass %>">Vel. actual</span>
+                <span class="<%= chipValueClass %>">
+                  <%= fallback(formatNumber(ultimoParametro.vel_actual, 2)) %>
+                </span>
+              </div>
+
+              <div class="<%= chipClass %>">
+                <span class="<%= chipLabelClass %>">P. casing</span>
+                <span class="<%= chipValueClass %>">
+                  <%= fallback(formatNumber(ultimoParametro.presion_casing, 2)) %>
+                </span>
+              </div>
+
+              <div class="<%= chipClass %>">
+                <span class="<%= chipLabelClass %>">P. tubing</span>
+                <span class="<%= chipValueClass %>">
+                  <%= fallback(formatNumber(ultimoParametro.presion_tubing, 2)) %>
+                </span>
+              </div>
             </div>
 
             <div
-              class="rounded-2xl border border-orange-100 bg-orange-50 px-3 py-3 dark:border-orange-900/40 dark:bg-orange-950/20">
-              <p class="text-[10px] font-semibold uppercase tracking-wide text-orange-700 dark:text-orange-300">Torque
-              </p>
-              <p class="mt-1 text-sm font-bold text-slate-900 dark:text-white">
-                <%= formatNumber(ultimoParametro.torque, 2) %>
-              </p>
-            </div>
-
-            <div
-              class="rounded-2xl border border-amber-100 bg-amber-50 px-3 py-3 dark:border-amber-900/40 dark:bg-amber-950/20">
-              <p class="text-[10px] font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300">AMP</p>
-              <p class="mt-1 text-sm font-bold text-slate-900 dark:text-white">
-                <%= formatNumber(ultimoParametro.amp, 2) %>
-              </p>
-            </div>
-
-            <div
-              class="rounded-2xl border border-cyan-100 bg-cyan-50 px-3 py-3 dark:border-cyan-900/40 dark:bg-cyan-950/20">
-              <p class="text-[10px] font-semibold uppercase tracking-wide text-cyan-700 dark:text-cyan-300">Freq</p>
-              <p class="mt-1 text-sm font-bold text-slate-900 dark:text-white">
-                <%= formatNumber(ultimoParametro.freq, 2) %>
-              </p>
-            </div>
-
-            <div
-              class="rounded-2xl border border-purple-100 bg-purple-50 px-3 py-3 dark:border-purple-900/40 dark:bg-purple-950/20">
-              <p class="text-[10px] font-semibold uppercase tracking-wide text-purple-700 dark:text-purple-300">Volts
-              </p>
-              <p class="mt-1 text-sm font-bold text-slate-900 dark:text-white">
-                <%= formatNumber(ultimoParametro.volts, 2) %>
-              </p>
-            </div>
-
-            <div
-              class="rounded-2xl border border-emerald-100 bg-emerald-50 px-3 py-3 dark:border-emerald-900/40 dark:bg-emerald-950/20">
-              <p class="text-[10px] font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">HP</p>
-              <p class="mt-1 text-sm font-bold text-slate-900 dark:text-white">
-                <%= formatNumber(ultimoParametro.hp, 2) %>
-              </p>
-            </div>
-
-            <div
-              class="rounded-2xl border border-indigo-100 bg-indigo-50 px-3 py-3 dark:border-indigo-900/40 dark:bg-indigo-950/20">
-              <p class="text-[10px] font-semibold uppercase tracking-wide text-indigo-700 dark:text-indigo-300">VO</p>
-              <p class="mt-1 text-sm font-bold text-slate-900 dark:text-white">
-                <%= formatNumber(ultimoParametro.vel_operacional, 2) %>
-              </p>
-            </div>
-
-            <div
-              class="rounded-2xl border border-sky-100 bg-sky-50 px-3 py-3 dark:border-sky-900/40 dark:bg-sky-950/20">
-              <p class="text-[10px] font-semibold uppercase tracking-wide text-sky-700 dark:text-sky-300">Vel. actual
-              </p>
-              <p class="mt-1 text-sm font-bold text-slate-900 dark:text-white">
-                <%= formatNumber(ultimoParametro.vel_actual, 2) %>
-              </p>
-            </div>
-
-            <div
-              class="rounded-2xl border border-rose-100 bg-rose-50 px-3 py-3 dark:border-rose-900/40 dark:bg-rose-950/20">
-              <p class="text-[10px] font-semibold uppercase tracking-wide text-rose-700 dark:text-rose-300">P. casing
-              </p>
-              <p class="mt-1 text-sm font-bold text-slate-900 dark:text-white">
-                <%= formatNumber(ultimoParametro.presion_casing, 2) %>
-              </p>
-            </div>
-
-            <div
-              class="rounded-2xl border border-teal-100 bg-teal-50 px-3 py-3 dark:border-teal-900/40 dark:bg-teal-950/20">
-              <p class="text-[10px] font-semibold uppercase tracking-wide text-teal-700 dark:text-teal-300">P. tubing
-              </p>
-              <p class="mt-1 text-sm font-bold text-slate-900 dark:text-white">
-                <%= formatNumber(ultimoParametro.presion_tubing, 2) %>
-              </p>
-            </div>
-
-            <div
-              class="rounded-2xl border border-slate-100 bg-slate-50 px-3 py-3 dark:border-slate-700 dark:bg-slate-800/70 sm:col-span-2 md:col-span-2 xl:col-span-6">
-              <p class="text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                Observación / recomendación</p>
-              <p class="mt-1 line-clamp-2 text-sm font-medium text-slate-800 dark:text-slate-200"
-                title="<%= fallback(ultimoParametro.recomendaciones_completas || ultimoParametro.observacion) %>">
+              class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs dark:border-slate-700 dark:bg-slate-900">
+              <span class="font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                Observación:
+              </span>
+              <span class="font-medium text-slate-800 dark:text-slate-200">
                 <%= fallback(ultimoParametro.recomendaciones_completas || ultimoParametro.observacion) %>
-              </p>
+              </span>
             </div>
-
           </div>
           <% } else { %>
             <div class="rounded-xl bg-yellow-50 p-4 text-sm text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-300">
@@ -148,8 +146,8 @@
     </section>
 
     <!-- =========================================================
-       GRAFICA PARAMETROS
-       ========================================================= -->
+   GRAFICA PARAMETROS
+   ========================================================= -->
     <section class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900">
       <div class="mb-4 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div>
@@ -163,7 +161,7 @@
 
         <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
           <select id="parametros-periodo"
-            class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200">
+            class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200">
             <option value="7">1 semana</option>
             <option value="30" selected>1 mes</option>
             <option value="90">3 meses</option>
@@ -172,8 +170,9 @@
           </select>
 
           <button type="button" data-export-chart="chart-parametros-pozo"
-            data-export-name="parametros-<%= pozo.codigo %>"
-            class="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700">
+            data-export-name="parametros-<%= pozo.codigo %>" data-export-pozo="<%= pozo.codigo %>"
+            data-export-kind="parametros"
+            class="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700">
             <i class="fa-solid fa-download"></i>
             Exportar PNG
           </button>
@@ -181,47 +180,47 @@
       </div>
 
       <div class="mb-4 flex flex-wrap gap-2 text-sm">
-        <label class="inline-flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-800">
+        <label class="<%= checkboxClass %>">
           <input type="checkbox" name="parametro-chart-field" value="torque" checked>
           Torque
         </label>
 
-        <label class="inline-flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-800">
+        <label class="<%= checkboxClass %>">
           <input type="checkbox" name="parametro-chart-field" value="amp">
           AMP
         </label>
 
-        <label class="inline-flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-800">
+        <label class="<%= checkboxClass %>">
           <input type="checkbox" name="parametro-chart-field" value="freq">
           Freq
         </label>
 
-        <label class="inline-flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-800">
+        <label class="<%= checkboxClass %>">
           <input type="checkbox" name="parametro-chart-field" value="volts">
           Volts
         </label>
 
-        <label class="inline-flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-800">
+        <label class="<%= checkboxClass %>">
           <input type="checkbox" name="parametro-chart-field" value="hp">
           HP
         </label>
 
-        <label class="inline-flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-800">
+        <label class="<%= checkboxClass %>">
           <input type="checkbox" name="parametro-chart-field" value="vel_operacional">
           VO
         </label>
 
-        <label class="inline-flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-800">
+        <label class="<%= checkboxClass %>">
           <input type="checkbox" name="parametro-chart-field" value="vel_actual">
           Vel. actual
         </label>
 
-        <label class="inline-flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-800">
+        <label class="<%= checkboxClass %>">
           <input type="checkbox" name="parametro-chart-field" value="presion_casing">
           P. casing
         </label>
 
-        <label class="inline-flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-800">
+        <label class="<%= checkboxClass %>">
           <input type="checkbox" name="parametro-chart-field" value="presion_tubing">
           P. tubing
         </label>
@@ -230,7 +229,7 @@
       <script type="application/json" id="parametros-data-json"><%- JSON.stringify(parametros || []) %></script>
 
       <div id="chart-parametros-pozo"
-        class="min-h-[320px] rounded-xl border border-dashed border-slate-300 bg-white p-2 dark:border-slate-600 dark:bg-slate-900">
+        class="min-h-[320px] rounded-xl border border-dashed border-slate-300 bg-slate-50 p-2 dark:border-slate-600 dark:bg-slate-950/40">
         <% if (!parametros || !parametros.length) { %>
           <div class="flex min-h-[300px] items-center justify-center">
             <p class="text-sm text-slate-500 dark:text-slate-400">
@@ -242,143 +241,148 @@
     </section>
 
     <!-- =========================================================
-       RESUMEN NIVELES
-       ========================================================= -->
+   RESUMEN NIVELES COMPACTO
+   ========================================================= -->
     <section
       class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900">
-      <div
-        class="border-b border-slate-100 bg-gradient-to-r from-emerald-50 via-white to-slate-50 p-4 dark:border-slate-800 dark:from-emerald-950/30 dark:via-slate-900 dark:to-slate-900">
-        <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div class="flex items-center gap-2">
+      <div class="border-b border-slate-100 bg-slate-50 px-3 py-2 dark:border-slate-800 dark:bg-slate-800/70">
+        <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div class="flex min-w-0 items-center gap-2">
             <span
-              class="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">
-              <i class="fa-solid fa-water"></i>
+              class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">
+              <i class="fa-solid fa-water text-sm"></i>
             </span>
 
-            <div>
-              <h2 class="text-lg font-semibold text-slate-900 dark:text-white">
+            <div class="min-w-0">
+              <h2 class="truncate text-sm font-semibold text-slate-900 dark:text-white">
                 Última toma de nivel
               </h2>
-              <p class="text-sm text-slate-500 dark:text-slate-400">
-                Último registro cargado desde la base de niveles.
+              <p class="truncate text-[11px] text-slate-500 dark:text-slate-400">
+                Registro más reciente cargado desde la base de niveles.
               </p>
             </div>
           </div>
 
           <button type="button" data-pozo-open-modal="modal-historial-niveles"
-            class="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-white px-3 py-2 text-sm font-medium text-emerald-700 shadow-sm hover:bg-emerald-50 dark:border-emerald-800 dark:bg-slate-900 dark:text-emerald-300 dark:hover:bg-emerald-950/40">
+            class="inline-flex items-center justify-center gap-2 rounded-lg border border-emerald-200 bg-white px-3 py-1.5 text-xs font-semibold text-emerald-700 shadow-sm hover:bg-emerald-50 dark:border-emerald-800 dark:bg-slate-900 dark:text-emerald-300 dark:hover:bg-emerald-950/40">
             <i class="fa-solid fa-table-list"></i>
-            Ver histórico
+            Histórico
           </button>
         </div>
       </div>
 
-      <div class="p-4">
-        <% if (ultimoNivel) { %>
-          <div class="grid gap-3 sm:grid-cols-2 md:grid-cols-4 xl:grid-cols-10">
+      <div class="p-3">
+        <% if (typeof ultimoNivel !=='undefined' && ultimoNivel) { %>
+          <div
+            class="flex flex-col gap-3 rounded-xl border border-slate-200 bg-slate-100/80 p-3 dark:border-slate-700 dark:bg-slate-900/80">
 
-            <div
-              class="rounded-2xl border border-slate-100 bg-slate-50 px-3 py-3 dark:border-slate-700 dark:bg-slate-800/70">
-              <p class="text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Fecha</p>
-              <p class="mt-1 text-sm font-bold text-slate-900 dark:text-white">
-                <%= formatDate(ultimoNivel.fecha) %>
-              </p>
+            <div class="grid gap-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6 2xl:grid-cols-12">
+              <div class="<%= chipClass %>">
+                <span class="<%= chipLabelClass %>">Fecha</span>
+                <span class="<%= chipValueClass %>">
+                  <%= fallback(formatDate(ultimoNivel.fecha)) %>
+                </span>
+              </div>
+
+              <div class="<%= chipClass %>">
+                <span class="<%= chipLabelClass %>">NF pies</span>
+                <span class="<%= chipValueClass %>">
+                  <%= fallback(formatNumber(ultimoNivel.nf_pies, 2)) %>
+                </span>
+              </div>
+
+              <div class="<%= chipClass %>">
+                <span class="<%= chipLabelClass %>">SUM</span>
+                <span class="<%= chipValueClass %>">
+                  <%= fallback(formatNumber(ultimoNivel.sumergencia, 2)) %>
+                </span>
+              </div>
+
+              <div class="<%= chipClass %>">
+                <span class="<%= chipLabelClass %>">% Liq</span>
+                <span class="<%= chipValueClass %>">
+                  <%= fallback(formatNumber(ultimoNivel.porcentaje_liq, 2)) %>
+                </span>
+              </div>
+
+              <div class="<%= chipClass %>">
+                <span class="<%= chipLabelClass %>">PIP</span>
+                <span class="<%= chipValueClass %>">
+                  <%= fallback(formatNumber(ultimoNivel.pip, 2)) %>
+                </span>
+              </div>
+
+              <div class="<%= chipClass %>">
+                <span class="<%= chipLabelClass %>">PBHP</span>
+                <span class="<%= chipValueClass %>">
+                  <%= fallback(formatNumber(ultimoNivel.pbhp, 2)) %>
+                </span>
+              </div>
+
+              <div class="<%= chipClass %>">
+                <span class="<%= chipLabelClass %>">Casing</span>
+                <span class="<%= chipValueClass %>">
+                  <%= fallback(formatNumber(ultimoNivel.presion_casing, 2)) %>
+                </span>
+              </div>
+
+              <div class="<%= chipClass %>">
+                <span class="<%= chipLabelClass %>">Tubing</span>
+                <span class="<%= chipValueClass %>">
+                  <%= fallback(formatNumber(ultimoNivel.presion_tubing, 2)) %>
+                </span>
+              </div>
+
+              <div class="<%= chipClass %>">
+                <span class="<%= chipLabelClass %>">RPM</span>
+                <span class="<%= chipValueClass %>">
+                  <%= fallback(formatNumber(ultimoNivel.rpm, 2)) %>
+                </span>
+              </div>
+
+              <div class="<%= chipClass %>">
+                <span class="<%= chipLabelClass %>">Torque</span>
+                <span class="<%= chipValueClass %>">
+                  <%= fallback(formatNumber(ultimoNivel.torque, 2)) %>
+                </span>
+              </div>
+
+              <div class="<%= chipClass %>">
+                <span class="<%= chipLabelClass %>">AMP</span>
+                <span class="<%= chipValueClass %>">
+                  <%= fallback(formatNumber(ultimoNivel.amp, 2)) %>
+                </span>
+              </div>
+
+              <div class="<%= chipClass %>">
+                <span class="<%= chipLabelClass %>">HP</span>
+                <span class="<%= chipValueClass %>">
+                  <%= fallback(formatNumber(ultimoNivel.hp, 2)) %>
+                </span>
+              </div>
             </div>
 
-            <div
-              class="rounded-2xl border border-blue-100 bg-blue-50 px-3 py-3 dark:border-blue-900/40 dark:bg-blue-950/20">
-              <p class="text-[10px] font-semibold uppercase tracking-wide text-blue-700 dark:text-blue-300">NF pies</p>
-              <p class="mt-1 text-sm font-bold text-slate-900 dark:text-white">
-                <%= formatNumber(ultimoNivel.nf_pies, 2) %>
-              </p>
-            </div>
+            <div class="grid gap-2 text-xs lg:grid-cols-2">
+              <div
+                class="rounded-lg border border-slate-200 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-900">
+                <span class="font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                  Diagnóstico:
+                </span>
+                <span class="font-medium text-slate-800 dark:text-slate-200">
+                  <%= fallback(ultimoNivel.diagnostico) %>
+                </span>
+              </div>
 
-            <div
-              class="rounded-2xl border border-emerald-100 bg-emerald-50 px-3 py-3 dark:border-emerald-900/40 dark:bg-emerald-950/20">
-              <p class="text-[10px] font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">SUM
-              </p>
-              <p class="mt-1 text-sm font-bold text-slate-900 dark:text-white">
-                <%= formatNumber(ultimoNivel.sumergencia, 2) %>
-              </p>
+              <div
+                class="rounded-lg border border-slate-200 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-900">
+                <span class="font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                  Recomendación:
+                </span>
+                <span class="font-medium text-slate-800 dark:text-slate-200">
+                  <%= fallback(ultimoNivel.recomendacion_ejecutada || ultimoNivel.recomendacion) %>
+                </span>
+              </div>
             </div>
-
-            <div
-              class="rounded-2xl border border-cyan-100 bg-cyan-50 px-3 py-3 dark:border-cyan-900/40 dark:bg-cyan-950/20">
-              <p class="text-[10px] font-semibold uppercase tracking-wide text-cyan-700 dark:text-cyan-300">% Liq</p>
-              <p class="mt-1 text-sm font-bold text-slate-900 dark:text-white">
-                <%= formatNumber(ultimoNivel.porcentaje_liq, 2) %>
-              </p>
-            </div>
-
-            <div
-              class="rounded-2xl border border-indigo-100 bg-indigo-50 px-3 py-3 dark:border-indigo-900/40 dark:bg-indigo-950/20">
-              <p class="text-[10px] font-semibold uppercase tracking-wide text-indigo-700 dark:text-indigo-300">PIP</p>
-              <p class="mt-1 text-sm font-bold text-slate-900 dark:text-white">
-                <%= formatNumber(ultimoNivel.pip, 2) %>
-              </p>
-            </div>
-
-            <div
-              class="rounded-2xl border border-purple-100 bg-purple-50 px-3 py-3 dark:border-purple-900/40 dark:bg-purple-950/20">
-              <p class="text-[10px] font-semibold uppercase tracking-wide text-purple-700 dark:text-purple-300">PBHP</p>
-              <p class="mt-1 text-sm font-bold text-slate-900 dark:text-white">
-                <%= formatNumber(ultimoNivel.pbhp, 2) %>
-              </p>
-            </div>
-
-            <div
-              class="rounded-2xl border border-rose-100 bg-rose-50 px-3 py-3 dark:border-rose-900/40 dark:bg-rose-950/20">
-              <p class="text-[10px] font-semibold uppercase tracking-wide text-rose-700 dark:text-rose-300">Casing</p>
-              <p class="mt-1 text-sm font-bold text-slate-900 dark:text-white">
-                <%= formatNumber(ultimoNivel.presion_casing, 2) %>
-              </p>
-            </div>
-
-            <div
-              class="rounded-2xl border border-teal-100 bg-teal-50 px-3 py-3 dark:border-teal-900/40 dark:bg-teal-950/20">
-              <p class="text-[10px] font-semibold uppercase tracking-wide text-teal-700 dark:text-teal-300">Tubing</p>
-              <p class="mt-1 text-sm font-bold text-slate-900 dark:text-white">
-                <%= formatNumber(ultimoNivel.presion_tubing, 2) %>
-              </p>
-            </div>
-
-            <div
-              class="rounded-2xl border border-orange-100 bg-orange-50 px-3 py-3 dark:border-orange-900/40 dark:bg-orange-950/20">
-              <p class="text-[10px] font-semibold uppercase tracking-wide text-orange-700 dark:text-orange-300">Torque
-              </p>
-              <p class="mt-1 text-sm font-bold text-slate-900 dark:text-white">
-                <%= formatNumber(ultimoNivel.torque, 2) %>
-              </p>
-            </div>
-
-            <div
-              class="rounded-2xl border border-amber-100 bg-amber-50 px-3 py-3 dark:border-amber-900/40 dark:bg-amber-950/20">
-              <p class="text-[10px] font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300">AMP</p>
-              <p class="mt-1 text-sm font-bold text-slate-900 dark:text-white">
-                <%= formatNumber(ultimoNivel.amp, 2) %>
-              </p>
-            </div>
-
-            <div
-              class="rounded-2xl border border-slate-100 bg-slate-50 px-3 py-3 dark:border-slate-700 dark:bg-slate-800/70 sm:col-span-2 md:col-span-2 xl:col-span-5">
-              <p class="text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                Diagnóstico</p>
-              <p class="mt-1 line-clamp-2 text-sm font-medium text-slate-800 dark:text-slate-200"
-                title="<%= fallback(ultimoNivel.diagnostico) %>">
-                <%= fallback(ultimoNivel.diagnostico) %>
-              </p>
-            </div>
-
-            <div
-              class="rounded-2xl border border-slate-100 bg-slate-50 px-3 py-3 dark:border-slate-700 dark:bg-slate-800/70 sm:col-span-2 md:col-span-2 xl:col-span-5">
-              <p class="text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                Recomendación ejecutada</p>
-              <p class="mt-1 line-clamp-2 text-sm font-medium text-slate-800 dark:text-slate-200"
-                title="<%= fallback(ultimoNivel.recomendacion_ejecutada || ultimoNivel.recomendacion) %>">
-                <%= fallback(ultimoNivel.recomendacion_ejecutada || ultimoNivel.recomendacion) %>
-              </p>
-            </div>
-
           </div>
           <% } else { %>
             <div class="rounded-xl bg-yellow-50 p-4 text-sm text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-300">
@@ -389,8 +393,8 @@
     </section>
 
     <!-- =========================================================
-       GRAFICA NIVELES
-       ========================================================= -->
+   GRAFICA NIVELES
+   ========================================================= -->
     <section class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900">
       <div class="mb-4 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div>
@@ -404,7 +408,7 @@
 
         <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
           <select id="niveles-limite"
-            class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200">
+            class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200">
             <option value="3">Últimas 3</option>
             <option value="5" selected>Últimas 5</option>
             <option value="10">Últimas 10</option>
@@ -412,7 +416,8 @@
           </select>
 
           <button type="button" data-export-chart="chart-niveles-pozo" data-export-name="niveles-<%= pozo.codigo %>"
-            class="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-700">
+            data-export-pozo="<%= pozo.codigo %>" data-export-kind="niveles"
+            class="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-emerald-700">
             <i class="fa-solid fa-download"></i>
             Exportar PNG
           </button>
@@ -420,57 +425,57 @@
       </div>
 
       <div class="mb-4 flex flex-wrap gap-2 text-sm">
-        <label class="inline-flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-800">
+        <label class="<%= checkboxClass %>">
           <input type="checkbox" name="nivel-chart-field" value="nf_pies" checked>
           NF pies
         </label>
 
-        <label class="inline-flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-800">
+        <label class="<%= checkboxClass %>">
           <input type="checkbox" name="nivel-chart-field" value="sumergencia">
           Sumergencia
         </label>
 
-        <label class="inline-flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-800">
+        <label class="<%= checkboxClass %>">
           <input type="checkbox" name="nivel-chart-field" value="porcentaje_liq">
           % Liq
         </label>
 
-        <label class="inline-flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-800">
+        <label class="<%= checkboxClass %>">
           <input type="checkbox" name="nivel-chart-field" value="pip">
           PIP
         </label>
 
-        <label class="inline-flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-800">
+        <label class="<%= checkboxClass %>">
           <input type="checkbox" name="nivel-chart-field" value="pbhp">
           PBHP
         </label>
 
-        <label class="inline-flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-800">
+        <label class="<%= checkboxClass %>">
           <input type="checkbox" name="nivel-chart-field" value="presion_casing">
           P. casing
         </label>
 
-        <label class="inline-flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-800">
+        <label class="<%= checkboxClass %>">
           <input type="checkbox" name="nivel-chart-field" value="presion_tubing">
           P. tubing
         </label>
 
-        <label class="inline-flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-800">
+        <label class="<%= checkboxClass %>">
           <input type="checkbox" name="nivel-chart-field" value="rpm">
           RPM
         </label>
 
-        <label class="inline-flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-800">
+        <label class="<%= checkboxClass %>">
           <input type="checkbox" name="nivel-chart-field" value="torque">
           Torque
         </label>
 
-        <label class="inline-flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-800">
+        <label class="<%= checkboxClass %>">
           <input type="checkbox" name="nivel-chart-field" value="amp">
           AMP
         </label>
 
-        <label class="inline-flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-800">
+        <label class="<%= checkboxClass %>">
           <input type="checkbox" name="nivel-chart-field" value="hp">
           HP
         </label>
@@ -479,7 +484,7 @@
       <script type="application/json" id="niveles-data-json"><%- JSON.stringify(niveles || []) %></script>
 
       <div id="chart-niveles-pozo"
-        class="min-h-[320px] rounded-xl border border-dashed border-slate-300 bg-white p-2 dark:border-slate-600 dark:bg-slate-900">
+        class="min-h-[320px] rounded-xl border border-dashed border-slate-300 bg-slate-50 p-2 dark:border-slate-600 dark:bg-slate-950/40">
         <% if (!niveles || !niveles.length) { %>
           <div class="flex min-h-[300px] items-center justify-center">
             <p class="text-sm text-slate-500 dark:text-slate-400">
@@ -491,8 +496,8 @@
     </section>
 
     <!-- =========================================================
-       COMPARATIVO
-       ========================================================= -->
+   COMPARATIVO
+   ========================================================= -->
     <section class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900">
       <div class="mb-4 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div>
@@ -501,20 +506,35 @@
           </h2>
 
           <p class="text-sm text-slate-500 dark:text-slate-400">
-            Contrasta la medición operativa diaria contra la medición tomada durante el nivel.
+            Selecciona una toma de nivel para comparar sus valores contra los parámetros del mismo día.
           </p>
         </div>
 
         <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <select id="comparativo-fecha-select"
+            class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200">
+            <% if (comparativo && comparativo.length) { %>
+              <% comparativo.forEach(function(row, index) { var fechaComparativo=row.fecha_nivel || row.fecha; var
+                fechaValue=fechaComparativo ? String(fechaComparativo).slice(0, 10) : '' ; %>
+                <option value="<%= fechaValue %>" <%=index===0 ? 'selected' : '' %>>
+                  <%= fallback(formatDate(fechaComparativo)) %>
+                </option>
+                <% }); %>
+                  <% } else { %>
+                    <option value="">Sin fechas</option>
+                    <% } %>
+          </select>
+
           <button type="button" data-pozo-open-modal="modal-comparativo-parametros-niveles"
-            class="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800">
+            class="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-100 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800">
             <i class="fa-solid fa-table-columns"></i>
-            Ver comparativo
+            Ver histórico
           </button>
 
           <button type="button" data-export-chart="chart-comparativa-pozo"
-            data-export-name="comparativo-<%= pozo.codigo %>"
-            class="inline-flex items-center justify-center gap-2 rounded-lg bg-violet-600 px-3 py-2 text-sm font-medium text-white hover:bg-violet-700">
+            data-export-name="comparativo-<%= pozo.codigo %>" data-export-pozo="<%= pozo.codigo %>"
+            data-export-kind="comparativo"
+            class="inline-flex items-center justify-center gap-2 rounded-lg bg-violet-600 px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-violet-700">
             <i class="fa-solid fa-download"></i>
             Exportar PNG
           </button>
@@ -525,56 +545,61 @@
         id="comparativo-parametros-niveles-json"><%- JSON.stringify(comparativo || []) %></script>
 
       <% if (ultimoComparativo) { %>
-        <div class="mb-4 grid gap-3 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6">
+        <div class="mb-4 grid gap-2 sm:grid-cols-2 md:grid-cols-4 xl:grid-cols-7">
 
-          <div
-            class="rounded-2xl border border-slate-100 bg-slate-50 px-3 py-3 dark:border-slate-700 dark:bg-slate-800/70">
-            <p class="text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Fecha</p>
-            <p class="mt-1 text-sm font-bold text-slate-900 dark:text-white">
-              <%= formatDate(ultimoComparativo.fecha) %>
+          <div class="<%= cardClass %>">
+            <p class="<%= labelClass %>">Fecha</p>
+            <p id="comparativo-resumen-fecha" class="<%= valueClass %>"
+              title="<%= fallback(formatDate(ultimoComparativo.fecha_nivel || ultimoComparativo.fecha)) %>">
+              <%= fallback(formatDate(ultimoComparativo.fecha_nivel || ultimoComparativo.fecha)) %>
             </p>
           </div>
 
-          <div
-            class="rounded-2xl border border-blue-100 bg-blue-50 px-3 py-3 dark:border-blue-900/40 dark:bg-blue-950/20">
-            <p class="text-[10px] font-semibold uppercase tracking-wide text-blue-700 dark:text-blue-300">Dif. RPM</p>
-            <p class="mt-1 text-sm font-bold text-slate-900 dark:text-white">
-              <%= formatNumber(ultimoComparativo.dif_rpm, 2) %>
+          <div class="<%= cardClass %>">
+            <p class="<%= labelClass %>">Dif. RPM</p>
+            <p id="comparativo-resumen-dif-rpm" class="<%= valueClass %>"
+              title="<%= fallback(formatNumber(ultimoComparativo.dif_rpm, 2)) %>">
+              <%= fallback(formatNumber(ultimoComparativo.dif_rpm, 2)) %>
             </p>
           </div>
 
-          <div
-            class="rounded-2xl border border-orange-100 bg-orange-50 px-3 py-3 dark:border-orange-900/40 dark:bg-orange-950/20">
-            <p class="text-[10px] font-semibold uppercase tracking-wide text-orange-700 dark:text-orange-300">Dif.
-              Torque</p>
-            <p class="mt-1 text-sm font-bold text-slate-900 dark:text-white">
-              <%= formatNumber(ultimoComparativo.dif_torque, 2) %>
+          <div class="<%= cardClass %>">
+            <p class="<%= labelClass %>">Dif. Torque</p>
+            <p id="comparativo-resumen-dif-torque" class="<%= valueClass %>"
+              title="<%= fallback(formatNumber(ultimoComparativo.dif_torque, 2)) %>">
+              <%= fallback(formatNumber(ultimoComparativo.dif_torque, 2)) %>
             </p>
           </div>
 
-          <div
-            class="rounded-2xl border border-amber-100 bg-amber-50 px-3 py-3 dark:border-amber-900/40 dark:bg-amber-950/20">
-            <p class="text-[10px] font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300">Dif. AMP</p>
-            <p class="mt-1 text-sm font-bold text-slate-900 dark:text-white">
-              <%= formatNumber(ultimoComparativo.dif_amp, 2) %>
+          <div class="<%= cardClass %>">
+            <p class="<%= labelClass %>">Dif. AMP</p>
+            <p id="comparativo-resumen-dif-amp" class="<%= valueClass %>"
+              title="<%= fallback(formatNumber(ultimoComparativo.dif_amp, 2)) %>">
+              <%= fallback(formatNumber(ultimoComparativo.dif_amp, 2)) %>
             </p>
           </div>
 
-          <div
-            class="rounded-2xl border border-rose-100 bg-rose-50 px-3 py-3 dark:border-rose-900/40 dark:bg-rose-950/20">
-            <p class="text-[10px] font-semibold uppercase tracking-wide text-rose-700 dark:text-rose-300">Dif. Casing
-            </p>
-            <p class="mt-1 text-sm font-bold text-slate-900 dark:text-white">
-              <%= formatNumber(ultimoComparativo.dif_presion_casing, 2) %>
+          <div class="<%= cardClass %>">
+            <p class="<%= labelClass %>">Dif. HP</p>
+            <p id="comparativo-resumen-dif-hp" class="<%= valueClass %>"
+              title="<%= fallback(formatNumber(ultimoComparativo.dif_hp, 2)) %>">
+              <%= fallback(formatNumber(ultimoComparativo.dif_hp, 2)) %>
             </p>
           </div>
 
-          <div
-            class="rounded-2xl border border-teal-100 bg-teal-50 px-3 py-3 dark:border-teal-900/40 dark:bg-teal-950/20">
-            <p class="text-[10px] font-semibold uppercase tracking-wide text-teal-700 dark:text-teal-300">Dif. Tubing
+          <div class="<%= cardClass %>">
+            <p class="<%= labelClass %>">Dif. Casing</p>
+            <p id="comparativo-resumen-dif-casing" class="<%= valueClass %>"
+              title="<%= fallback(formatNumber(ultimoComparativo.dif_presion_casing, 2)) %>">
+              <%= fallback(formatNumber(ultimoComparativo.dif_presion_casing, 2)) %>
             </p>
-            <p class="mt-1 text-sm font-bold text-slate-900 dark:text-white">
-              <%= formatNumber(ultimoComparativo.dif_presion_tubing, 2) %>
+          </div>
+
+          <div class="<%= cardClass %>">
+            <p class="<%= labelClass %>">Dif. Tubing</p>
+            <p id="comparativo-resumen-dif-tubing" class="<%= valueClass %>"
+              title="<%= fallback(formatNumber(ultimoComparativo.dif_presion_tubing, 2)) %>">
+              <%= fallback(formatNumber(ultimoComparativo.dif_presion_tubing, 2)) %>
             </p>
           </div>
 
@@ -587,7 +612,7 @@
           <% } %>
 
             <div id="chart-comparativa-pozo"
-              class="min-h-[300px] rounded-xl border border-dashed border-slate-300 bg-white p-2 dark:border-slate-600 dark:bg-slate-900">
+              class="min-h-[300px] rounded-xl border border-dashed border-slate-300 bg-slate-50 p-2 dark:border-slate-600 dark:bg-slate-950/40">
               <% if (!comparativo || !comparativo.length) { %>
                 <div class="flex min-h-[260px] items-center justify-center">
                   <p class="text-sm text-slate-500 dark:text-slate-400">
@@ -599,12 +624,11 @@
     </section>
 
     <!-- =========================================================
-       MODAL HISTORICO PARAMETROS
-       ========================================================= -->
+   MODAL HISTORICO PARAMETROS
+   ========================================================= -->
     <div id="modal-historial-parametros"
       class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/60 p-4" role="dialog" aria-modal="true"
       aria-labelledby="modal-historial-parametros-title">
-
       <div class="max-h-[90vh] w-full max-w-7xl overflow-hidden rounded-2xl bg-white shadow-xl dark:bg-slate-900">
         <div
           class="flex items-center justify-between border-b border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800">
@@ -623,7 +647,7 @@
           </button>
         </div>
 
-        <div class="max-h-[75vh] overflow-auto p-4">
+        <div class="max-h-[75vh] overflow-auto bg-white p-4 dark:bg-slate-900">
           <table id="tabla-historial-parametros-pozo"
             class="w-full min-w-[1200px] overflow-hidden rounded-xl text-left text-sm text-slate-600 dark:text-slate-300">
             <thead
@@ -646,7 +670,7 @@
 
             <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
               <% if (parametros && parametros.length) { %>
-                <% parametros.forEach((row, index)=> { %>
+                <% parametros.forEach(function(row, index) { %>
                   <tr
                     class="<%= index % 2 === 0 ? 'bg-white dark:bg-slate-900' : 'bg-slate-50/80 dark:bg-slate-800/50' %> hover:bg-blue-50 dark:hover:bg-blue-950/30">
                     <td class="whitespace-nowrap px-4 py-3 font-semibold text-slate-900 dark:text-white">
@@ -687,7 +711,7 @@
                       <%= fallback(row.recomendaciones_completas || row.recomendacion || row.recomendaciones) %>
                     </td>
                   </tr>
-                  <% }) %>
+                  <% }); %>
                     <% } else { %>
                       <tr>
                         <td colspan="12" class="px-4 py-6 text-center text-slate-500 dark:text-slate-400">
@@ -702,11 +726,10 @@
     </div>
 
     <!-- =========================================================
-       MODAL HISTORICO NIVELES
-       ========================================================= -->
+   MODAL HISTORICO NIVELES
+   ========================================================= -->
     <div id="modal-historial-niveles" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/60 p-4"
       role="dialog" aria-modal="true" aria-labelledby="modal-historial-niveles-title">
-
       <div class="max-h-[90vh] w-full max-w-7xl overflow-hidden rounded-2xl bg-white shadow-xl dark:bg-slate-900">
         <div
           class="flex items-center justify-between border-b border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800">
@@ -725,7 +748,7 @@
           </button>
         </div>
 
-        <div class="max-h-[75vh] overflow-auto p-4">
+        <div class="max-h-[75vh] overflow-auto bg-white p-4 dark:bg-slate-900">
           <table id="tabla-historial-niveles-pozo"
             class="w-full min-w-[1300px] overflow-hidden rounded-xl text-left text-sm text-slate-600 dark:text-slate-300">
             <thead
@@ -750,7 +773,7 @@
 
             <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
               <% if (niveles && niveles.length) { %>
-                <% niveles.forEach((row, index)=> { %>
+                <% niveles.forEach(function(row, index) { %>
                   <tr
                     class="<%= index % 2 === 0 ? 'bg-white dark:bg-slate-900' : 'bg-slate-50/80 dark:bg-slate-800/50' %> hover:bg-emerald-50 dark:hover:bg-emerald-950/30">
                     <td class="whitespace-nowrap px-4 py-3 font-semibold text-slate-900 dark:text-white">
@@ -797,7 +820,7 @@
                       <%= fallback(row.recomendacion_ejecutada || row.recomendacion) %>
                     </td>
                   </tr>
-                  <% }) %>
+                  <% }); %>
                     <% } else { %>
                       <tr>
                         <td colspan="14" class="px-4 py-6 text-center text-slate-500 dark:text-slate-400">
@@ -812,12 +835,11 @@
     </div>
 
     <!-- =========================================================
-       MODAL COMPARATIVO
-       ========================================================= -->
+   MODAL COMPARATIVO
+   ========================================================= -->
     <div id="modal-comparativo-parametros-niveles"
       class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/60 p-4" role="dialog" aria-modal="true"
       aria-labelledby="modal-comparativo-parametros-niveles-title">
-
       <div class="max-h-[90vh] w-full max-w-7xl overflow-hidden rounded-2xl bg-white shadow-xl dark:bg-slate-900">
         <div
           class="flex items-center justify-between border-b border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800">
@@ -827,7 +849,7 @@
               Comparativo parámetros vs niveles - <%= pozo.codigo %>
             </h3>
             <p class="text-sm text-slate-500 dark:text-slate-400">
-              Diferencias entre ambas mediciones por fecha.
+              Diferencias entre ambas mediciones usando como base las fechas con toma de nivel.
             </p>
           </div>
 
@@ -837,13 +859,14 @@
           </button>
         </div>
 
-        <div class="max-h-[75vh] overflow-auto p-4">
+        <div class="max-h-[75vh] overflow-auto bg-white p-4 dark:bg-slate-900">
           <table id="tabla-comparativo-parametros-niveles"
             class="w-full min-w-[1500px] overflow-hidden rounded-xl text-left text-sm text-slate-600 dark:text-slate-300">
             <thead
               class="sticky top-0 z-10 bg-violet-50 text-xs uppercase text-violet-900 dark:bg-violet-950 dark:text-violet-200">
               <tr>
-                <th class="px-4 py-3">Fecha</th>
+                <th class="px-4 py-3">Fecha nivel</th>
+                <th class="px-4 py-3">Fecha param</th>
                 <th class="px-4 py-3">RPM param</th>
                 <th class="px-4 py-3">RPM nivel</th>
                 <th class="px-4 py-3">Dif RPM</th>
@@ -867,13 +890,15 @@
 
             <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
               <% if (comparativo && comparativo.length) { %>
-                <% comparativo.forEach((row, index)=> { %>
+                <% comparativo.forEach(function(row, index) { %>
                   <tr
                     class="<%= index % 2 === 0 ? 'bg-white dark:bg-slate-900' : 'bg-slate-50/80 dark:bg-slate-800/50' %> hover:bg-violet-50 dark:hover:bg-violet-950/30">
                     <td class="whitespace-nowrap px-4 py-3 font-semibold text-slate-900 dark:text-white">
-                      <%= formatDate(row.fecha) %>
+                      <%= formatDate(row.fecha_nivel || row.fecha) %>
                     </td>
-
+                    <td class="whitespace-nowrap px-4 py-3 text-slate-700 dark:text-slate-300">
+                      <%= row.fecha_parametro ? formatDate(row.fecha_parametro) : '—' %>
+                    </td>
                     <td class="px-4 py-3">
                       <%= formatNumber(row.rpm_parametros, 2) %>
                     </td>
@@ -883,7 +908,6 @@
                     <td class="px-4 py-3 font-semibold">
                       <%= formatNumber(row.dif_rpm, 2) %>
                     </td>
-
                     <td class="px-4 py-3">
                       <%= formatNumber(row.torque_parametros, 2) %>
                     </td>
@@ -893,7 +917,6 @@
                     <td class="px-4 py-3 font-semibold">
                       <%= formatNumber(row.dif_torque, 2) %>
                     </td>
-
                     <td class="px-4 py-3">
                       <%= formatNumber(row.amp_parametros, 2) %>
                     </td>
@@ -903,7 +926,6 @@
                     <td class="px-4 py-3 font-semibold">
                       <%= formatNumber(row.dif_amp, 2) %>
                     </td>
-
                     <td class="px-4 py-3">
                       <%= formatNumber(row.hp_parametros, 2) %>
                     </td>
@@ -913,7 +935,6 @@
                     <td class="px-4 py-3 font-semibold">
                       <%= formatNumber(row.dif_hp, 2) %>
                     </td>
-
                     <td class="px-4 py-3">
                       <%= formatNumber(row.casing_parametros, 2) %>
                     </td>
@@ -923,7 +944,6 @@
                     <td class="px-4 py-3 font-semibold">
                       <%= formatNumber(row.dif_presion_casing, 2) %>
                     </td>
-
                     <td class="px-4 py-3">
                       <%= formatNumber(row.tubing_parametros, 2) %>
                     </td>
@@ -934,10 +954,10 @@
                       <%= formatNumber(row.dif_presion_tubing, 2) %>
                     </td>
                   </tr>
-                  <% }) %>
+                  <% }); %>
                     <% } else { %>
                       <tr>
-                        <td colspan="19" class="px-4 py-6 text-center text-slate-500 dark:text-slate-400">
+                        <td colspan="20" class="px-4 py-6 text-center text-slate-500 dark:text-slate-400">
                           No hay datos comparables.
                         </td>
                       </tr>
@@ -949,3 +969,57 @@
     </div>
 
   </div>
+
+  <style>
+    html.dark #tab-parametros-niveles {
+      background-color: rgb(2 6 23);
+      color: rgb(226 232 240);
+    }
+
+    html.dark #tab-parametros-niveles section {
+      background-color: rgb(15 23 42);
+      border-color: rgb(51 65 85);
+    }
+
+    html.dark #tab-parametros-niveles section>div:first-child {
+      background-color: rgba(30, 41, 59, 0.75);
+      border-color: rgb(51 65 85);
+    }
+
+    html.dark #tab-parametros-niveles .bg-white {
+      background-color: rgb(15 23 42);
+    }
+
+    html.dark #tab-parametros-niveles .bg-slate-50 {
+      background-color: rgb(15 23 42);
+    }
+
+    html.dark #tab-parametros-niveles .bg-slate-100\/80 {
+      background-color: rgba(15, 23, 42, 0.85);
+    }
+
+    html.dark #tab-parametros-niveles .text-slate-900 {
+      color: rgb(248 250 252);
+    }
+
+    html.dark #tab-parametros-niveles .text-slate-800 {
+      color: rgb(226 232 240);
+    }
+
+    html.dark #tab-parametros-niveles .text-slate-700 {
+      color: rgb(203 213 225);
+    }
+
+    html.dark #tab-parametros-niveles table,
+    html.dark #tab-parametros-niveles tbody,
+    html.dark #tab-parametros-niveles tr {
+      background-color: transparent;
+    }
+
+    html.dark #tab-parametros-niveles input,
+    html.dark #tab-parametros-niveles select {
+      background-color: rgb(15 23 42);
+      color: rgb(226 232 240);
+      border-color: rgb(71 85 105);
+    }
+  </style>
