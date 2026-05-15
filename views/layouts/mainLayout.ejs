@@ -46,7 +46,7 @@
     <%- include('../partials/topbar', { currentUser: typeof currentUser !=='undefined' ? currentUser : null, pageTitle:
       typeof title !=='undefined' ? title : 'Dashboard' }) %>
 
-      <!-- 
+      <!--
     Importante:
     pt-20 compensa el topbar fijo.
     lg:pl-64 compensa el sidebar fijo en desktop.
@@ -91,9 +91,9 @@
       <script src="/js/app-theme.js"></script>
 
       <!-- Script específico de cada página -->
-      <% if (typeof pageScript !== 'undefined' && pageScript) { %>
+      <% if (typeof pageScript !=='undefined' && pageScript) { %>
         <script src="<%= pageScript %>"></script>
-      <% } %>
+        <% } %>
 
 </body>
 
