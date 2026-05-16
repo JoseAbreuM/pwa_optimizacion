@@ -1,4 +1,22 @@
+const fs = require('fs');
 const mysql = require('mysql2/promise');
+
+function buildSslConfig() {
+  const caPath = process.env.DB_SSL_CA;
+
+  if (!caPath) {
+    return undefined;
+  }
+
+  if (!fs.existsSync(caPath)) {
+    console.warn('DB_SSL_CA definido, pero el archivo no existe:', caPath);
+    return undefined;
+  }
+
+  return {
+    ca: fs.readFileSync(caPath)
+  };
+}
 
 const pool = mysql.createPool({
   host: process.env.DB_HOST || '127.0.0.1',
@@ -14,9 +32,11 @@ const pool = mysql.createPool({
   enableKeepAlive: true,
   keepAliveInitialDelay: 0,
 
-  connectTimeout: 10000,
+  connectTimeout: 20000,
   decimalNumbers: true,
-  charset: 'utf8mb4'
+  charset: 'utf8mb4',
+
+  ssl: buildSslConfig()
 });
 
 async function query(sql, params = []) {
@@ -54,6 +74,7 @@ async function testConnection() {
   console.log('DB_PORT:', process.env.DB_PORT || 3306);
   console.log('DB_USER:', process.env.DB_USER || 'root');
   console.log('DB_NAME conectado:', dbName);
+  console.log('DB_SSL_CA:', process.env.DB_SSL_CA || 'No definido');
 
   const tablas = [
     'pozos',
@@ -62,8 +83,15 @@ async function testConnection() {
     'vdfs',
     'metodos_levantamiento',
     'vw_pozos_listado',
+    'vw_pozo_ficha_general',
     'vw_dashboard_kpis',
-    'vw_mapa_pozos_sync'
+    'vw_mapa_pozos_sync',
+    'vw_dashboard_muestras_alerta',
+    'vw_stg_bomba_actual',
+    'vw_stg_mapa_normalizado',
+    'vw_stg_pdt_vigente',
+    'vw_stg_pozos_consolidado',
+    'vw_stg_pozos_match'
   ];
 
   for (const tabla of tablas) {
