@@ -2,20 +2,27 @@ const fs = require('fs');
 const mysql = require('mysql2/promise');
 
 function buildSslConfig() {
+  const caText = process.env.DB_SSL_CA_TEXT;
   const caPath = process.env.DB_SSL_CA;
 
-  if (!caPath) {
-    return undefined;
+  if (caText) {
+    return {
+      ca: caText.replace(/\\n/g, '\n')
+    };
   }
 
-  if (!fs.existsSync(caPath)) {
-    console.warn('DB_SSL_CA definido, pero el archivo no existe:', caPath);
-    return undefined;
+  if (caPath) {
+    if (!fs.existsSync(caPath)) {
+      console.warn('DB_SSL_CA definido, pero el archivo no existe:', caPath);
+      return undefined;
+    }
+
+    return {
+      ca: fs.readFileSync(caPath)
+    };
   }
 
-  return {
-    ca: fs.readFileSync(caPath)
-  };
+  return undefined;
 }
 
 const pool = mysql.createPool({
@@ -75,6 +82,7 @@ async function testConnection() {
   console.log('DB_USER:', process.env.DB_USER || 'root');
   console.log('DB_NAME conectado:', dbName);
   console.log('DB_SSL_CA:', process.env.DB_SSL_CA || 'No definido');
+  console.log('DB_SSL_CA_TEXT:', process.env.DB_SSL_CA_TEXT ? 'Definido' : 'No definido');
 
   const tablas = [
     'pozos',
@@ -87,11 +95,7 @@ async function testConnection() {
     'vw_dashboard_kpis',
     'vw_mapa_pozos_sync',
     'vw_dashboard_muestras_alerta',
-    'vw_stg_bomba_actual',
-    'vw_stg_mapa_normalizado',
-    'vw_stg_pdt_vigente',
-    'vw_stg_pozos_consolidado',
-    'vw_stg_pozos_match'
+    'vw_ultimo_nivel_pozo'
   ];
 
   for (const tabla of tablas) {
