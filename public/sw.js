@@ -1,22 +1,28 @@
-const CACHE_NAME = 'petrofield-cache-v5';
+const CACHE_NAME = 'petrofield-cache-v6';
 
 const FILES_TO_CACHE = [
   '/',
   '/login',
+  '/offline.html',
+
   '/css/app.css',
+
   '/js/sw-register.js',
   '/js/core/app.js',
   '/js/core/ui.js',
+
   '/js/offline/db.js',
   '/js/offline/store.js',
   '/js/offline/sync.js',
   '/js/offline/status.js',
+
   '/js/modules/pozos.js',
   '/js/modules/pozo-detalle.js',
   '/js/modules/dashboard.js',
   '/js/modules/muestras.js',
   '/js/modules/parametros.js',
   '/js/modules/niveles.js',
+
   '/assets/icons/icono.png',
   '/manifest.json'
 ];
@@ -26,68 +32,88 @@ const DYNAMIC_NETWORK_FIRST_ROUTES = [
   '/pozos',
   '/optimizacion',
   '/operaciones',
-  '/mantenimiento'
+  '/mantenimiento',
+  '/parametros',
+  '/niveles',
+  '/muestras',
+  '/servicios'
 ];
 
 function createOfflineFallbackResponse() {
-  return new Response(`
-    <!DOCTYPE html>
-    <html lang="es">
-    <head>
-      <meta charset="UTF-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Sin conexión</title>
-      <style>
-        body {
-          font-family: Arial, sans-serif;
-          min-height: 100vh;
-          margin: 0;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          background: #0f172a;
-          color: #e2e8f0;
-          text-align: center;
-          padding: 24px;
-        }
-
-        .card {
-          max-width: 420px;
-          border: 1px solid #334155;
-          border-radius: 16px;
-          padding: 24px;
-          background: #111827;
-        }
-
-        h1 {
-          margin-top: 0;
-          font-size: 1.5rem;
-        }
-
-        p {
-          color: #cbd5e1;
-          line-height: 1.5;
-        }
-      </style>
-    </head>
-    <body>
-      <div class="card">
-        <h1>Sin conexión</h1>
-        <p>Necesitas internet para ver esta página por primera vez.</p>
-        <p>Cuando recuperes conexión, la PWA actualizará los datos automáticamente.</p>
-      </div>
-    </body>
-    </html>
-  `, {
-    status: 200,
-    headers: {
-      'Content-Type': 'text/html; charset=UTF-8'
+  return new Response(
+    `
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sin conexión - PetroField</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      display: grid;
+      min-height: 100vh;
+      place-items: center;
+      padding: 24px;
     }
-  });
+    .card {
+      max-width: 460px;
+      border: 1px solid #334155;
+      border-radius: 20px;
+      background: #020617;
+      padding: 24px;
+      box-shadow: 0 18px 45px rgba(0,0,0,.35);
+    }
+    h1 {
+      margin: 0 0 8px;
+      font-size: 24px;
+    }
+    p {
+      color: #94a3b8;
+      line-height: 1.5;
+    }
+    a, button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 0;
+      border-radius: 999px;
+      background: #033F73;
+      color: white;
+      padding: 10px 16px;
+      text-decoration: none;
+      font-weight: 700;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <h1>Sin conexión</h1>
+    <p>No se pudo cargar esta página desde la red. Puedes intentar abrir el modo offline si ya sincronizaste datos anteriormente.</p>
+    <a href="/offline.html">Abrir modo offline</a>
+  </main>
+</body>
+</html>
+`,
+    {
+      status: 200,
+      headers: {
+        'Content-Type': 'text/html; charset=UTF-8'
+      }
+    }
+  );
+}
+
+function isSameOrigin(url) {
+  return url.origin === self.location.origin;
 }
 
 function isDynamicNetworkFirstRoute(url) {
-  if (url.origin !== self.location.origin) return false;
+  if (!isSameOrigin(url)) return false;
 
   return DYNAMIC_NETWORK_FIRST_ROUTES.some((route) => (
     url.pathname === route ||
@@ -96,13 +122,14 @@ function isDynamicNetworkFirstRoute(url) {
 }
 
 function isStaticAppAsset(url) {
-  if (url.origin !== self.location.origin) return false;
+  if (!isSameOrigin(url)) return false;
 
   return (
     url.pathname.startsWith('/css/') ||
     url.pathname.startsWith('/js/') ||
     url.pathname.startsWith('/assets/') ||
-    url.pathname === '/manifest.json'
+    url.pathname === '/manifest.json' ||
+    url.pathname === '/offline.html'
   );
 }
 
@@ -117,14 +144,43 @@ async function putInCache(request, response) {
   }
 }
 
-async function getCachedOrFallback(request) {
-  const cached = await caches.match(request, { ignoreSearch: true });
-  if (cached) return cached;
+async function getOfflinePage() {
+  const cachedOffline = await caches.match('/offline.html', {
+    ignoreSearch: true
+  });
 
-  const login = await caches.match('/login');
-  if (login) return login;
+  if (cachedOffline) return cachedOffline;
 
   return createOfflineFallbackResponse();
+}
+
+async function getCachedOrOfflinePage(request) {
+  const cached = await caches.match(request, {
+    ignoreSearch: true
+  });
+
+  if (cached) return cached;
+
+  return getOfflinePage();
+}
+
+async function getCachedAssetOrFallback(request) {
+  const cached = await caches.match(request, {
+    ignoreSearch: true
+  });
+
+  if (cached) return cached;
+
+  try {
+    const response = await fetch(request);
+    await putInCache(request, response);
+    return response;
+  } catch (error) {
+    return new Response('', {
+      status: 504,
+      statusText: 'Offline'
+    });
+  }
 }
 
 self.addEventListener('install', (event) => {
@@ -153,20 +209,35 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
-  /**
-   * Las APIs dinámicas no se cachean.
-   * Los datos offline se manejan con IndexedDB desde /js/offline/*.
-   */
-  if (url.origin === self.location.origin && url.pathname.startsWith('/api/')) {
-    event.respondWith(fetch(event.request));
-    return;
-  }
-
   if (event.request.method !== 'GET') return;
 
   /**
+   * APIs:
+   * No se cachean aquí. Los datos offline se guardan en IndexedDB.
+   */
+  if (isSameOrigin(url) && url.pathname.startsWith('/api/')) {
+    event.respondWith(
+      fetch(event.request).catch(() => new Response(
+        JSON.stringify({
+          ok: false,
+          offline: true,
+          message: 'Sin conexión. Usa los datos guardados localmente.'
+        }),
+        {
+          status: 503,
+          headers: {
+            'Content-Type': 'application/json; charset=UTF-8'
+          }
+        }
+      ))
+    );
+
+    return;
+  }
+
+  /**
    * Rutas dinámicas principales:
-   * network-first, guardando copia cuando hay internet.
+   * network-first. Si no hay red, intenta cache. Si no hay cache, offline.html.
    */
   if (isDynamicNetworkFirstRoute(url)) {
     event.respondWith(
@@ -175,7 +246,7 @@ self.addEventListener('fetch', (event) => {
           await putInCache(event.request, response);
           return response;
         })
-        .catch(() => getCachedOrFallback(event.request))
+        .catch(() => getCachedOrOfflinePage(event.request))
     );
 
     return;
@@ -183,7 +254,7 @@ self.addEventListener('fetch', (event) => {
 
   /**
    * Navegación general:
-   * network-first con fallback a cache/login/offline.
+   * network-first con fallback a offline.html.
    */
   if (event.request.mode === 'navigate') {
     event.respondWith(
@@ -192,7 +263,7 @@ self.addEventListener('fetch', (event) => {
           await putInCache(event.request, response);
           return response;
         })
-        .catch(() => getCachedOrFallback(event.request))
+        .catch(() => getCachedOrOfflinePage(event.request))
     );
 
     return;
@@ -200,27 +271,21 @@ self.addEventListener('fetch', (event) => {
 
   /**
    * Assets locales:
-   * network-first para refrescar versiones, fallback a cache.
+   * cache-first para que la app abra rápido offline.
    */
   if (isStaticAppAsset(url)) {
-    event.respondWith(
-      fetch(event.request)
-        .then(async (response) => {
-          await putInCache(event.request, response);
-          return response;
-        })
-        .catch(() => caches.match(event.request, { ignoreSearch: true }))
-    );
-
+    event.respondWith(getCachedAssetOrFallback(event.request));
     return;
   }
 
   /**
    * Resto:
-   * cache-first con actualización si se consigue red.
+   * cache-first con fallback mínimo.
    */
   event.respondWith(
-    caches.match(event.request, { ignoreSearch: true })
+    caches.match(event.request, {
+      ignoreSearch: true
+    })
       .then((cached) => {
         if (cached) return cached;
 
@@ -229,7 +294,7 @@ self.addEventListener('fetch', (event) => {
             await putInCache(event.request, response);
             return response;
           })
-          .catch(() => caches.match('/') || createOfflineFallbackResponse());
+          .catch(() => getOfflinePage());
       })
   );
 });

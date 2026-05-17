@@ -624,346 +624,444 @@
     </section>
 
     <!-- =========================================================
-   MODAL HISTORICO PARAMETROS
-   ========================================================= -->
-    <div id="modal-historial-parametros"
-      class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/60 p-4" role="dialog" aria-modal="true"
-      aria-labelledby="modal-historial-parametros-title">
-      <div class="max-h-[90vh] w-full max-w-7xl overflow-hidden rounded-2xl bg-white shadow-xl dark:bg-slate-900">
+           MODAL HISTORICO PARAMETROS
+           ========================================================= -->
+    <div id="modal-historial-parametros" class="fixed inset-0 z-50 hidden bg-slate-900/60 p-0 sm:p-4" role="dialog"
+      aria-modal="true" aria-labelledby="modal-historial-parametros-title" data-pozo-modal>
+
+      <div class="flex min-h-dvh w-full items-end justify-center sm:min-h-full sm:items-center">
         <div
-          class="flex items-center justify-between border-b border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800">
-          <div>
-            <h3 id="modal-historial-parametros-title" class="text-lg font-semibold text-slate-900 dark:text-white">
-              Histórico de parámetros - <%= pozo.codigo %>
-            </h3>
-            <p class="text-sm text-slate-500 dark:text-slate-400">
-              Registros operativos asociados a este pozo.
-            </p>
+          class="flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-2xl bg-white shadow-xl dark:bg-slate-900 sm:max-h-[90vh] sm:max-w-7xl sm:rounded-2xl">
+
+          <!-- Header sticky -->
+          <div
+            class="sticky top-0 z-20 border-b border-slate-200 bg-white px-4 py-3 dark:border-slate-700 dark:bg-slate-900">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0">
+                <h3 id="modal-historial-parametros-title"
+                  class="truncate text-base font-semibold text-slate-900 dark:text-white sm:text-lg">
+                  Histórico de parámetros - <%= pozo.codigo %>
+                </h3>
+                <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400 sm:text-sm">
+                  Registros operativos asociados a este pozo.
+                </p>
+              </div>
+
+              <button type="button" data-pozo-close-modal="modal-historial-parametros"
+                aria-label="Cerrar histórico de parámetros"
+                class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-100 hover:text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-white">
+                <i class="fa-solid fa-xmark text-sm"></i>
+              </button>
+            </div>
+
+            <div class="mt-3 flex flex-wrap items-center gap-2 sm:hidden">
+              <button type="button" data-pozo-close-modal="modal-historial-parametros"
+                class="inline-flex items-center gap-1.5 rounded-full bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-blue-700">
+                <i class="fa-solid fa-arrow-left text-[11px]"></i>
+                Volver a ficha
+              </button>
+
+              <span class="text-[11px] text-slate-500 dark:text-slate-400">
+                Desliza horizontalmente para ver toda la tabla.
+              </span>
+            </div>
           </div>
 
-          <button type="button" data-pozo-close-modal="modal-historial-parametros"
-            class="rounded-lg p-2 text-slate-500 hover:bg-slate-200 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-white">
-            ✕
-          </button>
-        </div>
-
-        <div class="max-h-[75vh] overflow-auto bg-white p-4 dark:bg-slate-900">
-          <table id="tabla-historial-parametros-pozo"
-            class="w-full min-w-[1200px] overflow-hidden rounded-xl text-left text-sm text-slate-600 dark:text-slate-300">
-            <thead
-              class="sticky top-0 z-10 bg-blue-50 text-xs uppercase text-blue-900 dark:bg-blue-950 dark:text-blue-200">
-              <tr>
-                <th class="px-4 py-3">Fecha</th>
-                <th class="px-4 py-3">Torque</th>
-                <th class="px-4 py-3">AMP</th>
-                <th class="px-4 py-3">Freq</th>
-                <th class="px-4 py-3">Volts</th>
-                <th class="px-4 py-3">HP</th>
-                <th class="px-4 py-3">VO</th>
-                <th class="px-4 py-3">Vel. actual</th>
-                <th class="px-4 py-3">P. casing</th>
-                <th class="px-4 py-3">P. tubing</th>
-                <th class="px-4 py-3">Observación</th>
-                <th class="px-4 py-3">Recomendación</th>
-              </tr>
-            </thead>
-
-            <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
-              <% if (parametros && parametros.length) { %>
-                <% parametros.forEach(function(row, index) { %>
-                  <tr
-                    class="<%= index % 2 === 0 ? 'bg-white dark:bg-slate-900' : 'bg-slate-50/80 dark:bg-slate-800/50' %> hover:bg-blue-50 dark:hover:bg-blue-950/30">
-                    <td class="whitespace-nowrap px-4 py-3 font-semibold text-slate-900 dark:text-white">
-                      <%= formatDate(row.fecha) %>
-                    </td>
-                    <td class="px-4 py-3">
-                      <%= formatNumber(row.torque, 2) %>
-                    </td>
-                    <td class="px-4 py-3">
-                      <%= formatNumber(row.amp, 2) %>
-                    </td>
-                    <td class="px-4 py-3">
-                      <%= formatNumber(row.freq, 2) %>
-                    </td>
-                    <td class="px-4 py-3">
-                      <%= formatNumber(row.volts, 2) %>
-                    </td>
-                    <td class="px-4 py-3">
-                      <%= formatNumber(row.hp, 2) %>
-                    </td>
-                    <td class="px-4 py-3">
-                      <%= formatNumber(row.vel_operacional, 2) %>
-                    </td>
-                    <td class="px-4 py-3">
-                      <%= formatNumber(row.vel_actual, 2) %>
-                    </td>
-                    <td class="px-4 py-3">
-                      <%= formatNumber(row.presion_casing, 2) %>
-                    </td>
-                    <td class="px-4 py-3">
-                      <%= formatNumber(row.presion_tubing, 2) %>
-                    </td>
-                    <td class="max-w-[320px] truncate px-4 py-3" title="<%= fallback(row.observacion) %>">
-                      <%= fallback(row.observacion) %>
-                    </td>
-                    <td class="max-w-[360px] truncate px-4 py-3"
-                      title="<%= fallback(row.recomendaciones_completas || row.recomendacion || row.recomendaciones) %>">
-                      <%= fallback(row.recomendaciones_completas || row.recomendacion || row.recomendaciones) %>
-                    </td>
+          <!-- Body -->
+          <div class="min-h-0 flex-1 overflow-y-auto px-3 py-4 sm:p-4">
+            <div class="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700">
+              <table id="tabla-historial-parametros-pozo"
+                class="min-w-[1200px] w-full text-left text-xs text-slate-600 dark:text-slate-300 sm:text-sm">
+                <thead
+                  class="bg-blue-50 text-[10px] uppercase text-blue-900 dark:bg-blue-950 dark:text-blue-200 sm:text-xs">
+                  <tr>
+                    <th class="whitespace-nowrap px-3 py-3 sm:px-4">Fecha</th>
+                    <th class="whitespace-nowrap px-3 py-3 sm:px-4">Torque</th>
+                    <th class="whitespace-nowrap px-3 py-3 sm:px-4">AMP</th>
+                    <th class="whitespace-nowrap px-3 py-3 sm:px-4">Freq</th>
+                    <th class="whitespace-nowrap px-3 py-3 sm:px-4">Volts</th>
+                    <th class="whitespace-nowrap px-3 py-3 sm:px-4">HP</th>
+                    <th class="whitespace-nowrap px-3 py-3 sm:px-4">VO</th>
+                    <th class="whitespace-nowrap px-3 py-3 sm:px-4">Vel. actual</th>
+                    <th class="whitespace-nowrap px-3 py-3 sm:px-4">P. casing</th>
+                    <th class="whitespace-nowrap px-3 py-3 sm:px-4">P. tubing</th>
+                    <th class="min-w-[260px] px-3 py-3 sm:px-4">Observación</th>
+                    <th class="min-w-[300px] px-3 py-3 sm:px-4">Recomendación</th>
                   </tr>
-                  <% }); %>
-                    <% } else { %>
-                      <tr>
-                        <td colspan="12" class="px-4 py-6 text-center text-slate-500 dark:text-slate-400">
-                          No hay parámetros registrados.
+                </thead>
+
+                <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+                  <% if (parametros && parametros.length) { %>
+                    <% parametros.forEach(function(row, index) { %>
+                      <tr
+                        class="<%= index % 2 === 0 ? 'bg-white dark:bg-slate-900' : 'bg-slate-50/80 dark:bg-slate-800/50' %> hover:bg-blue-50 dark:hover:bg-blue-950/30">
+                        <td class="whitespace-nowrap px-3 py-3 font-semibold text-slate-900 dark:text-white sm:px-4">
+                          <%= formatDate(row.fecha) %>
+                        </td>
+                        <td class="whitespace-nowrap px-3 py-3 sm:px-4">
+                          <%= formatNumber(row.torque, 2) %>
+                        </td>
+                        <td class="whitespace-nowrap px-3 py-3 sm:px-4">
+                          <%= formatNumber(row.amp, 2) %>
+                        </td>
+                        <td class="whitespace-nowrap px-3 py-3 sm:px-4">
+                          <%= formatNumber(row.freq, 2) %>
+                        </td>
+                        <td class="whitespace-nowrap px-3 py-3 sm:px-4">
+                          <%= formatNumber(row.volts, 2) %>
+                        </td>
+                        <td class="whitespace-nowrap px-3 py-3 sm:px-4">
+                          <%= formatNumber(row.hp, 2) %>
+                        </td>
+                        <td class="whitespace-nowrap px-3 py-3 sm:px-4">
+                          <%= formatNumber(row.vel_operacional, 2) %>
+                        </td>
+                        <td class="whitespace-nowrap px-3 py-3 sm:px-4">
+                          <%= formatNumber(row.vel_actual, 2) %>
+                        </td>
+                        <td class="whitespace-nowrap px-3 py-3 sm:px-4">
+                          <%= formatNumber(row.presion_casing, 2) %>
+                        </td>
+                        <td class="whitespace-nowrap px-3 py-3 sm:px-4">
+                          <%= formatNumber(row.presion_tubing, 2) %>
+                        </td>
+                        <td class="min-w-[260px] max-w-[320px] truncate px-3 py-3 sm:px-4"
+                          title="<%= fallback(row.observacion) %>">
+                          <%= fallback(row.observacion) %>
+                        </td>
+                        <td class="min-w-[300px] max-w-[380px] truncate px-3 py-3 sm:px-4"
+                          title="<%= fallback(row.recomendaciones_completas || row.recomendacion || row.recomendaciones) %>">
+                          <%= fallback(row.recomendaciones_completas || row.recomendacion || row.recomendaciones) %>
                         </td>
                       </tr>
-                      <% } %>
-            </tbody>
-          </table>
+                      <% }); %>
+                        <% } else { %>
+                          <tr>
+                            <td colspan="12" class="px-4 py-6 text-center text-slate-500 dark:text-slate-400">
+                              No hay parámetros registrados.
+                            </td>
+                          </tr>
+                          <% } %>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Footer móvil -->
+          <div class="border-t border-slate-200 bg-white px-4 py-3 dark:border-slate-700 dark:bg-slate-900 sm:hidden">
+            <button type="button" data-pozo-close-modal="modal-historial-parametros"
+              class="inline-flex w-full items-center justify-center rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700">
+              Cerrar histórico
+            </button>
+          </div>
         </div>
       </div>
     </div>
 
     <!-- =========================================================
-   MODAL HISTORICO NIVELES
-   ========================================================= -->
-    <div id="modal-historial-niveles" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/60 p-4"
-      role="dialog" aria-modal="true" aria-labelledby="modal-historial-niveles-title">
-      <div class="max-h-[90vh] w-full max-w-7xl overflow-hidden rounded-2xl bg-white shadow-xl dark:bg-slate-900">
+           MODAL HISTORICO NIVELES
+           ========================================================= -->
+    <div id="modal-historial-niveles" class="fixed inset-0 z-50 hidden bg-slate-900/60 p-0 sm:p-4" role="dialog"
+      aria-modal="true" aria-labelledby="modal-historial-niveles-title" data-pozo-modal>
+
+      <div class="flex min-h-dvh w-full items-end justify-center sm:min-h-full sm:items-center">
         <div
-          class="flex items-center justify-between border-b border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800">
-          <div>
-            <h3 id="modal-historial-niveles-title" class="text-lg font-semibold text-slate-900 dark:text-white">
-              Histórico de niveles - <%= pozo.codigo %>
-            </h3>
-            <p class="text-sm text-slate-500 dark:text-slate-400">
-              Tomas de nivel asociadas a este pozo.
-            </p>
+          class="flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-2xl bg-white shadow-xl dark:bg-slate-900 sm:max-h-[90vh] sm:max-w-7xl sm:rounded-2xl">
+
+          <!-- Header sticky -->
+          <div
+            class="sticky top-0 z-20 border-b border-slate-200 bg-white px-4 py-3 dark:border-slate-700 dark:bg-slate-900">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0">
+                <h3 id="modal-historial-niveles-title"
+                  class="truncate text-base font-semibold text-slate-900 dark:text-white sm:text-lg">
+                  Histórico de niveles - <%= pozo.codigo %>
+                </h3>
+                <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400 sm:text-sm">
+                  Tomas de nivel asociadas a este pozo.
+                </p>
+              </div>
+
+              <button type="button" data-pozo-close-modal="modal-historial-niveles"
+                aria-label="Cerrar histórico de niveles"
+                class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-100 hover:text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-white">
+                <i class="fa-solid fa-xmark text-sm"></i>
+              </button>
+            </div>
+
+            <div class="mt-3 flex flex-wrap items-center gap-2 sm:hidden">
+              <button type="button" data-pozo-close-modal="modal-historial-niveles"
+                class="inline-flex items-center gap-1.5 rounded-full bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-emerald-700">
+                <i class="fa-solid fa-arrow-left text-[11px]"></i>
+                Volver a ficha
+              </button>
+
+              <span class="text-[11px] text-slate-500 dark:text-slate-400">
+                Desliza horizontalmente para ver toda la tabla.
+              </span>
+            </div>
           </div>
 
-          <button type="button" data-pozo-close-modal="modal-historial-niveles"
-            class="rounded-lg p-2 text-slate-500 hover:bg-slate-200 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-white">
-            ✕
-          </button>
-        </div>
-
-        <div class="max-h-[75vh] overflow-auto bg-white p-4 dark:bg-slate-900">
-          <table id="tabla-historial-niveles-pozo"
-            class="w-full min-w-[1300px] overflow-hidden rounded-xl text-left text-sm text-slate-600 dark:text-slate-300">
-            <thead
-              class="sticky top-0 z-10 bg-emerald-50 text-xs uppercase text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200">
-              <tr>
-                <th class="px-4 py-3">Fecha</th>
-                <th class="px-4 py-3">NF pies</th>
-                <th class="px-4 py-3">SUM</th>
-                <th class="px-4 py-3">% Liq</th>
-                <th class="px-4 py-3">PIP</th>
-                <th class="px-4 py-3">PBHP</th>
-                <th class="px-4 py-3">P. casing</th>
-                <th class="px-4 py-3">P. tubing</th>
-                <th class="px-4 py-3">RPM</th>
-                <th class="px-4 py-3">Torque</th>
-                <th class="px-4 py-3">AMP</th>
-                <th class="px-4 py-3">HP</th>
-                <th class="px-4 py-3">Diagnóstico</th>
-                <th class="px-4 py-3">Recomendación ejecutada</th>
-              </tr>
-            </thead>
-
-            <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
-              <% if (niveles && niveles.length) { %>
-                <% niveles.forEach(function(row, index) { %>
-                  <tr
-                    class="<%= index % 2 === 0 ? 'bg-white dark:bg-slate-900' : 'bg-slate-50/80 dark:bg-slate-800/50' %> hover:bg-emerald-50 dark:hover:bg-emerald-950/30">
-                    <td class="whitespace-nowrap px-4 py-3 font-semibold text-slate-900 dark:text-white">
-                      <%= formatDate(row.fecha) %>
-                    </td>
-                    <td class="px-4 py-3">
-                      <%= formatNumber(row.nf_pies, 2) %>
-                    </td>
-                    <td class="px-4 py-3">
-                      <%= formatNumber(row.sumergencia, 2) %>
-                    </td>
-                    <td class="px-4 py-3">
-                      <%= formatNumber(row.porcentaje_liq, 2) %>
-                    </td>
-                    <td class="px-4 py-3">
-                      <%= formatNumber(row.pip, 2) %>
-                    </td>
-                    <td class="px-4 py-3">
-                      <%= formatNumber(row.pbhp, 2) %>
-                    </td>
-                    <td class="px-4 py-3">
-                      <%= formatNumber(row.presion_casing, 2) %>
-                    </td>
-                    <td class="px-4 py-3">
-                      <%= formatNumber(row.presion_tubing, 2) %>
-                    </td>
-                    <td class="px-4 py-3">
-                      <%= formatNumber(row.rpm, 2) %>
-                    </td>
-                    <td class="px-4 py-3">
-                      <%= formatNumber(row.torque, 2) %>
-                    </td>
-                    <td class="px-4 py-3">
-                      <%= formatNumber(row.amp, 2) %>
-                    </td>
-                    <td class="px-4 py-3">
-                      <%= formatNumber(row.hp, 2) %>
-                    </td>
-                    <td class="max-w-[320px] truncate px-4 py-3" title="<%= fallback(row.diagnostico) %>">
-                      <%= fallback(row.diagnostico) %>
-                    </td>
-                    <td class="max-w-[360px] truncate px-4 py-3"
-                      title="<%= fallback(row.recomendacion_ejecutada || row.recomendacion) %>">
-                      <%= fallback(row.recomendacion_ejecutada || row.recomendacion) %>
-                    </td>
+          <!-- Body -->
+          <div class="min-h-0 flex-1 overflow-y-auto px-3 py-4 sm:p-4">
+            <div class="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700">
+              <table id="tabla-historial-niveles-pozo"
+                class="min-w-[1320px] w-full text-left text-xs text-slate-600 dark:text-slate-300 sm:text-sm">
+                <thead
+                  class="bg-emerald-50 text-[10px] uppercase text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200 sm:text-xs">
+                  <tr>
+                    <th class="whitespace-nowrap px-3 py-3 sm:px-4">Fecha</th>
+                    <th class="whitespace-nowrap px-3 py-3 sm:px-4">NF pies</th>
+                    <th class="whitespace-nowrap px-3 py-3 sm:px-4">SUM</th>
+                    <th class="whitespace-nowrap px-3 py-3 sm:px-4">% Liq</th>
+                    <th class="whitespace-nowrap px-3 py-3 sm:px-4">PIP</th>
+                    <th class="whitespace-nowrap px-3 py-3 sm:px-4">PBHP</th>
+                    <th class="whitespace-nowrap px-3 py-3 sm:px-4">P. casing</th>
+                    <th class="whitespace-nowrap px-3 py-3 sm:px-4">P. tubing</th>
+                    <th class="whitespace-nowrap px-3 py-3 sm:px-4">RPM</th>
+                    <th class="whitespace-nowrap px-3 py-3 sm:px-4">Torque</th>
+                    <th class="whitespace-nowrap px-3 py-3 sm:px-4">AMP</th>
+                    <th class="whitespace-nowrap px-3 py-3 sm:px-4">HP</th>
+                    <th class="min-w-[260px] px-3 py-3 sm:px-4">Diagnóstico</th>
+                    <th class="min-w-[320px] px-3 py-3 sm:px-4">Recomendación ejecutada</th>
                   </tr>
-                  <% }); %>
-                    <% } else { %>
-                      <tr>
-                        <td colspan="14" class="px-4 py-6 text-center text-slate-500 dark:text-slate-400">
-                          No hay niveles registrados.
+                </thead>
+
+                <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+                  <% if (niveles && niveles.length) { %>
+                    <% niveles.forEach(function(row, index) { %>
+                      <tr
+                        class="<%= index % 2 === 0 ? 'bg-white dark:bg-slate-900' : 'bg-slate-50/80 dark:bg-slate-800/50' %> hover:bg-emerald-50 dark:hover:bg-emerald-950/30">
+                        <td class="whitespace-nowrap px-3 py-3 font-semibold text-slate-900 dark:text-white sm:px-4">
+                          <%= formatDate(row.fecha) %>
+                        </td>
+                        <td class="whitespace-nowrap px-3 py-3 sm:px-4">
+                          <%= formatNumber(row.nf_pies, 2) %>
+                        </td>
+                        <td class="whitespace-nowrap px-3 py-3 sm:px-4">
+                          <%= formatNumber(row.sumergencia, 2) %>
+                        </td>
+                        <td class="whitespace-nowrap px-3 py-3 sm:px-4">
+                          <%= formatNumber(row.porcentaje_liq, 2) %>
+                        </td>
+                        <td class="whitespace-nowrap px-3 py-3 sm:px-4">
+                          <%= formatNumber(row.pip, 2) %>
+                        </td>
+                        <td class="whitespace-nowrap px-3 py-3 sm:px-4">
+                          <%= formatNumber(row.pbhp, 2) %>
+                        </td>
+                        <td class="whitespace-nowrap px-3 py-3 sm:px-4">
+                          <%= formatNumber(row.presion_casing, 2) %>
+                        </td>
+                        <td class="whitespace-nowrap px-3 py-3 sm:px-4">
+                          <%= formatNumber(row.presion_tubing, 2) %>
+                        </td>
+                        <td class="whitespace-nowrap px-3 py-3 sm:px-4">
+                          <%= formatNumber(row.rpm, 2) %>
+                        </td>
+                        <td class="whitespace-nowrap px-3 py-3 sm:px-4">
+                          <%= formatNumber(row.torque, 2) %>
+                        </td>
+                        <td class="whitespace-nowrap px-3 py-3 sm:px-4">
+                          <%= formatNumber(row.amp, 2) %>
+                        </td>
+                        <td class="whitespace-nowrap px-3 py-3 sm:px-4">
+                          <%= formatNumber(row.hp, 2) %>
+                        </td>
+                        <td class="min-w-[260px] max-w-[320px] truncate px-3 py-3 sm:px-4"
+                          title="<%= fallback(row.diagnostico) %>">
+                          <%= fallback(row.diagnostico) %>
+                        </td>
+                        <td class="min-w-[320px] max-w-[400px] truncate px-3 py-3 sm:px-4"
+                          title="<%= fallback(row.recomendacion_ejecutada || row.recomendacion) %>">
+                          <%= fallback(row.recomendacion_ejecutada || row.recomendacion) %>
                         </td>
                       </tr>
-                      <% } %>
-            </tbody>
-          </table>
+                      <% }); %>
+                        <% } else { %>
+                          <tr>
+                            <td colspan="14" class="px-4 py-6 text-center text-slate-500 dark:text-slate-400">
+                              No hay niveles registrados.
+                            </td>
+                          </tr>
+                          <% } %>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Footer móvil -->
+          <div class="border-t border-slate-200 bg-white px-4 py-3 dark:border-slate-700 dark:bg-slate-900 sm:hidden">
+            <button type="button" data-pozo-close-modal="modal-historial-niveles"
+              class="inline-flex w-full items-center justify-center rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700">
+              Cerrar histórico
+            </button>
+          </div>
         </div>
       </div>
     </div>
 
     <!-- =========================================================
-   MODAL COMPARATIVO
-   ========================================================= -->
-    <div id="modal-comparativo-parametros-niveles"
-      class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/60 p-4" role="dialog" aria-modal="true"
-      aria-labelledby="modal-comparativo-parametros-niveles-title">
-      <div class="max-h-[90vh] w-full max-w-7xl overflow-hidden rounded-2xl bg-white shadow-xl dark:bg-slate-900">
+           MODAL COMPARATIVO
+           ========================================================= -->
+    <div id="modal-comparativo-parametros-niveles" class="fixed inset-0 z-50 hidden bg-slate-900/60 p-0 sm:p-4"
+      role="dialog" aria-modal="true" aria-labelledby="modal-comparativo-parametros-niveles-title" data-pozo-modal>
+
+      <div class="flex min-h-dvh w-full items-end justify-center sm:min-h-full sm:items-center">
         <div
-          class="flex items-center justify-between border-b border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800">
-          <div>
-            <h3 id="modal-comparativo-parametros-niveles-title"
-              class="text-lg font-semibold text-slate-900 dark:text-white">
-              Comparativo parámetros vs niveles - <%= pozo.codigo %>
-            </h3>
-            <p class="text-sm text-slate-500 dark:text-slate-400">
-              Diferencias entre ambas mediciones usando como base las fechas con toma de nivel.
-            </p>
+          class="flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-2xl bg-white shadow-xl dark:bg-slate-900 sm:max-h-[90vh] sm:max-w-7xl sm:rounded-2xl">
+
+          <!-- Header sticky -->
+          <div
+            class="sticky top-0 z-20 border-b border-slate-200 bg-white px-4 py-3 dark:border-slate-700 dark:bg-slate-900">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0">
+                <h3 id="modal-comparativo-parametros-niveles-title"
+                  class="truncate text-base font-semibold text-slate-900 dark:text-white sm:text-lg">
+                  Comparativo parámetros vs niveles - <%= pozo.codigo %>
+                </h3>
+                <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400 sm:text-sm">
+                  Diferencias entre ambas mediciones usando como base las fechas con toma de nivel.
+                </p>
+              </div>
+
+              <button type="button" data-pozo-close-modal="modal-comparativo-parametros-niveles"
+                aria-label="Cerrar comparativo"
+                class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-100 hover:text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-white">
+                <i class="fa-solid fa-xmark text-sm"></i>
+              </button>
+            </div>
+
+            <div class="mt-3 flex flex-wrap items-center gap-2 sm:hidden">
+              <button type="button" data-pozo-close-modal="modal-comparativo-parametros-niveles"
+                class="inline-flex items-center gap-1.5 rounded-full bg-violet-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-violet-700">
+                <i class="fa-solid fa-arrow-left text-[11px]"></i>
+                Volver a ficha
+              </button>
+
+              <span class="text-[11px] text-slate-500 dark:text-slate-400">
+                Desliza horizontalmente para ver toda la tabla.
+              </span>
+            </div>
           </div>
 
-          <button type="button" data-pozo-close-modal="modal-comparativo-parametros-niveles"
-            class="rounded-lg p-2 text-slate-500 hover:bg-slate-200 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-white">
-            ✕
-          </button>
-        </div>
-
-        <div class="max-h-[75vh] overflow-auto bg-white p-4 dark:bg-slate-900">
-          <table id="tabla-comparativo-parametros-niveles"
-            class="w-full min-w-[1500px] overflow-hidden rounded-xl text-left text-sm text-slate-600 dark:text-slate-300">
-            <thead
-              class="sticky top-0 z-10 bg-violet-50 text-xs uppercase text-violet-900 dark:bg-violet-950 dark:text-violet-200">
-              <tr>
-                <th class="px-4 py-3">Fecha nivel</th>
-                <th class="px-4 py-3">Fecha param</th>
-                <th class="px-4 py-3">RPM param</th>
-                <th class="px-4 py-3">RPM nivel</th>
-                <th class="px-4 py-3">Dif RPM</th>
-                <th class="px-4 py-3">Torque param</th>
-                <th class="px-4 py-3">Torque nivel</th>
-                <th class="px-4 py-3">Dif torque</th>
-                <th class="px-4 py-3">AMP param</th>
-                <th class="px-4 py-3">AMP nivel</th>
-                <th class="px-4 py-3">Dif AMP</th>
-                <th class="px-4 py-3">HP param</th>
-                <th class="px-4 py-3">HP nivel</th>
-                <th class="px-4 py-3">Dif HP</th>
-                <th class="px-4 py-3">Casing param</th>
-                <th class="px-4 py-3">Casing nivel</th>
-                <th class="px-4 py-3">Dif casing</th>
-                <th class="px-4 py-3">Tubing param</th>
-                <th class="px-4 py-3">Tubing nivel</th>
-                <th class="px-4 py-3">Dif tubing</th>
-              </tr>
-            </thead>
-
-            <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
-              <% if (comparativo && comparativo.length) { %>
-                <% comparativo.forEach(function(row, index) { %>
-                  <tr
-                    class="<%= index % 2 === 0 ? 'bg-white dark:bg-slate-900' : 'bg-slate-50/80 dark:bg-slate-800/50' %> hover:bg-violet-50 dark:hover:bg-violet-950/30">
-                    <td class="whitespace-nowrap px-4 py-3 font-semibold text-slate-900 dark:text-white">
-                      <%= formatDate(row.fecha_nivel || row.fecha) %>
-                    </td>
-                    <td class="whitespace-nowrap px-4 py-3 text-slate-700 dark:text-slate-300">
-                      <%= row.fecha_parametro ? formatDate(row.fecha_parametro) : '—' %>
-                    </td>
-                    <td class="px-4 py-3">
-                      <%= formatNumber(row.rpm_parametros, 2) %>
-                    </td>
-                    <td class="px-4 py-3">
-                      <%= formatNumber(row.rpm_nivel, 2) %>
-                    </td>
-                    <td class="px-4 py-3 font-semibold">
-                      <%= formatNumber(row.dif_rpm, 2) %>
-                    </td>
-                    <td class="px-4 py-3">
-                      <%= formatNumber(row.torque_parametros, 2) %>
-                    </td>
-                    <td class="px-4 py-3">
-                      <%= formatNumber(row.torque_nivel, 2) %>
-                    </td>
-                    <td class="px-4 py-3 font-semibold">
-                      <%= formatNumber(row.dif_torque, 2) %>
-                    </td>
-                    <td class="px-4 py-3">
-                      <%= formatNumber(row.amp_parametros, 2) %>
-                    </td>
-                    <td class="px-4 py-3">
-                      <%= formatNumber(row.amp_nivel, 2) %>
-                    </td>
-                    <td class="px-4 py-3 font-semibold">
-                      <%= formatNumber(row.dif_amp, 2) %>
-                    </td>
-                    <td class="px-4 py-3">
-                      <%= formatNumber(row.hp_parametros, 2) %>
-                    </td>
-                    <td class="px-4 py-3">
-                      <%= formatNumber(row.hp_nivel, 2) %>
-                    </td>
-                    <td class="px-4 py-3 font-semibold">
-                      <%= formatNumber(row.dif_hp, 2) %>
-                    </td>
-                    <td class="px-4 py-3">
-                      <%= formatNumber(row.casing_parametros, 2) %>
-                    </td>
-                    <td class="px-4 py-3">
-                      <%= formatNumber(row.casing_nivel, 2) %>
-                    </td>
-                    <td class="px-4 py-3 font-semibold">
-                      <%= formatNumber(row.dif_presion_casing, 2) %>
-                    </td>
-                    <td class="px-4 py-3">
-                      <%= formatNumber(row.tubing_parametros, 2) %>
-                    </td>
-                    <td class="px-4 py-3">
-                      <%= formatNumber(row.tubing_nivel, 2) %>
-                    </td>
-                    <td class="px-4 py-3 font-semibold">
-                      <%= formatNumber(row.dif_presion_tubing, 2) %>
-                    </td>
+          <!-- Body -->
+          <div class="min-h-0 flex-1 overflow-y-auto px-3 py-4 sm:p-4">
+            <div class="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700">
+              <table id="tabla-comparativo-parametros-niveles"
+                class="min-w-[1600px] w-full text-left text-xs text-slate-600 dark:text-slate-300 sm:text-sm">
+                <thead
+                  class="bg-violet-50 text-[10px] uppercase text-violet-900 dark:bg-violet-950 dark:text-violet-200 sm:text-xs">
+                  <tr>
+                    <th class="whitespace-nowrap px-3 py-3 sm:px-4">Fecha nivel</th>
+                    <th class="whitespace-nowrap px-3 py-3 sm:px-4">Fecha param</th>
+                    <th class="whitespace-nowrap px-3 py-3 sm:px-4">RPM param</th>
+                    <th class="whitespace-nowrap px-3 py-3 sm:px-4">RPM nivel</th>
+                    <th class="whitespace-nowrap px-3 py-3 sm:px-4">Dif RPM</th>
+                    <th class="whitespace-nowrap px-3 py-3 sm:px-4">Torque param</th>
+                    <th class="whitespace-nowrap px-3 py-3 sm:px-4">Torque nivel</th>
+                    <th class="whitespace-nowrap px-3 py-3 sm:px-4">Dif torque</th>
+                    <th class="whitespace-nowrap px-3 py-3 sm:px-4">AMP param</th>
+                    <th class="whitespace-nowrap px-3 py-3 sm:px-4">AMP nivel</th>
+                    <th class="whitespace-nowrap px-3 py-3 sm:px-4">Dif AMP</th>
+                    <th class="whitespace-nowrap px-3 py-3 sm:px-4">HP param</th>
+                    <th class="whitespace-nowrap px-3 py-3 sm:px-4">HP nivel</th>
+                    <th class="whitespace-nowrap px-3 py-3 sm:px-4">Dif HP</th>
+                    <th class="whitespace-nowrap px-3 py-3 sm:px-4">Casing param</th>
+                    <th class="whitespace-nowrap px-3 py-3 sm:px-4">Casing nivel</th>
+                    <th class="whitespace-nowrap px-3 py-3 sm:px-4">Dif casing</th>
+                    <th class="whitespace-nowrap px-3 py-3 sm:px-4">Tubing param</th>
+                    <th class="whitespace-nowrap px-3 py-3 sm:px-4">Tubing nivel</th>
+                    <th class="whitespace-nowrap px-3 py-3 sm:px-4">Dif tubing</th>
                   </tr>
-                  <% }); %>
-                    <% } else { %>
-                      <tr>
-                        <td colspan="20" class="px-4 py-6 text-center text-slate-500 dark:text-slate-400">
-                          No hay datos comparables.
+                </thead>
+
+                <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+                  <% if (comparativo && comparativo.length) { %>
+                    <% comparativo.forEach(function(row, index) { %>
+                      <tr
+                        class="<%= index % 2 === 0 ? 'bg-white dark:bg-slate-900' : 'bg-slate-50/80 dark:bg-slate-800/50' %> hover:bg-violet-50 dark:hover:bg-violet-950/30">
+                        <td class="whitespace-nowrap px-3 py-3 font-semibold text-slate-900 dark:text-white sm:px-4">
+                          <%= formatDate(row.fecha_nivel || row.fecha) %>
+                        </td>
+                        <td class="whitespace-nowrap px-3 py-3 text-slate-700 dark:text-slate-300 sm:px-4">
+                          <%= row.fecha_parametro ? formatDate(row.fecha_parametro) : '—' %>
+                        </td>
+                        <td class="whitespace-nowrap px-3 py-3 sm:px-4">
+                          <%= formatNumber(row.rpm_parametros, 2) %>
+                        </td>
+                        <td class="whitespace-nowrap px-3 py-3 sm:px-4">
+                          <%= formatNumber(row.rpm_nivel, 2) %>
+                        </td>
+                        <td class="whitespace-nowrap px-3 py-3 font-semibold sm:px-4">
+                          <%= formatNumber(row.dif_rpm, 2) %>
+                        </td>
+                        <td class="whitespace-nowrap px-3 py-3 sm:px-4">
+                          <%= formatNumber(row.torque_parametros, 2) %>
+                        </td>
+                        <td class="whitespace-nowrap px-3 py-3 sm:px-4">
+                          <%= formatNumber(row.torque_nivel, 2) %>
+                        </td>
+                        <td class="whitespace-nowrap px-3 py-3 font-semibold sm:px-4">
+                          <%= formatNumber(row.dif_torque, 2) %>
+                        </td>
+                        <td class="whitespace-nowrap px-3 py-3 sm:px-4">
+                          <%= formatNumber(row.amp_parametros, 2) %>
+                        </td>
+                        <td class="whitespace-nowrap px-3 py-3 sm:px-4">
+                          <%= formatNumber(row.amp_nivel, 2) %>
+                        </td>
+                        <td class="whitespace-nowrap px-3 py-3 font-semibold sm:px-4">
+                          <%= formatNumber(row.dif_amp, 2) %>
+                        </td>
+                        <td class="whitespace-nowrap px-3 py-3 sm:px-4">
+                          <%= formatNumber(row.hp_parametros, 2) %>
+                        </td>
+                        <td class="whitespace-nowrap px-3 py-3 sm:px-4">
+                          <%= formatNumber(row.hp_nivel, 2) %>
+                        </td>
+                        <td class="whitespace-nowrap px-3 py-3 font-semibold sm:px-4">
+                          <%= formatNumber(row.dif_hp, 2) %>
+                        </td>
+                        <td class="whitespace-nowrap px-3 py-3 sm:px-4">
+                          <%= formatNumber(row.casing_parametros, 2) %>
+                        </td>
+                        <td class="whitespace-nowrap px-3 py-3 sm:px-4">
+                          <%= formatNumber(row.casing_nivel, 2) %>
+                        </td>
+                        <td class="whitespace-nowrap px-3 py-3 font-semibold sm:px-4">
+                          <%= formatNumber(row.dif_presion_casing, 2) %>
+                        </td>
+                        <td class="whitespace-nowrap px-3 py-3 sm:px-4">
+                          <%= formatNumber(row.tubing_parametros, 2) %>
+                        </td>
+                        <td class="whitespace-nowrap px-3 py-3 sm:px-4">
+                          <%= formatNumber(row.tubing_nivel, 2) %>
+                        </td>
+                        <td class="whitespace-nowrap px-3 py-3 font-semibold sm:px-4">
+                          <%= formatNumber(row.dif_presion_tubing, 2) %>
                         </td>
                       </tr>
-                      <% } %>
-            </tbody>
-          </table>
+                      <% }); %>
+                        <% } else { %>
+                          <tr>
+                            <td colspan="20" class="px-4 py-6 text-center text-slate-500 dark:text-slate-400">
+                              No hay datos comparables.
+                            </td>
+                          </tr>
+                          <% } %>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Footer móvil -->
+          <div class="border-t border-slate-200 bg-white px-4 py-3 dark:border-slate-700 dark:bg-slate-900 sm:hidden">
+            <button type="button" data-pozo-close-modal="modal-comparativo-parametros-niveles"
+              class="inline-flex w-full items-center justify-center rounded-full bg-violet-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-violet-700">
+              Cerrar comparativo
+            </button>
+          </div>
         </div>
       </div>
     </div>

@@ -5,6 +5,9 @@
   let surveyChart = null;
   let muestrasChart = null;
 
+  let activeModalId = null;
+  let modalHistoryPushed = false;
+
   function init() {
     initTabs();
     initModals();
@@ -113,20 +116,30 @@
   function initModals() {
     document.querySelectorAll('[data-pozo-open-modal]').forEach((button) => {
       button.addEventListener('click', () => {
-        openModal(button.dataset.pozoOpenModal);
+        openModal(button.dataset.pozoOpenModal, {
+          pushHistory: true
+        });
       });
     });
 
     document.querySelectorAll('[data-pozo-close-modal]').forEach((button) => {
       button.addEventListener('click', () => {
-        closeModal(button.dataset.pozoCloseModal);
+        closeModal(button.dataset.pozoCloseModal, {
+          goBack: true
+        });
       });
     });
 
     document.querySelectorAll('[role="dialog"]').forEach((modal) => {
       modal.addEventListener('click', (event) => {
-        if (event.target === modal) {
-          closeModal(modal.id);
+        const clickedBackdrop = event.target === modal;
+        const clickedOuterWrapper =
+          event.target?.dataset?.pozoModalBackdrop === 'true';
+
+        if (clickedBackdrop || clickedOuterWrapper) {
+          closeModal(modal.id, {
+            goBack: true
+          });
         }
       });
     });
@@ -134,36 +147,140 @@
     document.addEventListener('keydown', (event) => {
       if (event.key !== 'Escape') return;
 
-      document.querySelectorAll('[role="dialog"]:not(.hidden)').forEach((modal) => {
-        closeModal(modal.id);
+      const openModalEl = getTopOpenModal();
+      if (!openModalEl) return;
+
+      closeModal(openModalEl.id, {
+        goBack: true
+      });
+    });
+
+    window.addEventListener('popstate', () => {
+      if (!activeModalId) return;
+
+      const modalId = activeModalId;
+
+      closeModal(modalId, {
+        fromPopState: true
       });
     });
   }
 
-  function openModal(modalId) {
+  function openModal(modalId, options = {}) {
     const modal = document.getElementById(modalId);
     if (!modal) return;
 
+    const alreadyOpen = !modal.classList.contains('hidden');
+
+    closeOtherModals(modalId);
+
     modal.classList.remove('hidden');
     modal.classList.add('flex');
+
     document.body.classList.add('overflow-hidden');
+    document.documentElement.classList.add('overflow-hidden');
+
+    activeModalId = modalId;
+
+    if (!alreadyOpen && options.pushHistory && !modalHistoryPushed) {
+      try {
+        const currentState =
+          history.state && typeof history.state === 'object'
+            ? history.state
+            : {};
+
+        history.pushState(
+          {
+            ...currentState,
+            pozoModal: modalId
+          },
+          '',
+          window.location.href
+        );
+
+        modalHistoryPushed = true;
+      } catch (error) {
+        modalHistoryPushed = false;
+      }
+    }
+
+    focusModalCloseButton(modal);
 
     setTimeout(() => {
       adjustVisibleDataTables();
+      window.dispatchEvent(new Event('resize'));
     }, 150);
   }
 
-  function closeModal(modalId) {
+  function closeModal(modalId, options = {}) {
     const modal = document.getElementById(modalId);
     if (!modal) return;
 
     modal.classList.add('hidden');
     modal.classList.remove('flex');
 
+    if (activeModalId === modalId) {
+      activeModalId = null;
+    }
+
     const openModals = document.querySelectorAll('[role="dialog"]:not(.hidden)');
+
     if (!openModals.length) {
       document.body.classList.remove('overflow-hidden');
+      document.documentElement.classList.remove('overflow-hidden');
     }
+
+    if (options.fromPopState) {
+      modalHistoryPushed = false;
+      return;
+    }
+
+    if (options.goBack && modalHistoryPushed) {
+      modalHistoryPushed = false;
+
+      try {
+        history.back();
+      } catch (error) {
+        // Si el navegador bloquea history.back(), simplemente deja el modal cerrado.
+      }
+
+      return;
+    }
+
+    modalHistoryPushed = false;
+  }
+
+  function closeOtherModals(exceptModalId) {
+    document.querySelectorAll('[role="dialog"]:not(.hidden)').forEach((modal) => {
+      if (modal.id === exceptModalId) return;
+
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    });
+  }
+
+  function getTopOpenModal() {
+    const openModals = Array.from(
+      document.querySelectorAll('[role="dialog"]:not(.hidden)')
+    );
+
+    return openModals[openModals.length - 1] || null;
+  }
+
+  function focusModalCloseButton(modal) {
+    const closeButton = modal.querySelector('[data-pozo-close-modal]');
+
+    if (!closeButton) return;
+
+    setTimeout(() => {
+      try {
+        closeButton.focus({
+          preventScroll: true
+        });
+      } catch (error) {
+        closeButton.focus();
+      }
+    }, 60);
   }
 
   function initDetalleTables() {
