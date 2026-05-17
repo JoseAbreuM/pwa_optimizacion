@@ -1,6 +1,8 @@
 <section class="bg-brand-bg dark:bg-slate-950">
   <div class="mx-auto flex min-h-screen max-w-7xl items-center justify-center px-4 py-8 sm:px-6 lg:px-8">
     <div class="grid w-full items-center gap-8 lg:grid-cols-2">
+
+      <!-- Panel izquierdo -->
       <div class="login-hero-panel">
         <div class="rounded-3xl bg-primary-700 p-8 text-white shadow-2xl">
           <div class="mb-6 flex items-center gap-4">
@@ -11,13 +13,25 @@
             </div>
           </div>
 
-          <p class="text-base text-primary-50">Plataforma profesional de monitoreo y
-            operación de campo.</p>
+          <p class="text-base text-primary-50">
+            Plataforma profesional de monitoreo y operación de campo.
+          </p>
+
+          <div class="mt-6 rounded-2xl border border-white/15 bg-white/10 p-4 text-sm text-primary-50">
+            <p class="font-semibold text-white">
+              Modo offline disponible
+            </p>
+            <p class="mt-1 text-primary-100">
+              Si ya sincronizaste datos antes, puedes consultar pozos y registros guardados aunque no tengas conexión.
+            </p>
+          </div>
         </div>
       </div>
 
+      <!-- Card login -->
       <div class="mx-auto w-full max-w-md">
-        <div class="auth-card backdrop-blur-sm bg-white/90 dark:bg-slate-900/80">
+        <div class="auth-card bg-white/90 backdrop-blur-sm dark:bg-slate-900/80">
+
           <div class="mb-6 flex items-start justify-between gap-4">
             <div>
               <a href="/login" class="mb-4 flex items-center text-2xl font-semibold text-brand-dark dark:text-white">
@@ -25,10 +39,16 @@
                   class="mr-3 h-12 w-12 rounded-xl object-cover" />
                 Cavallino
               </a>
-              <h1 class="text-2xl font-bold leading-tight tracking-tight text-brand-dark dark:text-white">Iniciar sesión
+
+              <h1 class="text-2xl font-bold leading-tight tracking-tight text-brand-dark dark:text-white">
+                Iniciar sesión
               </h1>
 
+              <p id="network-status-text" class="mt-2 text-sm text-slate-500 dark:text-slate-400">
+                Verificando conexión...
+              </p>
             </div>
+
             <button id="theme-toggle" type="button"
               class="inline-flex items-center justify-center rounded-lg border border-slate-200 p-2 text-slate-600 transition hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
               aria-label="Cambiar tema">
@@ -51,20 +71,40 @@
                 </div>
                 <% } %>
 
+                  <div id="offline-login-warning"
+                    class="mb-4 hidden rounded-xl border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-800 dark:border-yellow-900/70 dark:bg-yellow-950/40 dark:text-yellow-200">
+                    <div class="flex gap-3">
+                      <div class="mt-0.5 shrink-0">
+                        <i class="fa-solid fa-wifi text-yellow-600 dark:text-yellow-300"></i>
+                      </div>
+                      <div>
+                        <p class="font-semibold">
+                          Estás sin conexión
+                        </p>
+                        <p class="mt-1">
+                          El inicio de sesión requiere internet. Puedes entrar en modo offline para consultar la última
+                          información guardada en este dispositivo.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
                   <form class="space-y-5" action="/login" method="post">
                     <div>
                       <label for="username" class="auth-label">Usuario</label>
                       <input id="username" name="username" type="text" class="auth-input"
-                        placeholder=" Ejemplo: Optimizacion" required />
+                        placeholder="Ejemplo: Optimizacion" required />
                     </div>
 
                     <div>
                       <label for="password" class="auth-label">Contraseña</label>
+
                       <div
                         class="flex w-full items-center rounded-lg border border-slate-300 bg-slate-50 transition-all duration-200 focus-within:border-primary-700 focus-within:ring-2 focus-within:ring-primary-200 dark:border-slate-700 dark:bg-slate-800 dark:focus-within:border-primary-400 dark:focus-within:ring-primary-900/40">
                         <input id="password" name="password" type="password"
                           class="w-full border-0 bg-transparent px-3 py-3 text-sm text-brand-dark placeholder-slate-400 focus:outline-none focus:ring-0 dark:text-white"
                           placeholder="Contraseña" required />
+
                         <span id="toggle-password"
                           class="mr-3 flex shrink-0 cursor-pointer items-center justify-center text-slate-500 transition-colors hover:text-primary-700 dark:text-slate-400 dark:hover:text-primary-400"
                           role="button" tabindex="0" onclick="togglePasswordVisibility()"
@@ -81,13 +121,31 @@
                           class="mr-2 h-4 w-4 rounded border-slate-300 text-primary-700 focus:ring-primary-500" />
                         Recordar sesión
                       </label>
-                      <span class="text-sm text-slate-500 dark:text-slate-400">Acceso seguro</span>
+
+                      <span class="text-sm text-slate-500 dark:text-slate-400">
+                        Acceso seguro
+                      </span>
                     </div>
 
-                    <button type="submit"
-                      class="w-full rounded-lg bg-primary-700 px-5 py-3 text-center text-sm font-semibold text-white hover:bg-primary-800 focus:outline-none focus:ring-4 focus:ring-primary-300 dark:bg-primary-700 dark:hover:bg-primary-600 dark:focus:ring-primary-900">Iniciar
-                      sesión</button>
+                    <button id="login-submit-button" type="submit"
+                      class="w-full rounded-lg bg-primary-700 px-5 py-3 text-center text-sm font-semibold text-white hover:bg-primary-800 focus:outline-none focus:ring-4 focus:ring-primary-300 dark:bg-primary-700 dark:hover:bg-primary-600 dark:focus:ring-primary-900">
+                      Iniciar sesión
+                    </button>
                   </form>
+
+                  <!-- Acceso offline -->
+                  <div class="mt-5 border-t border-slate-200 pt-5 dark:border-slate-700">
+                    <a href="/offline.html"
+                      class="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700">
+                      <i class="fa-solid fa-database text-xs"></i>
+                      Entrar en modo offline
+                    </a>
+
+                    <p class="mt-2 text-center text-xs text-slate-500 dark:text-slate-400">
+                      Disponible solo si este dispositivo ya tiene datos sincronizados.
+                    </p>
+                  </div>
+
         </div>
       </div>
     </div>
@@ -103,9 +161,11 @@
     if (!passwordInput || !toggleButton || !toggleIcon) return;
 
     const isHidden = passwordInput.type === 'password';
+
     passwordInput.type = isHidden ? 'text' : 'password';
     toggleButton.setAttribute('aria-pressed', String(isHidden));
     toggleButton.setAttribute('aria-label', isHidden ? 'Ocultar contraseña' : 'Mostrar contraseña');
+
     toggleIcon.classList.toggle('fa-eye-slash', !isHidden);
     toggleIcon.classList.toggle('fa-eye', isHidden);
   }
@@ -121,11 +181,11 @@
 
     const updateIcons = () => {
       if (document.documentElement.classList.contains('dark')) {
-        darkIcon.classList.add('hidden');
-        lightIcon.classList.remove('hidden');
+        darkIcon?.classList.add('hidden');
+        lightIcon?.classList.remove('hidden');
       } else {
-        lightIcon.classList.add('hidden');
-        darkIcon.classList.remove('hidden');
+        lightIcon?.classList.add('hidden');
+        darkIcon?.classList.remove('hidden');
       }
     };
 
@@ -139,5 +199,39 @@
 
       updateIcons();
     });
+  })();
+</script>
+
+<script>
+  (function () {
+    const statusText = document.getElementById('network-status-text');
+    const warning = document.getElementById('offline-login-warning');
+    const submitButton = document.getElementById('login-submit-button');
+
+    function updateNetworkStatus() {
+      const online = navigator.onLine;
+
+      if (statusText) {
+        statusText.textContent = online
+          ? 'Con conexión. Puedes iniciar sesión normalmente.'
+          : 'Sin conexión. El login no estará disponible.';
+      }
+
+      if (warning) {
+        warning.classList.toggle('hidden', online);
+      }
+
+      if (submitButton) {
+        submitButton.disabled = !online;
+        submitButton.classList.toggle('opacity-60', !online);
+        submitButton.classList.toggle('cursor-not-allowed', !online);
+        submitButton.textContent = online ? 'Iniciar sesión' : 'Sin conexión';
+      }
+    }
+
+    window.addEventListener('online', updateNetworkStatus);
+    window.addEventListener('offline', updateNetworkStatus);
+
+    updateNetworkStatus();
   })();
 </script>

@@ -1,13 +1,13 @@
-const CACHE_NAME = 'petrofield-cache-v6';
+const CACHE_NAME = 'petrofield-cache-v7';
 
-const FILES_TO_CACHE = [
-  '/',
-  '/login',
+const APP_SHELL_FILES = [
   '/offline.html',
 
   '/css/app.css',
+  '/css/tailwind.css',
 
   '/js/sw-register.js',
+  '/js/app-theme.js',
   '/js/core/app.js',
   '/js/core/ui.js',
 
@@ -27,19 +27,81 @@ const FILES_TO_CACHE = [
   '/manifest.json'
 ];
 
-const DYNAMIC_NETWORK_FIRST_ROUTES = [
+const NAVIGATION_FALLBACK_ROUTES = [
+  '/',
+  '/login',
   '/dashboard',
   '/pozos',
-  '/optimizacion',
-  '/operaciones',
-  '/mantenimiento',
   '/parametros',
   '/niveles',
   '/muestras',
   '/servicios'
 ];
 
-function createOfflineFallbackResponse() {
+function isSameOrigin(url) {
+  return url.origin === self.location.origin;
+}
+
+function isApiRequest(url) {
+  return isSameOrigin(url) && url.pathname.startsWith('/api/');
+}
+
+function isStaticAsset(url) {
+  if (!isSameOrigin(url)) return false;
+
+  return (
+    url.pathname.startsWith('/css/') ||
+    url.pathname.startsWith('/js/') ||
+    url.pathname.startsWith('/assets/') ||
+    url.pathname === '/manifest.json' ||
+    url.pathname === '/offline.html'
+  );
+}
+
+async function openAppCache() {
+  return caches.open(CACHE_NAME);
+}
+
+async function safeCachePut(request, response) {
+  if (!response || response.status !== 200) return;
+
+  try {
+    const cache = await openAppCache();
+    await cache.put(request, response.clone());
+  } catch (error) {
+    console.warn('[SW] No se pudo guardar en cache:', request.url || request, error);
+  }
+}
+
+async function cacheAppShell() {
+  const cache = await openAppCache();
+
+  for (const file of APP_SHELL_FILES) {
+    try {
+      const request = new Request(file, {
+        cache: 'reload'
+      });
+
+      const response = await fetch(request);
+
+      if (response.ok) {
+        await cache.put(file, response);
+      } else {
+        console.warn('[SW] No se precacheó:', file, response.status);
+      }
+    } catch (error) {
+      console.warn('[SW] Error precacheando:', file, error);
+    }
+  }
+}
+
+async function getOfflineFallback() {
+  const cachedOffline = await caches.match('/offline.html', {
+    ignoreSearch: true
+  });
+
+  if (cachedOffline) return cachedOffline;
+
   return new Response(
     `
 <!DOCTYPE html>
@@ -52,48 +114,49 @@ function createOfflineFallbackResponse() {
     body {
       margin: 0;
       font-family: Arial, sans-serif;
-      background: #0f172a;
-      color: #e2e8f0;
-      display: grid;
       min-height: 100vh;
+      display: grid;
       place-items: center;
+      background: #020617;
+      color: #e2e8f0;
       padding: 24px;
     }
-    .card {
+
+    main {
       max-width: 460px;
       border: 1px solid #334155;
       border-radius: 20px;
-      background: #020617;
+      background: #0f172a;
       padding: 24px;
-      box-shadow: 0 18px 45px rgba(0,0,0,.35);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
     }
+
     h1 {
       margin: 0 0 8px;
       font-size: 24px;
     }
+
     p {
       color: #94a3b8;
       line-height: 1.5;
     }
-    a, button {
+
+    a {
       display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      border: 0;
+      margin-top: 12px;
       border-radius: 999px;
       background: #033F73;
-      color: white;
+      color: #fff;
       padding: 10px 16px;
       text-decoration: none;
       font-weight: 700;
-      cursor: pointer;
     }
   </style>
 </head>
 <body>
-  <main class="card">
+  <main>
     <h1>Sin conexión</h1>
-    <p>No se pudo cargar esta página desde la red. Puedes intentar abrir el modo offline si ya sincronizaste datos anteriormente.</p>
+    <p>No se pudo abrir la PWA desde la red. Abre el modo offline para consultar la última información guardada.</p>
     <a href="/offline.html">Abrir modo offline</a>
   </main>
 </body>
@@ -108,63 +171,39 @@ function createOfflineFallbackResponse() {
   );
 }
 
-function isSameOrigin(url) {
-  return url.origin === self.location.origin;
-}
-
-function isDynamicNetworkFirstRoute(url) {
-  if (!isSameOrigin(url)) return false;
-
-  return DYNAMIC_NETWORK_FIRST_ROUTES.some((route) => (
-    url.pathname === route ||
-    url.pathname.startsWith(`${route}/`)
-  ));
-}
-
-function isStaticAppAsset(url) {
-  if (!isSameOrigin(url)) return false;
-
-  return (
-    url.pathname.startsWith('/css/') ||
-    url.pathname.startsWith('/js/') ||
-    url.pathname.startsWith('/assets/') ||
-    url.pathname === '/manifest.json' ||
-    url.pathname === '/offline.html'
-  );
-}
-
-async function putInCache(request, response) {
-  if (!response || response.status !== 200 || response.type === 'opaque') return;
-
+async function networkFirstNavigation(request) {
   try {
-    const cache = await caches.open(CACHE_NAME);
-    await cache.put(request, response.clone());
+    const response = await fetch(request);
+
+    if (response && response.ok) {
+      await safeCachePut(request, response);
+    }
+
+    return response;
   } catch (error) {
-    console.warn('[SW] No se pudo guardar en cache:', request.url, error);
+    const cachedExact = await caches.match(request, {
+      ignoreSearch: true
+    });
+
+    if (cachedExact) return cachedExact;
+
+    const url = new URL(request.url);
+
+    for (const route of NAVIGATION_FALLBACK_ROUTES) {
+      if (url.pathname === route || url.pathname.startsWith(`${route}/`)) {
+        const cachedRoute = await caches.match(route, {
+          ignoreSearch: true
+        });
+
+        if (cachedRoute) return cachedRoute;
+      }
+    }
+
+    return getOfflineFallback();
   }
 }
 
-async function getOfflinePage() {
-  const cachedOffline = await caches.match('/offline.html', {
-    ignoreSearch: true
-  });
-
-  if (cachedOffline) return cachedOffline;
-
-  return createOfflineFallbackResponse();
-}
-
-async function getCachedOrOfflinePage(request) {
-  const cached = await caches.match(request, {
-    ignoreSearch: true
-  });
-
-  if (cached) return cached;
-
-  return getOfflinePage();
-}
-
-async function getCachedAssetOrFallback(request) {
+async function cacheFirstAsset(request) {
   const cached = await caches.match(request, {
     ignoreSearch: true
   });
@@ -173,7 +212,9 @@ async function getCachedAssetOrFallback(request) {
 
   try {
     const response = await fetch(request);
-    await putInCache(request, response);
+
+    await safeCachePut(request, response);
+
     return response;
   } catch (error) {
     return new Response('', {
@@ -183,14 +224,16 @@ async function getCachedAssetOrFallback(request) {
   }
 }
 
-self.addEventListener('install', (event) => {
-  self.skipWaiting();
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+});
 
+self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then((cache) => Promise.allSettled(
-        FILES_TO_CACHE.map((file) => cache.add(file))
-      ))
+    cacheAppShell()
+      .then(() => self.skipWaiting())
   );
 });
 
@@ -207,15 +250,11 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  const url = new URL(event.request.url);
-
   if (event.request.method !== 'GET') return;
 
-  /**
-   * APIs:
-   * No se cachean aquí. Los datos offline se guardan en IndexedDB.
-   */
-  if (isSameOrigin(url) && url.pathname.startsWith('/api/')) {
+  const url = new URL(event.request.url);
+
+  if (isApiRequest(url)) {
     event.respondWith(
       fetch(event.request).catch(() => new Response(
         JSON.stringify({
@@ -235,53 +274,16 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  /**
-   * Rutas dinámicas principales:
-   * network-first. Si no hay red, intenta cache. Si no hay cache, offline.html.
-   */
-  if (isDynamicNetworkFirstRoute(url)) {
-    event.respondWith(
-      fetch(event.request)
-        .then(async (response) => {
-          await putInCache(event.request, response);
-          return response;
-        })
-        .catch(() => getCachedOrOfflinePage(event.request))
-    );
-
-    return;
-  }
-
-  /**
-   * Navegación general:
-   * network-first con fallback a offline.html.
-   */
   if (event.request.mode === 'navigate') {
-    event.respondWith(
-      fetch(event.request)
-        .then(async (response) => {
-          await putInCache(event.request, response);
-          return response;
-        })
-        .catch(() => getCachedOrOfflinePage(event.request))
-    );
-
+    event.respondWith(networkFirstNavigation(event.request));
     return;
   }
 
-  /**
-   * Assets locales:
-   * cache-first para que la app abra rápido offline.
-   */
-  if (isStaticAppAsset(url)) {
-    event.respondWith(getCachedAssetOrFallback(event.request));
+  if (isStaticAsset(url)) {
+    event.respondWith(cacheFirstAsset(event.request));
     return;
   }
 
-  /**
-   * Resto:
-   * cache-first con fallback mínimo.
-   */
   event.respondWith(
     caches.match(event.request, {
       ignoreSearch: true
@@ -291,10 +293,10 @@ self.addEventListener('fetch', (event) => {
 
         return fetch(event.request)
           .then(async (response) => {
-            await putInCache(event.request, response);
+            await safeCachePut(event.request, response);
             return response;
           })
-          .catch(() => getOfflinePage());
+          .catch(() => getOfflineFallback());
       })
   );
 });
