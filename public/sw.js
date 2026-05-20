@@ -1,4 +1,4 @@
-const CACHE_NAME = 'petrofield-cache-v7';
+const CACHE_NAME = 'petrofield-cache-v8';
 
 const APP_SHELL_FILES = [
   '/offline.html',
@@ -24,18 +24,16 @@ const APP_SHELL_FILES = [
   '/js/modules/niveles.js',
 
   '/assets/icons/icono.png',
+  '/assets/icons/icon-192.svg',
+  '/assets/icons/icon-512.svg',
   '/manifest.json'
 ];
 
-const NAVIGATION_FALLBACK_ROUTES = [
-  '/',
-  '/login',
+const OFFLINE_NAVIGATION_FALLBACKS = [
   '/dashboard',
   '/pozos',
-  '/parametros',
-  '/niveles',
-  '/muestras',
-  '/servicios'
+  '/login',
+  '/offline.html'
 ];
 
 function isSameOrigin(url) {
@@ -65,6 +63,20 @@ async function openAppCache() {
 async function safeCachePut(request, response) {
   if (!response || response.status !== 200) return;
 
+  const contentType = response.headers.get('content-type') || '';
+
+  /**
+   * Evita cachear páginas de error HTML como si fueran dashboard real.
+   */
+  if (
+    request.mode === 'navigate' &&
+    contentType.includes('text/html') &&
+    response.url.includes('/login') &&
+    !new URL(request.url).pathname.includes('/login')
+  ) {
+    return;
+  }
+
   try {
     const cache = await openAppCache();
     await cache.put(request, response.clone());
@@ -79,7 +91,8 @@ async function cacheAppShell() {
   for (const file of APP_SHELL_FILES) {
     try {
       const request = new Request(file, {
-        cache: 'reload'
+        cache: 'reload',
+        credentials: 'same-origin'
       });
 
       const response = await fetch(request);
@@ -96,11 +109,13 @@ async function cacheAppShell() {
 }
 
 async function getOfflineFallback() {
-  const cachedOffline = await caches.match('/offline.html', {
-    ignoreSearch: true
-  });
+  for (const path of OFFLINE_NAVIGATION_FALLBACKS) {
+    const cached = await caches.match(path, {
+      ignoreSearch: true
+    });
 
-  if (cachedOffline) return cachedOffline;
+    if (cached) return cached;
+  }
 
   return new Response(
     `
@@ -140,24 +155,12 @@ async function getOfflineFallback() {
       color: #94a3b8;
       line-height: 1.5;
     }
-
-    a {
-      display: inline-flex;
-      margin-top: 12px;
-      border-radius: 999px;
-      background: #033F73;
-      color: #fff;
-      padding: 10px 16px;
-      text-decoration: none;
-      font-weight: 700;
-    }
   </style>
 </head>
 <body>
   <main>
     <h1>Sin conexión</h1>
-    <p>No se pudo abrir la PWA desde la red. Abre el modo offline para consultar la última información guardada.</p>
-    <a href="/offline.html">Abrir modo offline</a>
+    <p>No se encontró una versión cacheada de la app. Abre PetroField una vez con internet para preparar el modo offline.</p>
   </main>
 </body>
 </html>
@@ -186,18 +189,6 @@ async function networkFirstNavigation(request) {
     });
 
     if (cachedExact) return cachedExact;
-
-    const url = new URL(request.url);
-
-    for (const route of NAVIGATION_FALLBACK_ROUTES) {
-      if (url.pathname === route || url.pathname.startsWith(`${route}/`)) {
-        const cachedRoute = await caches.match(route, {
-          ignoreSearch: true
-        });
-
-        if (cachedRoute) return cachedRoute;
-      }
-    }
 
     return getOfflineFallback();
   }
@@ -232,8 +223,7 @@ self.addEventListener('message', (event) => {
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    cacheAppShell()
-      .then(() => self.skipWaiting())
+    cacheAppShell().then(() => self.skipWaiting())
   );
 });
 

@@ -2,7 +2,7 @@
   "name": "PetroField Operaciones",
   "short_name": "PetroField",
   "description": "PWA operativa para consulta y sincronización de pozos, parámetros, niveles y servicios.",
-  "start_url": "/offline.html",
+  "start_url": "/dashboard",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
