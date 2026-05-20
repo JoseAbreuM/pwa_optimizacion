@@ -165,6 +165,12 @@
 
     if (!db) return;
 
+    emitStatus({
+      state: 'saving',
+      message: 'Limpiando almacenamiento local anterior...',
+      progress: 15
+    });
+
     for (const store of REQUIRED_STORES) {
       await db.clear(store);
     }
@@ -180,9 +186,68 @@
     const snapshot = validateSnapshot(rawSnapshot);
     const counts = getSnapshotCounts(snapshot);
 
+    const steps = [
+      {
+        label: 'Dashboard',
+        progress: 20,
+        run: async () => {
+          await db.put('dashboard', {
+            key: 'main',
+            ...(snapshot.dashboard || {})
+          });
+        }
+      },
+      {
+        label: 'Pozos',
+        progress: 30,
+        run: async () => db.putMany('pozos', snapshot.pozos)
+      },
+      {
+        label: 'Fichas de pozos',
+        progress: 40,
+        run: async () => db.putMany('pozo_detalles', snapshot.pozoDetalles)
+      },
+      {
+        label: 'Parámetros',
+        progress: 52,
+        run: async () => db.putMany('parametros', snapshot.parametros)
+      },
+      {
+        label: 'Niveles',
+        progress: 64,
+        run: async () => db.putMany('niveles', snapshot.niveles)
+      },
+      {
+        label: 'Muestras',
+        progress: 74,
+        run: async () => db.putMany('muestras', snapshot.muestras)
+      },
+      {
+        label: 'Bombas',
+        progress: 84,
+        run: async () => db.putMany('bombas', snapshot.bombas)
+      },
+      {
+        label: 'Servicios',
+        progress: 90,
+        run: async () => db.putMany('servicios', snapshot.servicios)
+      },
+      {
+        label: 'Mapa',
+        progress: 95,
+        run: async () => db.putMany('mapa_pozos', snapshot.mapaPozos)
+      },
+      {
+        label: 'Survey',
+        progress: 98,
+        run: async () => db.putMany('survey', snapshot.survey)
+      }
+    ];
+
     emitStatus({
       state: 'saving',
-      message: 'Guardando datos offline...',
+      message: 'Validando snapshot offline...',
+      progress: 12,
       counts
     });
 
@@ -193,25 +258,35 @@
      */
     await clearSnapshotStores();
 
-    await db.put('dashboard', {
-      key: 'main',
-      ...(snapshot.dashboard || {})
-    });
+    for (const step of steps) {
+      emitStatus({
+        state: 'saving',
+        message: `Guardando ${step.label}...`,
+        progress: step.progress,
+        counts
+      });
 
-    await db.putMany('pozos', snapshot.pozos);
-    await db.putMany('pozo_detalles', snapshot.pozoDetalles);
-    await db.putMany('parametros', snapshot.parametros);
-    await db.putMany('niveles', snapshot.niveles);
-    await db.putMany('muestras', snapshot.muestras);
-    await db.putMany('bombas', snapshot.bombas);
-    await db.putMany('servicios', snapshot.servicios);
-    await db.putMany('mapa_pozos', snapshot.mapaPozos);
-    await db.putMany('survey', snapshot.survey);
+      await step.run();
+    }
+
+    emitStatus({
+      state: 'saving',
+      message: 'Guardando metadatos offline...',
+      progress: 99,
+      counts
+    });
 
     await db.setMetadata('lastSnapshotAt', new Date().toISOString());
     await db.setMetadata('snapshotVersion', snapshot.version);
     await db.setMetadata('serverTime', snapshot.serverTime);
     await db.setMetadata('snapshotCounts', counts);
+
+    emitStatus({
+      state: 'ready',
+      message: 'Datos offline guardados correctamente.',
+      progress: 100,
+      counts
+    });
 
     emitUpdated({
       counts,
@@ -232,23 +307,32 @@
       lastSyncError = 'IndexedDB no está disponible.';
       emitStatus({
         state: 'error',
-        message: lastSyncError
+        message: lastSyncError,
+        progress: 0
       });
       return null;
     }
 
     if (!navigator.onLine && !options.force) {
+      const metadata = await getMetadataSnapshot();
+
       emitStatus({
         state: 'offline',
-        message: 'Sin conexión. Se usarán datos locales.'
+        message: metadata.hasSnapshot
+          ? 'Sin conexión. Se usarán datos locales guardados.'
+          : 'Sin conexión. Aún no hay datos offline guardados.',
+        progress: metadata.hasSnapshot ? 100 : 0,
+        counts: metadata.counts
       });
+
       return null;
     }
 
     if (syncInProgress) {
       emitStatus({
         state: 'busy',
-        message: 'Sincronización offline ya está en proceso.'
+        message: 'Sincronización offline ya está en proceso.',
+        progress: 8
       });
       return null;
     }
@@ -258,7 +342,8 @@
 
     emitStatus({
       state: 'loading',
-      message: 'Descargando snapshot offline...'
+      message: 'Descargando snapshot offline...',
+      progress: 8
     });
 
     try {
@@ -282,6 +367,12 @@
 
       const payload = await response.json();
 
+      emitStatus({
+        state: 'saving',
+        message: 'Snapshot descargado. Preparando almacenamiento local...',
+        progress: 10
+      });
+
       if (!payload.ok) {
         throw new Error(payload.message || 'Snapshot inválido.');
       }
@@ -291,6 +382,7 @@
       emitStatus({
         state: 'ready',
         message: 'Modo offline listo.',
+        progress: 100,
         counts: result.counts
       });
 
@@ -302,7 +394,8 @@
 
       emitStatus({
         state: 'error',
-        message: lastSyncError
+        message: lastSyncError,
+        progress: 0
       });
 
       return null;
@@ -327,7 +420,8 @@
 
     emitStatus({
       state: 'syncing-queue',
-      message: `Sincronizando ${pendingQueue.length} cambio(s) pendiente(s)...`
+      message: `Sincronizando ${pendingQueue.length} cambio(s) pendiente(s)...`,
+      progress: 8
     });
 
     try {
@@ -381,6 +475,15 @@
         results: payload.results
       });
 
+      emitStatus({
+        state: 'syncing-queue',
+        message: queueLength
+          ? `Quedan ${queueLength} cambio(s) pendiente(s).`
+          : 'Cambios pendientes sincronizados.',
+        progress: queueLength ? 50 : 100,
+        queueLength
+      });
+
       return payload.results;
     } catch (error) {
       console.warn('PetroSync.flushQueue:', error);
@@ -389,7 +492,8 @@
 
       emitStatus({
         state: 'error',
-        message: lastSyncError
+        message: lastSyncError,
+        progress: 0
       });
 
       return [];
@@ -403,16 +507,24 @@
       lastSyncError = 'IndexedDB no está disponible.';
       emitStatus({
         state: 'error',
-        message: lastSyncError
+        message: lastSyncError,
+        progress: 0
       });
       return null;
     }
 
     if (!navigator.onLine && !options.force) {
+      const metadata = await getMetadataSnapshot();
+
       emitStatus({
         state: 'offline',
-        message: 'Sin conexión. Trabajando con datos locales.'
+        message: metadata.hasSnapshot
+          ? 'Sin conexión. Trabajando con datos locales.'
+          : 'Sin conexión. No hay datos locales preparados.',
+        progress: metadata.hasSnapshot ? 100 : 0,
+        counts: metadata.counts
       });
+
       return null;
     }
 
@@ -446,6 +558,7 @@
     emitStatus({
       state: 'queued',
       message: `Cambio guardado localmente. Pendientes: ${queueLength}`,
+      progress: 100,
       queueLength
     });
 
@@ -506,6 +619,8 @@
     return {
       ok: true,
       online: navigator.onLine,
+      syncInProgress,
+      lastSyncError,
       metadata,
       counts: {
         dashboard: dashboard ? 1 : 0,
@@ -534,31 +649,51 @@
       lastSyncError = 'PetroDB no está inicializado.';
       emitStatus({
         state: 'error',
-        message: lastSyncError
+        message: lastSyncError,
+        progress: 0
       });
       return;
     }
 
+    const metadata = await getMetadataSnapshot();
+
     emitStatus({
       state: navigator.onLine ? 'idle-online' : 'offline',
       message: navigator.onLine
-        ? 'Con conexión. Preparando datos offline...'
-        : 'Sin conexión. Trabajando con datos locales.'
+        ? (
+          metadata.hasSnapshot
+            ? 'Con conexión. Verificando actualización offline...'
+            : 'Con conexión. Preparando datos offline por primera vez...'
+        )
+        : (
+          metadata.hasSnapshot
+            ? 'Sin conexión. Trabajando con datos locales.'
+            : 'Sin conexión. No hay datos offline guardados.'
+        ),
+      progress: metadata.hasSnapshot ? 100 : 5,
+      counts: metadata.counts
     });
 
     window.addEventListener('online', () => {
       emitStatus({
         state: 'online',
-        message: 'Conexión recuperada. Sincronizando...'
+        message: 'Conexión recuperada. Sincronizando...',
+        progress: 8
       });
 
       syncNow().catch(() => {});
     });
 
-    window.addEventListener('offline', () => {
+    window.addEventListener('offline', async () => {
+      const currentMetadata = await getMetadataSnapshot();
+
       emitStatus({
         state: 'offline',
-        message: 'Sin conexión. Los cambios se guardarán localmente.'
+        message: currentMetadata.hasSnapshot
+          ? 'Sin conexión. Los cambios se guardarán localmente.'
+          : 'Sin conexión. Aún no hay datos guardados en este dispositivo.',
+        progress: currentMetadata.hasSnapshot ? 100 : 0,
+        counts: currentMetadata.counts
       });
     });
 

@@ -59,6 +59,230 @@
         </div>
       </main>
 
+      <!-- Estado de preparación offline -->
+      <div id="offline-ready-indicator"
+        class="fixed bottom-4 left-4 right-4 z-[9999] hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-2xl dark:border-slate-700 dark:bg-slate-900 sm:left-auto sm:w-[420px]">
+
+        <div class="flex items-start gap-3">
+          <div id="offline-ready-dot" class="mt-1 h-3 w-3 shrink-0 rounded-full bg-slate-400"></div>
+
+          <div class="min-w-0 flex-1">
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <p id="offline-ready-title" class="text-sm font-bold text-slate-900 dark:text-white">
+                  Preparando modo offline
+                </p>
+                <p id="offline-ready-message" class="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                  Verificando datos locales...
+                </p>
+              </div>
+
+              <button type="button" id="offline-ready-close"
+                class="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-white"
+                aria-label="Cerrar estado offline">
+                <i class="fa-solid fa-xmark"></i>
+              </button>
+            </div>
+
+            <div class="mt-3 h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
+              <div id="offline-ready-progress"
+                class="h-full w-0 rounded-full bg-sky-600 transition-all duration-300 dark:bg-sky-400"></div>
+            </div>
+
+            <div class="mt-2 flex items-center justify-between gap-3 text-[11px] text-slate-400 dark:text-slate-500">
+              <span id="offline-ready-counts">—</span>
+
+              <button type="button" id="offline-ready-sync-now"
+                class="hidden font-semibold text-sky-700 hover:underline dark:text-sky-300">
+                Sincronizar ahora
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Control visual del estado offline -->
+      <script>
+        (() => {
+          const indicator = document.getElementById('offline-ready-indicator');
+          const dot = document.getElementById('offline-ready-dot');
+          const title = document.getElementById('offline-ready-title');
+          const message = document.getElementById('offline-ready-message');
+          const progress = document.getElementById('offline-ready-progress');
+          const counts = document.getElementById('offline-ready-counts');
+          const closeButton = document.getElementById('offline-ready-close');
+          const syncNowButton = document.getElementById('offline-ready-sync-now');
+
+          if (!indicator || !dot || !title || !message || !progress || !counts) return;
+
+          let closedManually = false;
+          let hideTimer = null;
+
+          function setDot(state) {
+            dot.className = 'mt-1 h-3 w-3 shrink-0 rounded-full';
+
+            if (state === 'ready') {
+              dot.classList.add('bg-emerald-500');
+              return;
+            }
+
+            if (state === 'error') {
+              dot.classList.add('bg-red-500');
+              return;
+            }
+
+            if (state === 'offline') {
+              dot.classList.add('bg-yellow-500');
+              return;
+            }
+
+            dot.classList.add('bg-sky-500', 'animate-pulse');
+          }
+
+          function setProgress(value) {
+            const safeValue = Math.max(0, Math.min(100, Number(value) || 0));
+            progress.style.width = `${safeValue}%`;
+          }
+
+          function formatCounts(snapshotCounts) {
+            if (!snapshotCounts || typeof snapshotCounts !== 'object') return '—';
+
+            const parts = [
+              `Pozos: ${snapshotCounts.pozos || 0}`,
+              `Parámetros: ${snapshotCounts.parametros || 0}`,
+              `Niveles: ${snapshotCounts.niveles || 0}`,
+              `Bombas: ${snapshotCounts.bombas || 0}`
+            ];
+
+            return parts.join(' · ');
+          }
+
+          function show(detail = {}) {
+            if (closedManually && detail.state !== 'error') return;
+
+            clearTimeout(hideTimer);
+
+            const state = detail.state || 'loading';
+
+            setDot(state);
+            setProgress(detail.progress ?? (state === 'ready' ? 100 : 15));
+
+            if (state === 'ready') {
+              title.textContent = 'Listo para usar sin conexión';
+              message.textContent = detail.message || 'Los datos quedaron guardados en este dispositivo.';
+              counts.textContent = formatCounts(detail.counts);
+
+              hideTimer = setTimeout(() => {
+                indicator.classList.add('hidden');
+              }, 9000);
+            } else if (state === 'error') {
+              title.textContent = 'No se pudo preparar offline';
+              message.textContent = detail.message || 'Ocurrió un error durante la sincronización local.';
+              counts.textContent = 'Revisa la conexión o inicia sesión nuevamente.';
+            } else if (state === 'offline') {
+              title.textContent = 'Trabajando sin conexión';
+              message.textContent = detail.message || 'Usando los datos guardados localmente.';
+              counts.textContent = formatCounts(detail.counts);
+            } else if (state === 'saving') {
+              title.textContent = 'Guardando datos offline';
+              message.textContent = detail.message || 'Guardando información en IndexedDB...';
+              counts.textContent = formatCounts(detail.counts);
+            } else if (state === 'loading') {
+              title.textContent = 'Descargando datos offline';
+              message.textContent = detail.message || 'Descargando snapshot desde el servidor...';
+              counts.textContent = 'Esto puede tardar unos segundos la primera vez.';
+            } else if (state === 'syncing-queue') {
+              title.textContent = 'Sincronizando cambios pendientes';
+              message.textContent = detail.message || 'Enviando cambios guardados localmente...';
+              counts.textContent = formatCounts(detail.counts);
+            } else if (state === 'queued') {
+              title.textContent = 'Cambio guardado localmente';
+              message.textContent = detail.message || 'Se sincronizará cuando vuelva la conexión.';
+              counts.textContent = detail.queueLength ? `Pendientes: ${detail.queueLength}` : 'Pendiente de sincronizar.';
+            } else {
+              title.textContent = 'Preparando modo offline';
+              message.textContent = detail.message || 'Verificando datos locales...';
+              counts.textContent = formatCounts(detail.counts);
+            }
+
+            syncNowButton?.classList.toggle('hidden', !navigator.onLine);
+
+            indicator.classList.remove('hidden');
+          }
+
+          closeButton?.addEventListener('click', () => {
+            closedManually = true;
+            indicator.classList.add('hidden');
+          });
+
+          syncNowButton?.addEventListener('click', async () => {
+            closedManually = false;
+
+            if (!window.PetroSync?.syncNow) {
+              show({
+                state: 'error',
+                message: 'PetroSync no está disponible.'
+              });
+              return;
+            }
+
+            show({
+              state: 'loading',
+              message: 'Sincronizando manualmente...',
+              progress: 10
+            });
+
+            await window.PetroSync.syncNow({ force: true });
+          });
+
+          window.addEventListener('petro:offline-status', (event) => {
+            show(event.detail || {});
+          });
+
+          window.addEventListener('petro:offline-updated', (event) => {
+            localStorage.setItem('petro-offline-ready', '1');
+            localStorage.setItem('petro-offline-ready-at', new Date().toISOString());
+
+            show({
+              state: 'ready',
+              message: 'PetroField quedó preparado para trabajar sin conexión.',
+              progress: 100,
+              counts: event.detail?.counts
+            });
+          });
+
+          window.addEventListener('petro:offline-queue-updated', (event) => {
+            const queueLength = event.detail?.queueLength || 0;
+
+            if (queueLength > 0) {
+              closedManually = false;
+
+              show({
+                state: 'queued',
+                message: `Tienes ${queueLength} cambio(s) pendiente(s) por sincronizar.`,
+                queueLength,
+                progress: 100
+              });
+            }
+          });
+
+          window.addEventListener('online', () => {
+            closedManually = false;
+            syncNowButton?.classList.remove('hidden');
+          });
+
+          window.addEventListener('offline', () => {
+            closedManually = false;
+
+            show({
+              state: 'offline',
+              message: 'Sin conexión. Se usarán los datos guardados localmente.',
+              progress: localStorage.getItem('petro-offline-ready') === '1' ? 100 : 0
+            });
+          });
+        })();
+      </script>
+
       <!-- Librerías base -->
       <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 
