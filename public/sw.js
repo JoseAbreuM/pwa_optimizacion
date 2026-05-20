@@ -1,6 +1,7 @@
-const CACHE_NAME = 'petrofield-cache-v8';
+const CACHE_NAME = 'petrofield-cache-v9';
 
 const APP_SHELL_FILES = [
+  '/offline-app.html',
   '/offline.html',
 
   '/css/app.css',
@@ -15,6 +16,7 @@ const APP_SHELL_FILES = [
   '/js/offline/store.js',
   '/js/offline/sync.js',
   '/js/offline/status.js',
+  '/js/offline/app-shell.js',
 
   '/js/modules/pozos.js',
   '/js/modules/pozo-detalle.js',
@@ -26,14 +28,8 @@ const APP_SHELL_FILES = [
   '/assets/icons/icono.png',
   '/assets/icons/icon-192.svg',
   '/assets/icons/icon-512.svg',
-  '/manifest.json'
-];
 
-const OFFLINE_NAVIGATION_FALLBACKS = [
-  '/dashboard',
-  '/pozos',
-  '/login',
-  '/offline.html'
+  '/manifest.json'
 ];
 
 function isSameOrigin(url) {
@@ -52,7 +48,8 @@ function isStaticAsset(url) {
     url.pathname.startsWith('/js/') ||
     url.pathname.startsWith('/assets/') ||
     url.pathname === '/manifest.json' ||
-    url.pathname === '/offline.html'
+    url.pathname === '/offline.html' ||
+    url.pathname === '/offline-app.html'
   );
 }
 
@@ -62,20 +59,6 @@ async function openAppCache() {
 
 async function safeCachePut(request, response) {
   if (!response || response.status !== 200) return;
-
-  const contentType = response.headers.get('content-type') || '';
-
-  /**
-   * Evita cachear páginas de error HTML como si fueran dashboard real.
-   */
-  if (
-    request.mode === 'navigate' &&
-    contentType.includes('text/html') &&
-    response.url.includes('/login') &&
-    !new URL(request.url).pathname.includes('/login')
-  ) {
-    return;
-  }
 
   try {
     const cache = await openAppCache();
@@ -109,13 +92,17 @@ async function cacheAppShell() {
 }
 
 async function getOfflineFallback() {
-  for (const path of OFFLINE_NAVIGATION_FALLBACKS) {
-    const cached = await caches.match(path, {
-      ignoreSearch: true
-    });
+  const cachedAppShell = await caches.match('/offline-app.html', {
+    ignoreSearch: true
+  });
 
-    if (cached) return cached;
-  }
+  if (cachedAppShell) return cachedAppShell;
+
+  const cachedOffline = await caches.match('/offline.html', {
+    ignoreSearch: true
+  });
+
+  if (cachedOffline) return cachedOffline;
 
   return new Response(
     `
@@ -160,7 +147,7 @@ async function getOfflineFallback() {
 <body>
   <main>
     <h1>Sin conexión</h1>
-    <p>No se encontró una versión cacheada de la app. Abre PetroField una vez con internet para preparar el modo offline.</p>
+    <p>No se encontró una versión cacheada de PetroField. Abre la app una vez con internet para preparar el modo offline.</p>
   </main>
 </body>
 </html>
@@ -244,6 +231,11 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(event.request.url);
 
+  /**
+   * API:
+   * No se cachean respuestas dinámicas de API aquí.
+   * Los datos persistentes viven en IndexedDB.
+   */
   if (isApiRequest(url)) {
     event.respondWith(
       fetch(event.request).catch(() => new Response(
@@ -264,16 +256,29 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  /**
+   * Navegación:
+   * Intenta red. Si no hay red, devuelve la página exacta cacheada.
+   * Si no existe, devuelve offline-app.html.
+   */
   if (event.request.mode === 'navigate') {
     event.respondWith(networkFirstNavigation(event.request));
     return;
   }
 
+  /**
+   * Assets de la app:
+   * Cache-first.
+   */
   if (isStaticAsset(url)) {
     event.respondWith(cacheFirstAsset(event.request));
     return;
   }
 
+  /**
+   * Resto:
+   * Cache-first con fallback al App Shell offline.
+   */
   event.respondWith(
     caches.match(event.request, {
       ignoreSearch: true
