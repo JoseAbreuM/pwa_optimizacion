@@ -1,26 +1,46 @@
-const CACHE_NAME = 'petrofield-cache-v11';
+const CACHE_NAME = 'petrofield-cache-v12';
 
 const APP_SHELL_FILES = [
+  /**
+   * Páginas online cacheables.
+   * Si el usuario ya inició sesión, estas rutas pueden quedar guardadas
+   * para abrir la PWA cerrada completamente sin internet.
+   */
   '/dashboard',
   '/pozos',
 
+  /**
+   * Fallbacks offline.
+   */
   '/offline-app.html',
   '/offline.html',
 
+  /**
+   * Estilos locales.
+   */
   '/css/app.css',
   '/css/tailwind.css',
 
+  /**
+   * Scripts core.
+   */
   '/js/sw-register.js',
   '/js/app-theme.js',
   '/js/core/app.js',
   '/js/core/ui.js',
 
+  /**
+   * Scripts offline.
+   */
   '/js/offline/db.js',
   '/js/offline/store.js',
   '/js/offline/sync.js',
   '/js/offline/status.js',
   '/js/offline/app-shell.js',
 
+  /**
+   * Scripts por módulo.
+   */
   '/js/modules/pozos.js',
   '/js/modules/pozo-detalle.js',
   '/js/modules/dashboard.js',
@@ -28,6 +48,9 @@ const APP_SHELL_FILES = [
   '/js/modules/parametros.js',
   '/js/modules/niveles.js',
 
+  /**
+   * Assets.
+   */
   '/assets/icons/icono.png',
   '/assets/icons/icon-192.svg',
   '/assets/icons/icon-512.svg',
@@ -155,20 +178,20 @@ async function getOfflineFallback(request = null) {
    * 2. Fichas /pozos/:id:
    * Nunca deben caer a /dashboard.
    * Si no existe la ficha HTML cacheada, se abre offline-app.html
-   * para renderizar la ficha desde IndexedDB.
+   * para que app-shell.js renderice la ficha desde IndexedDB.
    */
   if (isPozoDetailPath(pathname)) {
     const cachedAppShell = await getCachedPath('/offline-app.html');
 
     if (cachedAppShell) return cachedAppShell;
 
-    const cachedPozos = await getCachedPath('/pozos');
-
-    if (cachedPozos) return cachedPozos;
-
     const cachedOffline = await getCachedPath('/offline.html');
 
     if (cachedOffline) return cachedOffline;
+
+    const cachedPozos = await getCachedPath('/pozos');
+
+    if (cachedPozos) return cachedPozos;
   }
 
   /**
@@ -182,6 +205,10 @@ async function getOfflineFallback(request = null) {
     const cachedAppShell = await getCachedPath('/offline-app.html');
 
     if (cachedAppShell) return cachedAppShell;
+
+    const cachedOffline = await getCachedPath('/offline.html');
+
+    if (cachedOffline) return cachedOffline;
   }
 
   /**
@@ -195,10 +222,15 @@ async function getOfflineFallback(request = null) {
     const cachedAppShell = await getCachedPath('/offline-app.html');
 
     if (cachedAppShell) return cachedAppShell;
+
+    const cachedOffline = await getCachedPath('/offline.html');
+
+    if (cachedOffline) return cachedOffline;
   }
 
   /**
-   * 5. Resto de rutas: shell offline primero.
+   * 5. Resto de rutas:
+   * Usamos primero el shell offline, luego dashboard, luego pozos.
    */
   const fallbackOrder = [
     '/offline-app.html',
@@ -213,6 +245,9 @@ async function getOfflineFallback(request = null) {
     if (cached) return cached;
   }
 
+  /**
+   * 6. Fallback embebido por si no existe ningún cache.
+   */
   return new Response(
     `
 <!DOCTYPE html>
@@ -334,6 +369,11 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(event.request.url);
 
+  /**
+   * API:
+   * No se cachean respuestas dinámicas de API aquí.
+   * Los datos persistentes viven en IndexedDB.
+   */
   if (isApiRequest(url)) {
     event.respondWith(
       fetch(event.request).catch(() => new Response(
@@ -354,16 +394,31 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  /**
+   * Navegación:
+   * Intenta red. Si falla, decide fallback según la ruta:
+   * - /pozos/:id → offline-app.html
+   * - /pozos → /pozos cacheado u offline-app.html
+   * - /dashboard → /dashboard cacheado u offline-app.html
+   */
   if (event.request.mode === 'navigate') {
     event.respondWith(networkFirstNavigation(event.request));
     return;
   }
 
+  /**
+   * Assets de la app:
+   * Cache-first.
+   */
   if (isStaticAsset(url)) {
     event.respondWith(cacheFirstAsset(event.request));
     return;
   }
 
+  /**
+   * Resto:
+   * Cache-first con fallback al shell offline.
+   */
   event.respondWith(
     caches.match(event.request, {
       ignoreSearch: true

@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="theme-color" content="#033F73" />
 
-  <link rel="manifest" href="/manifest.json" />
+  <link rel="manifest" href="/manifest.json?v=20260520-02" />
   <link rel="icon" type="image/png" href="/assets/icons/icono.png" />
 
   <!-- Tema inicial antes de pintar la pantalla -->
@@ -29,8 +29,8 @@
   <link rel="stylesheet" href="https://cdn.datatables.net/colreorder/2.0.4/css/colReorder.dataTables.min.css" />
 
   <!-- Estilos propios -->
-  <link rel="stylesheet" href="/css/tailwind.css" />
-  <link rel="stylesheet" href="/css/app.css" />
+  <link rel="stylesheet" href="/css/tailwind.css?v=20260520-02" />
+  <link rel="stylesheet" href="/css/app.css?v=20260520-02" />
 
   <title>
     <%= typeof title !=='undefined' ? title : 'Dashboard' %> | Cavallino
@@ -174,7 +174,7 @@
 
               hideTimer = setTimeout(() => {
                 indicator.classList.add('hidden');
-              }, 9000);
+              }, 12000);
             } else if (state === 'error') {
               title.textContent = 'No se pudo preparar offline';
               message.textContent = detail.message || 'Ocurrió un error durante la sincronización local.';
@@ -199,6 +199,14 @@
               title.textContent = 'Cambio guardado localmente';
               message.textContent = detail.message || 'Se sincronizará cuando vuelva la conexión.';
               counts.textContent = detail.queueLength ? `Pendientes: ${detail.queueLength}` : 'Pendiente de sincronizar.';
+            } else if (state === 'idle-online' || state === 'online') {
+              title.textContent = 'Preparando modo offline';
+              message.textContent = detail.message || 'Con conexión. Verificando datos locales...';
+              counts.textContent = formatCounts(detail.counts);
+            } else if (state === 'busy') {
+              title.textContent = 'Sincronización en proceso';
+              message.textContent = detail.message || 'Ya hay una sincronización offline activa.';
+              counts.textContent = formatCounts(detail.counts);
             } else {
               title.textContent = 'Preparando modo offline';
               message.textContent = detail.message || 'Verificando datos locales...';
@@ -221,7 +229,8 @@
             if (!window.PetroSync?.syncNow) {
               show({
                 state: 'error',
-                message: 'PetroSync no está disponible.'
+                message: 'PetroSync no está disponible.',
+                progress: 0
               });
               return;
             }
@@ -269,6 +278,12 @@
           window.addEventListener('online', () => {
             closedManually = false;
             syncNowButton?.classList.remove('hidden');
+
+            show({
+              state: 'online',
+              message: 'Conexión recuperada. Verificando modo offline...',
+              progress: 10
+            });
           });
 
           window.addEventListener('offline', () => {
@@ -279,6 +294,21 @@
               message: 'Sin conexión. Se usarán los datos guardados localmente.',
               progress: localStorage.getItem('petro-offline-ready') === '1' ? 100 : 0
             });
+          });
+
+          /**
+           * Prueba visual automática suave:
+           * Si el usuario está online y aún no se ha marcado offline-ready,
+           * mostramos el indicador desde el layout mientras sync.js termina de cargar.
+           */
+          window.addEventListener('DOMContentLoaded', () => {
+            if (navigator.onLine && localStorage.getItem('petro-offline-ready') !== '1') {
+              show({
+                state: 'idle-online',
+                message: 'Con conexión. Preparando datos offline...',
+                progress: 5
+              });
+            }
           });
         })();
       </script>
@@ -305,21 +335,21 @@
       <!-- Dependencia para exportar Excel -->
       <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 
-      <!-- Scripts offline/core -->
-      <script src="/js/offline/db.js"></script>
-      <script src="/js/offline/store.js"></script>
-      <script src="/js/offline/sync.js"></script>
-      <script src="/js/offline/status.js"></script>
+      <!-- Scripts offline/core con cache-busting -->
+      <script src="/js/offline/db.js?v=20260520-02"></script>
+      <script src="/js/offline/store.js?v=20260520-02"></script>
+      <script src="/js/offline/sync.js?v=20260520-02"></script>
+      <script src="/js/offline/status.js?v=20260520-02"></script>
 
-      <!-- Scripts core -->
-      <script src="/js/core/ui.js"></script>
-      <script src="/js/core/app.js"></script>
-      <script src="/js/sw-register.js"></script>
-      <script src="/js/app-theme.js"></script>
+      <!-- Scripts core con cache-busting -->
+      <script src="/js/core/ui.js?v=20260520-02"></script>
+      <script src="/js/core/app.js?v=20260520-02"></script>
+      <script src="/js/sw-register.js?v=20260520-02"></script>
+      <script src="/js/app-theme.js?v=20260520-02"></script>
 
       <!-- Script específico de cada página -->
       <% if (typeof pageScript !=='undefined' && pageScript) { %>
-        <script src="<%= pageScript %>"></script>
+        <script src="<%= pageScript %>?v=20260520-02"></script>
         <% } %>
 
 </body>
