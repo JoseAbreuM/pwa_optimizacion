@@ -61,14 +61,14 @@
 
       <!-- Estado de preparación offline -->
       <div id="offline-ready-indicator"
-        class="fixed bottom-4 left-4 right-4 z-[9999] hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-2xl dark:border-slate-700 dark:bg-slate-900 sm:left-auto sm:w-[420px]">
+        class="fixed bottom-4 left-3 right-3 z-[9999] hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-2xl dark:border-slate-700 dark:bg-slate-900 sm:left-auto sm:right-4 sm:w-[420px]">
 
         <div class="flex items-start gap-3">
           <div id="offline-ready-dot" class="mt-1 h-3 w-3 shrink-0 rounded-full bg-slate-400"></div>
 
           <div class="min-w-0 flex-1">
             <div class="flex items-start justify-between gap-3">
-              <div>
+              <div class="min-w-0">
                 <p id="offline-ready-title" class="text-sm font-bold text-slate-900 dark:text-white">
                   Preparando modo offline
                 </p>
@@ -78,7 +78,7 @@
               </div>
 
               <button type="button" id="offline-ready-close"
-                class="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-white"
+                class="shrink-0 rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-white"
                 aria-label="Cerrar estado offline">
                 <i class="fa-solid fa-xmark"></i>
               </button>
@@ -90,10 +90,10 @@
             </div>
 
             <div class="mt-2 flex items-center justify-between gap-3 text-[11px] text-slate-400 dark:text-slate-500">
-              <span id="offline-ready-counts">—</span>
+              <span id="offline-ready-counts" class="min-w-0 truncate">—</span>
 
               <button type="button" id="offline-ready-sync-now"
-                class="hidden font-semibold text-sky-700 hover:underline dark:text-sky-300">
+                class="hidden shrink-0 font-semibold text-sky-700 hover:underline dark:text-sky-300">
                 Sincronizar ahora
               </button>
             </div>

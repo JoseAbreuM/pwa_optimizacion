@@ -1,48 +1,26 @@
-const CACHE_NAME = 'petrofield-cache-v10';
+const CACHE_NAME = 'petrofield-cache-v11';
 
 const APP_SHELL_FILES = [
-  /**
-   * Páginas online cacheables.
-   * Si el usuario ya inició sesión, estas rutas pueden quedar guardadas
-   * para abrir la PWA cerrada completamente sin internet.
-   */
   '/dashboard',
   '/pozos',
 
-  /**
-   * Fallbacks offline.
-   * offline-app.html es el shell offline real.
-   * offline.html queda como último respaldo.
-   */
   '/offline-app.html',
   '/offline.html',
 
-  /**
-   * Estilos locales.
-   */
   '/css/app.css',
   '/css/tailwind.css',
 
-  /**
-   * Scripts core.
-   */
   '/js/sw-register.js',
   '/js/app-theme.js',
   '/js/core/app.js',
   '/js/core/ui.js',
 
-  /**
-   * Scripts offline.
-   */
   '/js/offline/db.js',
   '/js/offline/store.js',
   '/js/offline/sync.js',
   '/js/offline/status.js',
   '/js/offline/app-shell.js',
 
-  /**
-   * Scripts por módulo.
-   */
   '/js/modules/pozos.js',
   '/js/modules/pozo-detalle.js',
   '/js/modules/dashboard.js',
@@ -50,9 +28,6 @@ const APP_SHELL_FILES = [
   '/js/modules/parametros.js',
   '/js/modules/niveles.js',
 
-  /**
-   * Assets.
-   */
   '/assets/icons/icono.png',
   '/assets/icons/icon-192.svg',
   '/assets/icons/icon-512.svg',
@@ -81,6 +56,18 @@ function isStaticAsset(url) {
   );
 }
 
+function isPozoDetailPath(pathname) {
+  return /^\/pozos\/\d+\/?$/.test(pathname);
+}
+
+function isPozosPath(pathname) {
+  return pathname === '/pozos' || pathname === '/pozos/';
+}
+
+function isDashboardPath(pathname) {
+  return pathname === '/' || pathname === '/dashboard' || pathname === '/dashboard/';
+}
+
 function isHtmlResponse(response) {
   const contentType = response.headers.get('content-type') || '';
   return contentType.includes('text/html');
@@ -92,10 +79,6 @@ function isLoginHtmlResponse(request, response) {
   const requestUrl = new URL(request.url);
   const responseUrl = response.url ? new URL(response.url) : null;
 
-  /**
-   * Evita guardar /login como si fuera /dashboard o /pozos.
-   * Esto pasa cuando la sesión expiró y Express redirige al login.
-   */
   return (
     requestUrl.pathname !== '/login' &&
     responseUrl &&
@@ -105,6 +88,12 @@ function isLoginHtmlResponse(request, response) {
 
 async function openAppCache() {
   return caches.open(CACHE_NAME);
+}
+
+async function getCachedPath(path) {
+  return caches.match(path, {
+    ignoreSearch: true
+  });
 }
 
 async function safeCachePut(request, response) {
@@ -147,10 +136,12 @@ async function cacheAppShell() {
 }
 
 async function getOfflineFallback(request = null) {
+  const requestUrl = request ? new URL(request.url) : null;
+  const pathname = requestUrl?.pathname || '';
+
   /**
    * 1. Primero intenta devolver exactamente la ruta solicitada.
-   * Ejemplo: si el usuario abre /dashboard offline y /dashboard está cacheado,
-   * devuelve /dashboard.
+   * Si /pozos/102 fue visitado online antes, devuelve esa ficha cacheada.
    */
   if (request) {
     const cachedExact = await caches.match(request, {
@@ -161,34 +152,67 @@ async function getOfflineFallback(request = null) {
   }
 
   /**
-   * 2. Luego intenta páginas online cacheadas principales.
+   * 2. Fichas /pozos/:id:
+   * Nunca deben caer a /dashboard.
+   * Si no existe la ficha HTML cacheada, se abre offline-app.html
+   * para renderizar la ficha desde IndexedDB.
    */
-  const preferredPages = [
+  if (isPozoDetailPath(pathname)) {
+    const cachedAppShell = await getCachedPath('/offline-app.html');
+
+    if (cachedAppShell) return cachedAppShell;
+
+    const cachedPozos = await getCachedPath('/pozos');
+
+    if (cachedPozos) return cachedPozos;
+
+    const cachedOffline = await getCachedPath('/offline.html');
+
+    if (cachedOffline) return cachedOffline;
+  }
+
+  /**
+   * 3. Listado de pozos.
+   */
+  if (isPozosPath(pathname)) {
+    const cachedPozos = await getCachedPath('/pozos');
+
+    if (cachedPozos) return cachedPozos;
+
+    const cachedAppShell = await getCachedPath('/offline-app.html');
+
+    if (cachedAppShell) return cachedAppShell;
+  }
+
+  /**
+   * 4. Dashboard.
+   */
+  if (isDashboardPath(pathname)) {
+    const cachedDashboard = await getCachedPath('/dashboard');
+
+    if (cachedDashboard) return cachedDashboard;
+
+    const cachedAppShell = await getCachedPath('/offline-app.html');
+
+    if (cachedAppShell) return cachedAppShell;
+  }
+
+  /**
+   * 5. Resto de rutas: shell offline primero.
+   */
+  const fallbackOrder = [
+    '/offline-app.html',
     '/dashboard',
     '/pozos',
-
-    /**
-     * 3. Si no hay páginas online cacheadas, usa el shell offline real.
-     */
-    '/offline-app.html',
-
-    /**
-     * 4. Último respaldo.
-     */
     '/offline.html'
   ];
 
-  for (const path of preferredPages) {
-    const cached = await caches.match(path, {
-      ignoreSearch: true
-    });
+  for (const path of fallbackOrder) {
+    const cached = await getCachedPath(path);
 
     if (cached) return cached;
   }
 
-  /**
-   * 5. Fallback embebido por si no existe ningún cache.
-   */
   return new Response(
     `
 <!DOCTYPE html>
@@ -310,11 +334,6 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(event.request.url);
 
-  /**
-   * API:
-   * No se cachean respuestas dinámicas de API aquí.
-   * Los datos persistentes viven en IndexedDB.
-   */
   if (isApiRequest(url)) {
     event.respondWith(
       fetch(event.request).catch(() => new Response(
@@ -335,33 +354,16 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  /**
-   * Navegación:
-   * Intenta red. Si no hay red:
-   * 1. devuelve la página exacta cacheada;
-   * 2. si no existe, devuelve /dashboard;
-   * 3. si no existe, devuelve /pozos;
-   * 4. si no existe, devuelve /offline-app.html;
-   * 5. si no existe, devuelve /offline.html.
-   */
   if (event.request.mode === 'navigate') {
     event.respondWith(networkFirstNavigation(event.request));
     return;
   }
 
-  /**
-   * Assets de la app:
-   * Cache-first.
-   */
   if (isStaticAsset(url)) {
     event.respondWith(cacheFirstAsset(event.request));
     return;
   }
 
-  /**
-   * Resto:
-   * Cache-first con fallback al App Shell offline.
-   */
   event.respondWith(
     caches.match(event.request, {
       ignoreSearch: true

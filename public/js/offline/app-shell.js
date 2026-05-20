@@ -87,12 +87,15 @@
     els.alert?.classList.add('hidden');
   }
 
-  function setRoute(route) {
-    state.route = route;
-
+  function setActiveNav(route) {
     $all('[data-offline-route]').forEach((btn) => {
       btn.classList.toggle('active', btn.dataset.offlineRoute === route);
     });
+  }
+
+  function setRoute(route) {
+    state.route = route;
+    setActiveNav(route);
 
     const titles = {
       dashboard: 'Dashboard',
@@ -159,6 +162,9 @@
 
   async function renderDashboard() {
     hideAlert();
+    state.route = 'dashboard';
+    setActiveNav('dashboard');
+    setText('offline-page-title', 'Dashboard');
 
     const resumen = await window.PetroOfflineStore.getResumen();
     const pozos = resumen.pozos || [];
@@ -257,6 +263,9 @@
 
   async function renderPozos() {
     hideAlert();
+    state.route = 'pozos';
+    setActiveNav('pozos');
+    setText('offline-page-title', 'Pozos');
 
     const [pozos, options] = await Promise.all([
       getFilteredPozos(),
@@ -392,6 +401,11 @@
     return `
       <section class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900">
         <h3 class="mb-3 text-lg font-semibold text-slate-900 dark:text-white">${escapeHTML(title)}</h3>
+
+        <div class="mb-2 text-xs text-slate-500 dark:text-slate-400">
+          Registros locales: ${rows.length}
+        </div>
+
         <div class="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700">
           <table class="min-w-[900px] w-full text-left text-sm text-slate-600 dark:text-slate-300">
             <thead class="bg-slate-50 text-xs uppercase text-slate-500 dark:bg-slate-800 dark:text-slate-400">
@@ -400,7 +414,7 @@
               </tr>
             </thead>
             <tbody>
-              ${rows.slice(0, 10).map((row) => `
+              ${rows.map((row) => `
                 <tr class="border-b bg-white dark:border-slate-800 dark:bg-slate-900">
                   ${columns.map((column) => `
                     <td class="whitespace-nowrap px-4 py-3">
@@ -423,11 +437,16 @@
   }
 
   async function renderPozoDetalle(idPozo) {
+    hideAlert();
+    state.route = 'pozo-detalle';
+    setActiveNav('');
+
     const full = await window.PetroOfflineStore.getPozoFull(idPozo);
     const pozo = full.pozo || {};
 
-    if (!pozo) {
-      showAlert('No se pudo abrir la ficha offline del pozo.', 'error');
+    if (!pozo || !pozo.id) {
+      showAlert('No se pudo abrir la ficha offline del pozo. Verifica que el snapshot haya sido descargado.', 'error');
+      setRoute('pozos');
       return;
     }
 
@@ -494,7 +513,7 @@
           <div class="grid gap-2">
             ${infoCard('Marca', full.bombaActual?.marca)}
             ${infoCard('Modelo', full.bombaActual?.modelo)}
-            ${infoCard('Serial', full.bombaActual?.serial)}
+            ${infoCard('Serial', full.bombaActual?.serial || full.bombaActual?.serial_rotor || full.bombaActual?.serial_estator)}
             ${infoCard('Instalación', formatDate(full.bombaActual?.fecha_inst))}
             ${infoCard('TVU', full.bombaActual?.tvu_dias ? `${formatNumber(full.bombaActual.tvu_dias, 0)} días` : '—')}
           </div>
@@ -540,6 +559,9 @@
 
   async function renderDiagnostico() {
     hideAlert();
+    state.route = 'diagnostico';
+    setActiveNav('diagnostico');
+    setText('offline-page-title', 'Datos locales');
 
     const diagnostics = await window.PetroOfflineStore.getDiagnostics();
     const syncDiagnostics = window.PetroSync?.getDiagnostics
@@ -575,6 +597,23 @@
         setText('offline-last-sync', info.lastSnapshotAt ? `Última sync: ${formatDate(info.lastSnapshotAt)}` : 'Última sync: —');
       })
       .catch(() => {});
+  }
+
+  async function routeFromInitialPath() {
+    const initialPath = window.location.pathname;
+    const pozoMatch = initialPath.match(/^\/pozos\/(\d+)\/?$/);
+
+    if (pozoMatch) {
+      await renderPozoDetalle(pozoMatch[1]);
+      return;
+    }
+
+    if (initialPath === '/pozos' || initialPath === '/pozos/') {
+      setRoute('pozos');
+      return;
+    }
+
+    setRoute('dashboard');
   }
 
   async function bootstrap() {
@@ -627,7 +666,7 @@
     window.addEventListener('offline', updateHeaderStatus);
 
     updateHeaderStatus();
-    setRoute('dashboard');
+    await routeFromInitialPath();
   }
 
   if (document.readyState === 'loading') {
