@@ -1,23 +1,48 @@
-const CACHE_NAME = 'petrofield-cache-v9';
+const CACHE_NAME = 'petrofield-cache-v10';
 
 const APP_SHELL_FILES = [
+  /**
+   * Páginas online cacheables.
+   * Si el usuario ya inició sesión, estas rutas pueden quedar guardadas
+   * para abrir la PWA cerrada completamente sin internet.
+   */
+  '/dashboard',
+  '/pozos',
+
+  /**
+   * Fallbacks offline.
+   * offline-app.html es el shell offline real.
+   * offline.html queda como último respaldo.
+   */
   '/offline-app.html',
   '/offline.html',
 
+  /**
+   * Estilos locales.
+   */
   '/css/app.css',
   '/css/tailwind.css',
 
+  /**
+   * Scripts core.
+   */
   '/js/sw-register.js',
   '/js/app-theme.js',
   '/js/core/app.js',
   '/js/core/ui.js',
 
+  /**
+   * Scripts offline.
+   */
   '/js/offline/db.js',
   '/js/offline/store.js',
   '/js/offline/sync.js',
   '/js/offline/status.js',
   '/js/offline/app-shell.js',
 
+  /**
+   * Scripts por módulo.
+   */
   '/js/modules/pozos.js',
   '/js/modules/pozo-detalle.js',
   '/js/modules/dashboard.js',
@@ -25,6 +50,9 @@ const APP_SHELL_FILES = [
   '/js/modules/parametros.js',
   '/js/modules/niveles.js',
 
+  /**
+   * Assets.
+   */
   '/assets/icons/icono.png',
   '/assets/icons/icon-192.svg',
   '/assets/icons/icon-512.svg',
@@ -53,12 +81,39 @@ function isStaticAsset(url) {
   );
 }
 
+function isHtmlResponse(response) {
+  const contentType = response.headers.get('content-type') || '';
+  return contentType.includes('text/html');
+}
+
+function isLoginHtmlResponse(request, response) {
+  if (!response || !isHtmlResponse(response)) return false;
+
+  const requestUrl = new URL(request.url);
+  const responseUrl = response.url ? new URL(response.url) : null;
+
+  /**
+   * Evita guardar /login como si fuera /dashboard o /pozos.
+   * Esto pasa cuando la sesión expiró y Express redirige al login.
+   */
+  return (
+    requestUrl.pathname !== '/login' &&
+    responseUrl &&
+    responseUrl.pathname === '/login'
+  );
+}
+
 async function openAppCache() {
   return caches.open(CACHE_NAME);
 }
 
 async function safeCachePut(request, response) {
   if (!response || response.status !== 200) return;
+
+  if (isLoginHtmlResponse(request, response)) {
+    console.warn('[SW] No se cacheó respuesta de login para:', request.url);
+    return;
+  }
 
   try {
     const cache = await openAppCache();
@@ -80,8 +135,8 @@ async function cacheAppShell() {
 
       const response = await fetch(request);
 
-      if (response.ok) {
-        await cache.put(file, response);
+      if (response.ok && !isLoginHtmlResponse(request, response)) {
+        await cache.put(file, response.clone());
       } else {
         console.warn('[SW] No se precacheó:', file, response.status);
       }
@@ -91,19 +146,49 @@ async function cacheAppShell() {
   }
 }
 
-async function getOfflineFallback() {
-  const cachedAppShell = await caches.match('/offline-app.html', {
-    ignoreSearch: true
-  });
+async function getOfflineFallback(request = null) {
+  /**
+   * 1. Primero intenta devolver exactamente la ruta solicitada.
+   * Ejemplo: si el usuario abre /dashboard offline y /dashboard está cacheado,
+   * devuelve /dashboard.
+   */
+  if (request) {
+    const cachedExact = await caches.match(request, {
+      ignoreSearch: true
+    });
 
-  if (cachedAppShell) return cachedAppShell;
+    if (cachedExact) return cachedExact;
+  }
 
-  const cachedOffline = await caches.match('/offline.html', {
-    ignoreSearch: true
-  });
+  /**
+   * 2. Luego intenta páginas online cacheadas principales.
+   */
+  const preferredPages = [
+    '/dashboard',
+    '/pozos',
 
-  if (cachedOffline) return cachedOffline;
+    /**
+     * 3. Si no hay páginas online cacheadas, usa el shell offline real.
+     */
+    '/offline-app.html',
 
+    /**
+     * 4. Último respaldo.
+     */
+    '/offline.html'
+  ];
+
+  for (const path of preferredPages) {
+    const cached = await caches.match(path, {
+      ignoreSearch: true
+    });
+
+    if (cached) return cached;
+  }
+
+  /**
+   * 5. Fallback embebido por si no existe ningún cache.
+   */
   return new Response(
     `
 <!DOCTYPE html>
@@ -171,13 +256,7 @@ async function networkFirstNavigation(request) {
 
     return response;
   } catch (error) {
-    const cachedExact = await caches.match(request, {
-      ignoreSearch: true
-    });
-
-    if (cachedExact) return cachedExact;
-
-    return getOfflineFallback();
+    return getOfflineFallback(request);
   }
 }
 
@@ -258,8 +337,12 @@ self.addEventListener('fetch', (event) => {
 
   /**
    * Navegación:
-   * Intenta red. Si no hay red, devuelve la página exacta cacheada.
-   * Si no existe, devuelve offline-app.html.
+   * Intenta red. Si no hay red:
+   * 1. devuelve la página exacta cacheada;
+   * 2. si no existe, devuelve /dashboard;
+   * 3. si no existe, devuelve /pozos;
+   * 4. si no existe, devuelve /offline-app.html;
+   * 5. si no existe, devuelve /offline.html.
    */
   if (event.request.mode === 'navigate') {
     event.respondWith(networkFirstNavigation(event.request));
@@ -291,7 +374,7 @@ self.addEventListener('fetch', (event) => {
             await safeCachePut(event.request, response);
             return response;
           })
-          .catch(() => getOfflineFallback());
+          .catch(() => getOfflineFallback(event.request));
       })
   );
 });
