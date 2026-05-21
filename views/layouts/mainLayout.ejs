@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="theme-color" content="#033F73" />
 
-  <link rel="manifest" href="/manifest.json?v=20260520-03" />
+  <link rel="manifest" href="/manifest.json?v=20260520-04" />
   <link rel="icon" type="image/png" href="/assets/icons/icono.png" />
 
   <!-- Tema inicial antes de pintar la pantalla -->
@@ -29,8 +29,8 @@
   <link rel="stylesheet" href="https://cdn.datatables.net/colreorder/2.0.4/css/colReorder.dataTables.min.css" />
 
   <!-- Estilos propios -->
-  <link rel="stylesheet" href="/css/tailwind.css?v=20260520-03" />
-  <link rel="stylesheet" href="/css/app.css?v=20260520-03" />
+  <link rel="stylesheet" href="/css/tailwind.css?v=20260520-04" />
+  <link rel="stylesheet" href="/css/app.css?v=20260520-04" />
 
   <title>
     <%= typeof title !=='undefined' ? title : 'Dashboard' %> | Cavallino
@@ -336,20 +336,20 @@
       <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 
       <!-- Scripts offline/core con cache-busting -->
-      <script src="/js/offline/db.js?v=20260520-03"></script>
-      <script src="/js/offline/store.js?v=20260520-03"></script>
-      <script src="/js/offline/sync.js?v=20260520-03"></script>
-      <script src="/js/offline/status.js?v=20260520-03"></script>
+      <script src="/js/offline/db.js?v=20260520-04"></script>
+      <script src="/js/offline/store.js?v=20260520-04"></script>
+      <script src="/js/offline/sync.js?v=20260520-04"></script>
+      <script src="/js/offline/status.js?v=20260520-04"></script>
 
       <!-- Scripts core con cache-busting -->
-      <script src="/js/core/ui.js?v=20260520-03"></script>
-      <script src="/js/core/app.js?v=20260520-03"></script>
-      <script src="/js/sw-register.js?v=20260520-03"></script>
-      <script src="/js/app-theme.js?v=20260520-03"></script>
+      <script src="/js/core/ui.js?v=20260520-04"></script>
+      <script src="/js/core/app.js?v=20260520-04"></script>
+      <script src="/js/sw-register.js?v=20260520-04"></script>
+      <script src="/js/app-theme.js?v=20260520-04"></script>
 
       <!-- Script específico de cada página -->
       <% if (typeof pageScript !=='undefined' && pageScript) { %>
-        <script src="<%= pageScript %>?v=20260520-03"></script>
+        <script src="<%= pageScript %>?v=20260520-04"></script>
         <% } %>
 
 </body>

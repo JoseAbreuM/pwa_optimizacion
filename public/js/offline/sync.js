@@ -266,9 +266,34 @@
 
     const normalizedRows = normalizeRowsForStore(store, rows);
 
-    if (!normalizedRows.length) return;
+    if (!normalizedRows.length) return 0;
 
     await db.putMany(store, normalizedRows);
+
+    return normalizedRows.length;
+  }
+
+  async function replaceStoreSafely(store, rows = []) {
+    const db = getDB();
+
+    if (!db) {
+      throw new Error('IndexedDB no está disponible.');
+    }
+
+    const normalizedRows = normalizeRowsForStore(store, rows);
+
+    /**
+     * Importante:
+     * Este clear ocurre SOLO después de haber descargado
+     * todos los chunks de este store correctamente.
+     */
+    await db.clear(store);
+
+    if (normalizedRows.length) {
+      await db.putMany(store, normalizedRows);
+    }
+
+    return normalizedRows.length;
   }
 
   async function loadManifest() {
@@ -287,6 +312,46 @@
     }
 
     return payload.manifest;
+  }
+
+  async function downloadStoreChunks(store, table, progressContext = {}) {
+    const pages = Math.max(1, Number(table.pages || 1));
+    const pageSize = Number(table.pageSize || 1000);
+    const rows = [];
+
+    for (let page = 1; page <= pages; page += 1) {
+      const completedWork = Number(progressContext.completedWork || 0);
+      const totalWork = Math.max(1, Number(progressContext.totalWork || 1));
+
+      const progress = Math.min(
+        98,
+        Math.round(10 + ((completedWork / totalWork) * 88))
+      );
+
+      emitStatus({
+        state: 'loading',
+        message: `Descargando ${store} ${page}/${pages}...`,
+        progress,
+        counts: progressContext.counts || {}
+      });
+
+      const url = `${API_CHUNK_BASE}/${encodeURIComponent(store)}?page=${page}&pageSize=${pageSize}`;
+      const payload = await fetchJson(url);
+
+      if (!payload) {
+        throw new Error(`No se recibió respuesta para ${store} ${page}/${pages}.`);
+      }
+
+      if (!payload.ok) {
+        throw new Error(payload.message || `Chunk inválido para ${store} ${page}/${pages}.`);
+      }
+
+      rows.push(...normalizeArray(payload.rows));
+
+      progressContext.completedWork = completedWork + 1;
+    }
+
+    return rows;
   }
 
   async function loadChunks(options = {}) {
@@ -322,26 +387,37 @@
     lastSyncError = null;
     lastSyncStartedAt = Date.now();
 
+    const savedCounts = {};
+    const failedStores = [];
+
     try {
       const manifest = await loadManifest();
 
       if (!manifest) return null;
 
       const tables = getManifestTables(manifest);
-      const counts = getCountsFromManifest(tables);
+      const expectedCounts = getCountsFromManifest(tables);
       const totalWork = Math.max(1, getTotalWorkFromManifest(tables));
+
+      const progressContext = {
+        completedWork: 0,
+        totalWork,
+        counts: expectedCounts
+      };
 
       emitStatus({
         state: 'saving',
-        message: 'Preparando almacenamiento local...',
+        message: 'Preparando descarga offline por tablas...',
         progress: 8,
-        counts
+        counts: expectedCounts
       });
 
-      await clearSnapshotStores(counts);
-
-      let completedWork = 0;
-
+      /**
+       * Modo seguro:
+       * Ya NO limpiamos todos los stores al inicio.
+       * Cada store se reemplaza solo cuando todos sus chunks
+       * se descargaron correctamente.
+       */
       for (const store of CHUNK_STORES) {
         const table = tables[store];
 
@@ -350,10 +426,8 @@
           continue;
         }
 
-        const pages = Math.max(1, Number(table.pages || 1));
-        const pageSize = Number(table.pageSize || 1000);
-
-        for (let page = 1; page <= pages; page += 1) {
+        try {
+          const completedWork = Number(progressContext.completedWork || 0);
           const progress = Math.min(
             98,
             Math.round(10 + ((completedWork / totalWork) * 88))
@@ -361,72 +435,106 @@
 
           emitStatus({
             state: 'loading',
-            message: `Descargando ${store} ${page}/${pages}...`,
+            message: `Preparando ${store}...`,
             progress,
-            counts
+            counts: expectedCounts
           });
 
-          const url = `${API_CHUNK_BASE}/${encodeURIComponent(store)}?page=${page}&pageSize=${pageSize}`;
-          const payload = await fetchJson(url);
-
-          if (!payload) {
-            return null;
-          }
-
-          if (!payload.ok) {
-            throw new Error(payload.message || `Chunk inválido para ${store}.`);
-          }
+          const rows = await downloadStoreChunks(store, table, progressContext);
 
           emitStatus({
             state: 'saving',
-            message: `Guardando ${store} ${page}/${pages}...`,
-            progress: Math.min(99, progress + 1),
-            counts
+            message: `Guardando ${store} (${rows.length})...`,
+            progress: Math.min(
+              99,
+              Math.round(10 + ((Number(progressContext.completedWork || 0) / totalWork) * 88))
+            ),
+            counts: expectedCounts
           });
 
-          await putRows(store, payload.rows || []);
+          const saved = await replaceStoreSafely(store, rows);
+          savedCounts[store] = saved;
 
-          completedWork += 1;
+          await db.setMetadata(`store:${store}:lastSyncAt`, new Date().toISOString());
+          await db.setMetadata(`store:${store}:count`, saved);
+        } catch (storeError) {
+          console.warn(`[PetroSync] Falló store ${store}:`, storeError);
+
+          failedStores.push({
+            store,
+            message: storeError.message || 'Error desconocido'
+          });
+
+          /**
+           * No detenemos toda la sincronización.
+           * Si falla una tabla, conservamos su data anterior.
+           */
         }
       }
+
+      const finalCounts = {
+        dashboard: savedCounts.dashboard ?? expectedCounts.dashboard ?? 0,
+        pozos: savedCounts.pozos ?? expectedCounts.pozos ?? 0,
+        pozoDetalles: 0,
+        parametros: savedCounts.parametros ?? expectedCounts.parametros ?? 0,
+        niveles: savedCounts.niveles ?? expectedCounts.niveles ?? 0,
+        muestras: savedCounts.muestras ?? expectedCounts.muestras ?? 0,
+        bombas: savedCounts.bombas ?? expectedCounts.bombas ?? 0,
+        servicios: savedCounts.servicios ?? expectedCounts.servicios ?? 0,
+        mapaPozos: savedCounts.mapa_pozos ?? expectedCounts.mapaPozos ?? 0,
+        survey: savedCounts.survey ?? expectedCounts.survey ?? 0
+      };
 
       emitStatus({
         state: 'saving',
         message: 'Guardando metadatos offline...',
         progress: 99,
-        counts
+        counts: finalCounts
       });
 
       await db.setMetadata('lastSnapshotAt', new Date().toISOString());
       await db.setMetadata('snapshotVersion', manifest.version || new Date().toISOString());
       await db.setMetadata('serverTime', manifest.serverTime || new Date().toISOString());
-      await db.setMetadata('snapshotCounts', counts);
+      await db.setMetadata('snapshotCounts', finalCounts);
       await db.setMetadata('offlineMode', 'chunked');
+      await db.setMetadata('failedStores', failedStores);
 
       try {
-        localStorage.setItem('petro-offline-ready', '1');
+        localStorage.setItem('petro-offline-ready', failedStores.length ? 'partial' : '1');
         localStorage.setItem('petro-offline-ready-at', new Date().toISOString());
       } catch (error) {
         // No bloquear si localStorage falla.
       }
 
-      emitStatus({
-        state: 'ready',
-        message: 'Base offline descargada correctamente.',
-        progress: 100,
-        counts
-      });
+      if (failedStores.length) {
+        emitStatus({
+          state: 'ready',
+          message: `Offline parcial. Fallaron: ${failedStores.map((item) => item.store).join(', ')}`,
+          progress: 100,
+          counts: finalCounts,
+          failedStores
+        });
+      } else {
+        emitStatus({
+          state: 'ready',
+          message: 'Base offline descargada correctamente.',
+          progress: 100,
+          counts: finalCounts
+        });
+      }
 
       emitUpdated({
-        counts,
+        counts: finalCounts,
         version: manifest.version,
         serverTime: manifest.serverTime,
-        mode: 'chunked'
+        mode: 'chunked',
+        failedStores
       });
 
       return {
         manifest,
-        counts
+        counts: finalCounts,
+        failedStores
       };
     } catch (error) {
       if (isNetworkError(error)) {
@@ -896,7 +1004,8 @@
       mapaPozos,
       survey,
       queue,
-      offlineMode
+      offlineMode,
+      failedStores
     ] = await Promise.all([
       getMetadataSnapshot(),
       db.get('dashboard', 'main'),
@@ -910,7 +1019,8 @@
       db.getAll('mapa_pozos'),
       db.getAll('survey'),
       db.getPendingQueue(),
-      db.getMetadata('offlineMode')
+      db.getMetadata('offlineMode'),
+      db.getMetadata('failedStores')
     ]);
 
     return {
@@ -919,6 +1029,7 @@
       syncInProgress,
       lastSyncError,
       offlineMode,
+      failedStores: failedStores || [],
       metadata,
       counts: {
         dashboard: dashboard ? 1 : 0,
