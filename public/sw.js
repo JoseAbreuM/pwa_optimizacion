@@ -1,4 +1,4 @@
-const CACHE_NAME = 'petrofield-cache-v12';
+const CACHE_NAME = 'petrofield-cache-v13';
 
 const APP_SHELL_FILES = [
   /**
