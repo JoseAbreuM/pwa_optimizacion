@@ -20,6 +20,7 @@
   let initialized = false;
   let syncInProgress = false;
   let lastSyncError = null;
+  let lastSyncStartedAt = 0;
 
   function getDB() {
     return window.PetroDB || null;
@@ -27,6 +28,18 @@
 
   function createLocalId() {
     return `local-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  }
+
+  function isNetworkError(error) {
+    const message = String(error?.message || error || '');
+
+    return (
+      error instanceof TypeError ||
+      message.includes('Failed to fetch') ||
+      message.includes('NetworkError') ||
+      message.includes('ERR_INTERNET_DISCONNECTED') ||
+      message.includes('Load failed')
+    );
   }
 
   function emitStatus(detail = {}) {
@@ -42,11 +55,6 @@
       detail: payload
     }));
 
-    /**
-     * Ayuda para depurar en móvil/desktop.
-     * Puedes verlo en consola con:
-     * localStorage.getItem('petro-offline-last-status')
-     */
     try {
       localStorage.setItem('petro-offline-last-status', JSON.stringify(payload));
     } catch (error) {
@@ -178,6 +186,25 @@
     };
   }
 
+  async function emitOfflineStatus(message = null) {
+    const metadata = await getMetadataSnapshot();
+
+    lastSyncError = null;
+
+    emitStatus({
+      state: 'offline',
+      message: message || (
+        metadata.hasSnapshot
+          ? 'Sin conexión. Usando datos locales guardados.'
+          : 'Sin conexión. Aún no hay datos offline guardados.'
+      ),
+      progress: metadata.hasSnapshot ? 100 : 0,
+      counts: metadata.counts
+    });
+
+    return null;
+  }
+
   async function clearSnapshotStores(counts = {}) {
     const db = getDB();
 
@@ -280,10 +307,6 @@
       counts
     });
 
-    /**
-     * Solo limpiamos después de validar que el snapshot trae pozos.
-     * Así evitamos borrar datos buenos por una respuesta inválida.
-     */
     await clearSnapshotStores(counts);
 
     for (const step of steps) {
@@ -312,6 +335,13 @@
     await db.setMetadata('snapshotVersion', snapshot.version);
     await db.setMetadata('serverTime', snapshot.serverTime);
     await db.setMetadata('snapshotCounts', counts);
+
+    try {
+      localStorage.setItem('petro-offline-ready', '1');
+      localStorage.setItem('petro-offline-ready-at', new Date().toISOString());
+    } catch (error) {
+      // No bloquear si localStorage falla.
+    }
 
     emitStatus({
       state: 'ready',
@@ -348,18 +378,7 @@
     }
 
     if (!navigator.onLine && !options.force) {
-      const metadata = await getMetadataSnapshot();
-
-      emitStatus({
-        state: 'offline',
-        message: metadata.hasSnapshot
-          ? 'Sin conexión. Se usarán datos locales guardados.'
-          : 'Sin conexión. Aún no hay datos offline guardados.',
-        progress: metadata.hasSnapshot ? 100 : 0,
-        counts: metadata.counts
-      });
-
-      return null;
+      return emitOfflineStatus();
     }
 
     if (syncInProgress) {
@@ -374,6 +393,7 @@
 
     syncInProgress = true;
     lastSyncError = null;
+    lastSyncStartedAt = Date.now();
 
     emitStatus({
       state: 'loading',
@@ -396,8 +416,35 @@
         throw new Error(`No se pudo cargar snapshot. HTTP ${response.status}`);
       }
 
+      /**
+       * Si devuelve HTML, casi siempre es /login por sesión expirada.
+       * Si ya hay datos locales, no rompemos la experiencia offline.
+       */
       if (!contentType.includes('application/json')) {
-        throw new Error('El snapshot no devolvió JSON. Probablemente la sesión expiró.');
+        const metadata = await getMetadataSnapshot();
+
+        if (metadata.hasSnapshot) {
+          lastSyncError = null;
+
+          emitStatus({
+            state: 'offline',
+            message: 'Sesión online expirada. Usando datos locales guardados.',
+            progress: 100,
+            counts: metadata.counts
+          });
+
+          return null;
+        }
+
+        lastSyncError = 'La sesión expiró y aún no hay datos offline guardados.';
+
+        emitStatus({
+          state: 'error',
+          message: lastSyncError,
+          progress: 0
+        });
+
+        return null;
       }
 
       emitStatus({
@@ -429,6 +476,10 @@
 
       return result.snapshot;
     } catch (error) {
+      if (isNetworkError(error)) {
+        return emitOfflineStatus();
+      }
+
       lastSyncError = error.message || 'No se pudo preparar el modo offline.';
 
       console.warn('PetroSync.loadSnapshot:', error);
@@ -491,7 +542,18 @@
       }
 
       if (!contentType.includes('application/json')) {
-        throw new Error('La sincronización no devolvió JSON.');
+        const metadata = await getMetadataSnapshot();
+
+        emitStatus({
+          state: metadata.hasSnapshot ? 'offline' : 'error',
+          message: metadata.hasSnapshot
+            ? 'No se pudo sincronizar la cola. Usando datos locales.'
+            : 'No se pudo sincronizar la cola y no hay snapshot local.',
+          progress: metadata.hasSnapshot ? 100 : 0,
+          counts: metadata.counts
+        });
+
+        return [];
       }
 
       const payload = await response.json();
@@ -529,6 +591,10 @@
 
       return payload.results;
     } catch (error) {
+      if (isNetworkError(error)) {
+        return [];
+      }
+
       console.warn('PetroSync.flushQueue:', error);
 
       lastSyncError = error.message || 'No se pudo sincronizar la cola.';
@@ -559,15 +625,18 @@
     }
 
     if (!navigator.onLine && !options.force) {
-      const metadata = await getMetadataSnapshot();
+      return emitOfflineStatus('Sin conexión. Trabajando con datos locales.');
+    }
 
+    /**
+     * Evita loops agresivos cuando el navegador dice online,
+     * pero realmente no hay internet o Render no responde.
+     */
+    if (!options.force && lastSyncStartedAt && Date.now() - lastSyncStartedAt < 8000) {
       emitStatus({
-        state: 'offline',
-        message: metadata.hasSnapshot
-          ? 'Sin conexión. Trabajando con datos locales.'
-          : 'Sin conexión. No hay datos locales preparados.',
-        progress: metadata.hasSnapshot ? 100 : 0,
-        counts: metadata.counts
+        state: 'busy',
+        message: 'Sincronización reciente en proceso o recién ejecutada.',
+        progress: 8
       });
 
       return null;
@@ -738,16 +807,7 @@
     });
 
     window.addEventListener('offline', async () => {
-      const currentMetadata = await getMetadataSnapshot();
-
-      emitStatus({
-        state: 'offline',
-        message: currentMetadata.hasSnapshot
-          ? 'Sin conexión. Los cambios se guardarán localmente.'
-          : 'Sin conexión. Aún no hay datos guardados en este dispositivo.',
-        progress: currentMetadata.hasSnapshot ? 100 : 0,
-        counts: currentMetadata.counts
-      });
+      await emitOfflineStatus('Sin conexión. Los cambios se guardarán localmente.');
     });
 
     window.addEventListener('visibilitychange', () => {
@@ -762,6 +822,8 @@
      */
     if (navigator.onLine) {
       await syncNow();
+    } else {
+      await emitOfflineStatus();
     }
   }
 
