@@ -3,6 +3,20 @@
 
   const API_SNAPSHOT = '/api/offline/snapshot';
   const API_SYNC = '/api/offline/sync';
+  const API_MANIFEST = '/api/offline/manifest';
+  const API_CHUNK_BASE = '/api/offline/chunk';
+
+  const CHUNK_STORES = [
+    'dashboard',
+    'pozos',
+    'parametros',
+    'niveles',
+    'muestras',
+    'bombas',
+    'servicios',
+    'mapa_pozos',
+    'survey'
+  ];
 
   const REQUIRED_STORES = [
     'dashboard',
@@ -42,6 +56,10 @@
     );
   }
 
+  function normalizeArray(value) {
+    return Array.isArray(value) ? value : [];
+  }
+
   function emitStatus(detail = {}) {
     const payload = {
       online: navigator.onLine,
@@ -72,67 +90,6 @@
     window.dispatchEvent(new CustomEvent('petro:offline-queue-updated', {
       detail
     }));
-  }
-
-  function normalizeArray(value) {
-    return Array.isArray(value) ? value : [];
-  }
-
-  function normalizePozoDetalles(value) {
-    if (!value || typeof value !== 'object') return [];
-
-    return Object.values(value)
-      .filter((item) => item && typeof item === 'object')
-      .map((item) => {
-        const pozo = item.pozo && typeof item.pozo === 'object' ? item.pozo : {};
-
-        return {
-          ...item,
-          id: Number(item.id || pozo.id)
-        };
-      })
-      .filter((item) => Number.isFinite(Number(item.id)));
-  }
-
-  function validateSnapshot(snapshot) {
-    if (!snapshot || typeof snapshot !== 'object') {
-      throw new Error('Snapshot vacío o inválido.');
-    }
-
-    const pozos = normalizeArray(snapshot.pozos);
-
-    if (!pozos.length) {
-      throw new Error('El snapshot no contiene pozos.');
-    }
-
-    return {
-      dashboard: snapshot.dashboard || {},
-      pozos,
-      pozoDetalles: normalizePozoDetalles(snapshot.pozoDetalles),
-      parametros: normalizeArray(snapshot.parametros),
-      niveles: normalizeArray(snapshot.niveles),
-      muestras: normalizeArray(snapshot.muestras),
-      bombas: normalizeArray(snapshot.bombas),
-      servicios: normalizeArray(snapshot.servicios),
-      mapaPozos: normalizeArray(snapshot.mapaPozos),
-      survey: normalizeArray(snapshot.survey),
-      version: snapshot.version || new Date().toISOString(),
-      serverTime: snapshot.serverTime || new Date().toISOString()
-    };
-  }
-
-  function getSnapshotCounts(snapshot) {
-    return {
-      pozos: normalizeArray(snapshot?.pozos).length,
-      pozoDetalles: normalizePozoDetalles(snapshot?.pozoDetalles).length,
-      parametros: normalizeArray(snapshot?.parametros).length,
-      niveles: normalizeArray(snapshot?.niveles).length,
-      muestras: normalizeArray(snapshot?.muestras).length,
-      bombas: normalizeArray(snapshot?.bombas).length,
-      servicios: normalizeArray(snapshot?.servicios).length,
-      mapaPozos: normalizeArray(snapshot?.mapaPozos).length,
-      survey: normalizeArray(snapshot?.survey).length
-    };
   }
 
   function hasUsefulCounts(counts = {}) {
@@ -213,13 +170,340 @@
     emitStatus({
       state: 'saving',
       message: 'Limpiando almacenamiento local anterior...',
-      progress: 15,
+      progress: 10,
       counts
     });
 
     for (const store of REQUIRED_STORES) {
       await db.clear(store);
     }
+  }
+
+  async function fetchJson(url) {
+    const response = await fetch(url, {
+      cache: 'no-store',
+      credentials: 'same-origin',
+      headers: {
+        Accept: 'application/json'
+      }
+    });
+
+    const contentType = response.headers.get('content-type') || '';
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status} al cargar ${url}`);
+    }
+
+    if (!contentType.includes('application/json')) {
+      const metadata = await getMetadataSnapshot();
+
+      if (metadata.hasSnapshot) {
+        emitStatus({
+          state: 'offline',
+          message: 'Sesión online expirada. Usando datos locales guardados.',
+          progress: 100,
+          counts: metadata.counts
+        });
+
+        return null;
+      }
+
+      throw new Error('La respuesta no devolvió JSON. Probablemente la sesión expiró.');
+    }
+
+    return response.json();
+  }
+
+  function getManifestTables(manifestPayload = {}) {
+    const manifest = manifestPayload.manifest || manifestPayload;
+    return manifest.tables || {};
+  }
+
+  function getTotalWorkFromManifest(tables = {}) {
+    return CHUNK_STORES.reduce((total, store) => {
+      const item = tables[store];
+
+      if (!item) return total;
+
+      return total + Math.max(1, Number(item.pages || 1));
+    }, 0);
+  }
+
+  function getCountsFromManifest(tables = {}) {
+    return {
+      dashboard: tables.dashboard?.total || 0,
+      pozos: tables.pozos?.total || 0,
+      pozoDetalles: 0,
+      parametros: tables.parametros?.total || 0,
+      niveles: tables.niveles?.total || 0,
+      muestras: tables.muestras?.total || 0,
+      bombas: tables.bombas?.total || 0,
+      servicios: tables.servicios?.total || 0,
+      mapaPozos: tables.mapa_pozos?.total || 0,
+      survey: tables.survey?.total || 0
+    };
+  }
+
+  function normalizeRowsForStore(store, rows = []) {
+    if (store === 'dashboard') {
+      const dashboard = rows[0] || {};
+
+      return [{
+        key: 'main',
+        ...dashboard
+      }];
+    }
+
+    return normalizeArray(rows);
+  }
+
+  async function putRows(store, rows = []) {
+    const db = getDB();
+
+    if (!db) {
+      throw new Error('IndexedDB no está disponible.');
+    }
+
+    const normalizedRows = normalizeRowsForStore(store, rows);
+
+    if (!normalizedRows.length) return;
+
+    await db.putMany(store, normalizedRows);
+  }
+
+  async function loadManifest() {
+    emitStatus({
+      state: 'loading',
+      message: 'Consultando manifiesto offline...',
+      progress: 5
+    });
+
+    const payload = await fetchJson(API_MANIFEST);
+
+    if (!payload) return null;
+
+    if (!payload.ok) {
+      throw new Error(payload.message || 'Manifiesto offline inválido.');
+    }
+
+    return payload.manifest;
+  }
+
+  async function loadChunks(options = {}) {
+    const db = getDB();
+
+    if (!db) {
+      lastSyncError = 'IndexedDB no está disponible.';
+
+      emitStatus({
+        state: 'error',
+        message: lastSyncError,
+        progress: 0
+      });
+
+      return null;
+    }
+
+    if (!navigator.onLine && !options.force) {
+      return emitOfflineStatus();
+    }
+
+    if (syncInProgress) {
+      emitStatus({
+        state: 'busy',
+        message: 'Sincronización offline ya está en proceso.',
+        progress: 8
+      });
+
+      return null;
+    }
+
+    syncInProgress = true;
+    lastSyncError = null;
+    lastSyncStartedAt = Date.now();
+
+    try {
+      const manifest = await loadManifest();
+
+      if (!manifest) return null;
+
+      const tables = getManifestTables(manifest);
+      const counts = getCountsFromManifest(tables);
+      const totalWork = Math.max(1, getTotalWorkFromManifest(tables));
+
+      emitStatus({
+        state: 'saving',
+        message: 'Preparando almacenamiento local...',
+        progress: 8,
+        counts
+      });
+
+      await clearSnapshotStores(counts);
+
+      let completedWork = 0;
+
+      for (const store of CHUNK_STORES) {
+        const table = tables[store];
+
+        if (!table) {
+          console.warn(`[PetroSync] Store no incluido en manifest: ${store}`);
+          continue;
+        }
+
+        const pages = Math.max(1, Number(table.pages || 1));
+        const pageSize = Number(table.pageSize || 1000);
+
+        for (let page = 1; page <= pages; page += 1) {
+          const progress = Math.min(
+            98,
+            Math.round(10 + ((completedWork / totalWork) * 88))
+          );
+
+          emitStatus({
+            state: 'loading',
+            message: `Descargando ${store} ${page}/${pages}...`,
+            progress,
+            counts
+          });
+
+          const url = `${API_CHUNK_BASE}/${encodeURIComponent(store)}?page=${page}&pageSize=${pageSize}`;
+          const payload = await fetchJson(url);
+
+          if (!payload) {
+            return null;
+          }
+
+          if (!payload.ok) {
+            throw new Error(payload.message || `Chunk inválido para ${store}.`);
+          }
+
+          emitStatus({
+            state: 'saving',
+            message: `Guardando ${store} ${page}/${pages}...`,
+            progress: Math.min(99, progress + 1),
+            counts
+          });
+
+          await putRows(store, payload.rows || []);
+
+          completedWork += 1;
+        }
+      }
+
+      emitStatus({
+        state: 'saving',
+        message: 'Guardando metadatos offline...',
+        progress: 99,
+        counts
+      });
+
+      await db.setMetadata('lastSnapshotAt', new Date().toISOString());
+      await db.setMetadata('snapshotVersion', manifest.version || new Date().toISOString());
+      await db.setMetadata('serverTime', manifest.serverTime || new Date().toISOString());
+      await db.setMetadata('snapshotCounts', counts);
+      await db.setMetadata('offlineMode', 'chunked');
+
+      try {
+        localStorage.setItem('petro-offline-ready', '1');
+        localStorage.setItem('petro-offline-ready-at', new Date().toISOString());
+      } catch (error) {
+        // No bloquear si localStorage falla.
+      }
+
+      emitStatus({
+        state: 'ready',
+        message: 'Base offline descargada correctamente.',
+        progress: 100,
+        counts
+      });
+
+      emitUpdated({
+        counts,
+        version: manifest.version,
+        serverTime: manifest.serverTime,
+        mode: 'chunked'
+      });
+
+      return {
+        manifest,
+        counts
+      };
+    } catch (error) {
+      if (isNetworkError(error)) {
+        return emitOfflineStatus();
+      }
+
+      lastSyncError = error.message || 'No se pudo preparar el modo offline.';
+
+      console.warn('PetroSync.loadChunks:', error);
+
+      emitStatus({
+        state: 'error',
+        message: lastSyncError,
+        progress: 0
+      });
+
+      return null;
+    } finally {
+      syncInProgress = false;
+    }
+  }
+
+  function normalizePozoDetalles(value) {
+    if (!value || typeof value !== 'object') return [];
+
+    return Object.values(value)
+      .filter((item) => item && typeof item === 'object')
+      .map((item) => {
+        const pozo = item.pozo && typeof item.pozo === 'object' ? item.pozo : {};
+
+        return {
+          ...item,
+          id: Number(item.id || pozo.id)
+        };
+      })
+      .filter((item) => Number.isFinite(Number(item.id)));
+  }
+
+  function validateSnapshot(snapshot) {
+    if (!snapshot || typeof snapshot !== 'object') {
+      throw new Error('Snapshot vacío o inválido.');
+    }
+
+    const pozos = normalizeArray(snapshot.pozos);
+
+    if (!pozos.length) {
+      throw new Error('El snapshot no contiene pozos.');
+    }
+
+    return {
+      dashboard: snapshot.dashboard || {},
+      pozos,
+      pozoDetalles: normalizePozoDetalles(snapshot.pozoDetalles),
+      parametros: normalizeArray(snapshot.parametros),
+      niveles: normalizeArray(snapshot.niveles),
+      muestras: normalizeArray(snapshot.muestras),
+      bombas: normalizeArray(snapshot.bombas),
+      servicios: normalizeArray(snapshot.servicios),
+      mapaPozos: normalizeArray(snapshot.mapaPozos),
+      survey: normalizeArray(snapshot.survey),
+      version: snapshot.version || new Date().toISOString(),
+      serverTime: snapshot.serverTime || new Date().toISOString()
+    };
+  }
+
+  function getSnapshotCounts(snapshot) {
+    return {
+      pozos: normalizeArray(snapshot?.pozos).length,
+      pozoDetalles: normalizePozoDetalles(snapshot?.pozoDetalles).length,
+      parametros: normalizeArray(snapshot?.parametros).length,
+      niveles: normalizeArray(snapshot?.niveles).length,
+      muestras: normalizeArray(snapshot?.muestras).length,
+      bombas: normalizeArray(snapshot?.bombas).length,
+      servicios: normalizeArray(snapshot?.servicios).length,
+      mapaPozos: normalizeArray(snapshot?.mapaPozos).length,
+      survey: normalizeArray(snapshot?.survey).length
+    };
   }
 
   async function saveSnapshot(rawSnapshot = {}) {
@@ -232,116 +516,48 @@
     const snapshot = validateSnapshot(rawSnapshot);
     const counts = getSnapshotCounts(snapshot);
 
-    const steps = [
-      {
-        label: 'Dashboard',
-        progress: 20,
-        countKey: 'dashboard',
-        run: async () => {
-          await db.put('dashboard', {
-            key: 'main',
-            ...(snapshot.dashboard || {})
-          });
-        }
-      },
-      {
-        label: 'Pozos',
-        progress: 30,
-        countKey: 'pozos',
-        run: async () => db.putMany('pozos', snapshot.pozos)
-      },
-      {
-        label: 'Fichas de pozos',
-        progress: 40,
-        countKey: 'pozoDetalles',
-        run: async () => db.putMany('pozo_detalles', snapshot.pozoDetalles)
-      },
-      {
-        label: 'Parámetros',
-        progress: 52,
-        countKey: 'parametros',
-        run: async () => db.putMany('parametros', snapshot.parametros)
-      },
-      {
-        label: 'Niveles',
-        progress: 64,
-        countKey: 'niveles',
-        run: async () => db.putMany('niveles', snapshot.niveles)
-      },
-      {
-        label: 'Muestras',
-        progress: 74,
-        countKey: 'muestras',
-        run: async () => db.putMany('muestras', snapshot.muestras)
-      },
-      {
-        label: 'Bombas',
-        progress: 84,
-        countKey: 'bombas',
-        run: async () => db.putMany('bombas', snapshot.bombas)
-      },
-      {
-        label: 'Servicios',
-        progress: 90,
-        countKey: 'servicios',
-        run: async () => db.putMany('servicios', snapshot.servicios)
-      },
-      {
-        label: 'Mapa',
-        progress: 95,
-        countKey: 'mapaPozos',
-        run: async () => db.putMany('mapa_pozos', snapshot.mapaPozos)
-      },
-      {
-        label: 'Survey',
-        progress: 98,
-        countKey: 'survey',
-        run: async () => db.putMany('survey', snapshot.survey)
-      }
-    ];
+    await clearSnapshotStores(counts);
 
     emitStatus({
       state: 'saving',
-      message: 'Validando snapshot offline...',
-      progress: 12,
+      message: 'Guardando dashboard...',
+      progress: 20,
       counts
     });
 
-    await clearSnapshotStores(counts);
+    await db.put('dashboard', {
+      key: 'main',
+      ...(snapshot.dashboard || {})
+    });
 
-    for (const step of steps) {
-      const stepCount = counts[step.countKey];
+    const steps = [
+      ['pozos', snapshot.pozos, 30],
+      ['pozo_detalles', snapshot.pozoDetalles, 40],
+      ['parametros', snapshot.parametros, 52],
+      ['niveles', snapshot.niveles, 64],
+      ['muestras', snapshot.muestras, 74],
+      ['bombas', snapshot.bombas, 84],
+      ['servicios', snapshot.servicios, 90],
+      ['mapa_pozos', snapshot.mapaPozos, 95],
+      ['survey', snapshot.survey, 98]
+    ];
 
+    for (const [store, rows, progress] of steps) {
       emitStatus({
         state: 'saving',
-        message: typeof stepCount === 'number'
-          ? `Guardando ${step.label} (${stepCount})...`
-          : `Guardando ${step.label}...`,
-        progress: step.progress,
+        message: `Guardando ${store}...`,
+        progress,
         counts
       });
 
-      await step.run();
+      await db.putMany(store, rows);
     }
-
-    emitStatus({
-      state: 'saving',
-      message: 'Guardando metadatos offline...',
-      progress: 99,
-      counts
-    });
 
     await db.setMetadata('lastSnapshotAt', new Date().toISOString());
     await db.setMetadata('snapshotVersion', snapshot.version);
     await db.setMetadata('serverTime', snapshot.serverTime);
     await db.setMetadata('snapshotCounts', counts);
-
-    try {
-      localStorage.setItem('petro-offline-ready', '1');
-      localStorage.setItem('petro-offline-ready-at', new Date().toISOString());
-    } catch (error) {
-      // No bloquear si localStorage falla.
-    }
+    await db.setMetadata('offlineMode', 'snapshot');
 
     emitStatus({
       state: 'ready',
@@ -353,7 +569,8 @@
     emitUpdated({
       counts,
       version: snapshot.version,
-      serverTime: snapshot.serverTime
+      serverTime: snapshot.serverTime,
+      mode: 'snapshot'
     });
 
     return {
@@ -363,6 +580,17 @@
   }
 
   async function loadSnapshot(options = {}) {
+    /**
+     * Compatibilidad:
+     * Si por alguna razón quieres forzar el snapshot viejo:
+     * PetroSync.loadSnapshot({ legacy: true, force: true })
+     *
+     * Por defecto, usamos chunks.
+     */
+    if (!options.legacy) {
+      return loadChunks(options);
+    }
+
     const db = getDB();
 
     if (!db) {
@@ -402,58 +630,9 @@
     });
 
     try {
-      const response = await fetch(API_SNAPSHOT, {
-        cache: 'no-store',
-        credentials: 'same-origin',
-        headers: {
-          Accept: 'application/json'
-        }
-      });
+      const payload = await fetchJson(API_SNAPSHOT);
 
-      const contentType = response.headers.get('content-type') || '';
-
-      if (!response.ok) {
-        throw new Error(`No se pudo cargar snapshot. HTTP ${response.status}`);
-      }
-
-      /**
-       * Si devuelve HTML, casi siempre es /login por sesión expirada.
-       * Si ya hay datos locales, no rompemos la experiencia offline.
-       */
-      if (!contentType.includes('application/json')) {
-        const metadata = await getMetadataSnapshot();
-
-        if (metadata.hasSnapshot) {
-          lastSyncError = null;
-
-          emitStatus({
-            state: 'offline',
-            message: 'Sesión online expirada. Usando datos locales guardados.',
-            progress: 100,
-            counts: metadata.counts
-          });
-
-          return null;
-        }
-
-        lastSyncError = 'La sesión expiró y aún no hay datos offline guardados.';
-
-        emitStatus({
-          state: 'error',
-          message: lastSyncError,
-          progress: 0
-        });
-
-        return null;
-      }
-
-      emitStatus({
-        state: 'loading',
-        message: 'Snapshot recibido. Leyendo respuesta...',
-        progress: 10
-      });
-
-      const payload = await response.json();
+      if (!payload) return null;
 
       if (!payload.ok) {
         throw new Error(payload.message || 'Snapshot inválido.');
@@ -628,10 +807,6 @@
       return emitOfflineStatus('Sin conexión. Trabajando con datos locales.');
     }
 
-    /**
-     * Evita loops agresivos cuando el navegador dice online,
-     * pero realmente no hay internet o Render no responde.
-     */
     if (!options.force && lastSyncStartedAt && Date.now() - lastSyncStartedAt < 8000) {
       emitStatus({
         state: 'busy',
@@ -650,7 +825,7 @@
 
     await flushQueue();
 
-    return loadSnapshot(options);
+    return loadChunks(options);
   }
 
   async function enqueueOperation(operation) {
@@ -720,7 +895,8 @@
       servicios,
       mapaPozos,
       survey,
-      queue
+      queue,
+      offlineMode
     ] = await Promise.all([
       getMetadataSnapshot(),
       db.get('dashboard', 'main'),
@@ -733,7 +909,8 @@
       db.getAll('servicios'),
       db.getAll('mapa_pozos'),
       db.getAll('survey'),
-      db.getPendingQueue()
+      db.getPendingQueue(),
+      db.getMetadata('offlineMode')
     ]);
 
     return {
@@ -741,6 +918,7 @@
       online: navigator.onLine,
       syncInProgress,
       lastSyncError,
+      offlineMode,
       metadata,
       counts: {
         dashboard: dashboard ? 1 : 0,
@@ -816,10 +994,6 @@
       }
     });
 
-    /**
-     * Sincronización inicial.
-     * Se ejecuta después del login porque este script vive dentro del layout autenticado.
-     */
     if (navigator.onLine) {
       await syncNow();
     } else {
@@ -829,6 +1003,7 @@
 
   window.PetroSync = {
     init,
+    loadChunks,
     loadSnapshot,
     saveSnapshot,
     flushQueue,
