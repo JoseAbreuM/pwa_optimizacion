@@ -1,6 +1,5 @@
 const { pool } = require('../../config/db');
 const dashboardService = require('../dashboard/dashboard.service');
-const pozoService = require('../pozos/pozo.service');
 
 const SAFE_SQL_ERRORS = new Set([
   'ER_NO_SUCH_TABLE',
@@ -15,8 +14,10 @@ async function safeQuery(sql, params = [], fallback = []) {
     return rows || [];
   } catch (error) {
     if (SAFE_SQL_ERRORS.has(error.code)) {
+      console.warn('[OFFLINE/SAFE_QUERY]', error.code, error.message);
       return fallback;
     }
+
     throw error;
   }
 }
@@ -24,6 +25,116 @@ async function safeQuery(sql, params = [], fallback = []) {
 async function getExistingColumns(tableName) {
   const rows = await safeQuery(`DESCRIBE \`${tableName}\``, [], []);
   return rows.map((row) => row.Field);
+}
+
+function normalizeNumber(value) {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+}
+
+function getPozoIdFromRow(row) {
+  return normalizeNumber(
+    row?.id_pozo ??
+    row?.pozo_id ??
+    row?.idPozo
+  );
+}
+
+function groupRowsByPozoId(rows = []) {
+  const grouped = new Map();
+
+  rows.forEach((row) => {
+    const idPozo = getPozoIdFromRow(row);
+
+    if (!idPozo) return;
+
+    if (!grouped.has(idPozo)) {
+      grouped.set(idPozo, []);
+    }
+
+    grouped.get(idPozo).push(row);
+  });
+
+  return grouped;
+}
+
+function sortByDateDesc(fieldName = 'fecha') {
+  return (a, b) => {
+    const dateA = String(a?.[fieldName] || '');
+    const dateB = String(b?.[fieldName] || '');
+    return dateB.localeCompare(dateA);
+  };
+}
+
+function getLatest(rows = []) {
+  return Array.isArray(rows) && rows.length ? rows[0] : null;
+}
+
+function buildMapaByPozoId(mapaPozos = []) {
+  const map = new Map();
+
+  mapaPozos.forEach((row) => {
+    const id = normalizeNumber(row?.id_pozo ?? row?.id);
+
+    if (id && !map.has(id)) {
+      map.set(id, row);
+    }
+  });
+
+  return map;
+}
+
+function buildOfflineSummary({
+  pozos = [],
+  parametros = [],
+  niveles = [],
+  muestras = [],
+  bombas = [],
+  servicios = [],
+  mapaPozos = [],
+  survey = [],
+  pozoDetalles = {}
+}) {
+  const detalles = Object.values(pozoDetalles);
+
+  const pozosSinParametros = detalles
+    .filter((detalle) => !detalle.parametros?.length)
+    .map((detalle) => detalle.pozo?.codigo || detalle.id);
+
+  const pozosSinNiveles = detalles
+    .filter((detalle) => !detalle.niveles?.length)
+    .map((detalle) => detalle.pozo?.codigo || detalle.id);
+
+  const pozosSinBombas = detalles
+    .filter((detalle) => !detalle.bombas?.length)
+    .map((detalle) => detalle.pozo?.codigo || detalle.id);
+
+  return {
+    totals: {
+      pozos: pozos.length,
+      pozoDetalles: detalles.length,
+      parametros: parametros.length,
+      niveles: niveles.length,
+      muestras: muestras.length,
+      bombas: bombas.length,
+      servicios: servicios.length,
+      mapaPozos: mapaPozos.length,
+      survey: survey.length
+    },
+    coverage: {
+      pozosConParametros: detalles.filter((detalle) => detalle.parametros?.length).length,
+      pozosConNiveles: detalles.filter((detalle) => detalle.niveles?.length).length,
+      pozosConBombas: detalles.filter((detalle) => detalle.bombas?.length).length,
+      pozosConMuestras: detalles.filter((detalle) => detalle.muestras?.length).length,
+      pozosConSurvey: detalles.filter((detalle) => detalle.survey?.length).length,
+      pozosConMapa: detalles.filter((detalle) => detalle.mapa).length
+    },
+    samples: {
+      pozosSinParametros: pozosSinParametros.slice(0, 20),
+      pozosSinNiveles: pozosSinNiveles.slice(0, 20),
+      pozosSinBombas: pozosSinBombas.slice(0, 20)
+    }
+  };
 }
 
 async function buildOfflineSnapshot(currentUser) {
@@ -59,57 +170,204 @@ async function buildOfflineSnapshot(currentUser) {
     }
   };
 
+  /**
+   * Pozos base.
+   * Importante:
+   * Se deja estado_nombre para que el frontend offline pueda filtrar
+   * aunque el campo estado no venga directo desde pozos.
+   */
   const pozos = await safeQuery(
     `
-    SELECT p.*, ep.nombre AS estado_nombre
-    FROM pozos p
-    LEFT JOIN estado_pozo ep ON ep.id = p.id_estado
-    ORDER BY p.codigo ASC
-  `,
+      SELECT
+        p.*,
+        ep.nombre AS estado_nombre
+      FROM pozos p
+      LEFT JOIN estado_pozo ep ON ep.id = p.id_estado
+      ORDER BY p.codigo ASC
+    `,
     [],
     []
   );
 
-  const [parametros, niveles, muestras, bombas, servicios, mapaPozos, survey] = await Promise.all([
-    safeQuery('SELECT * FROM parametros_diarios ORDER BY fecha DESC, id DESC', [], []),
-    safeQuery('SELECT * FROM tomas_nivel ORDER BY fecha DESC, id DESC', [], []),
-    safeQuery('SELECT * FROM muestras_fluido ORDER BY fecha DESC, id DESC', [], []),
-    safeQuery('SELECT * FROM bombas_historial ORDER BY fecha_inst DESC, id DESC', [], []),
-    safeQuery('SELECT * FROM servicios ORDER BY id DESC', [], []),
-    safeQuery('SELECT * FROM vw_mapa_pozos_sync ORDER BY id ASC', [], []),
-    safeQuery('SELECT * FROM survey WHERE activo = 1 ORDER BY id DESC', [], [])
+  /**
+   * Datos históricos.
+   * Estos arrays son los que luego se guardan en IndexedDB.
+   */
+  const [
+    parametrosRaw,
+    nivelesRaw,
+    muestrasRaw,
+    bombasRaw,
+    servicios,
+    mapaPozos,
+    surveyRaw
+  ] = await Promise.all([
+    safeQuery(
+      `
+        SELECT *
+        FROM parametros_diarios
+        ORDER BY fecha DESC, id DESC
+      `,
+      [],
+      []
+    ),
+    safeQuery(
+      `
+        SELECT *
+        FROM tomas_nivel
+        ORDER BY fecha DESC, id DESC
+      `,
+      [],
+      []
+    ),
+    safeQuery(
+      `
+        SELECT *
+        FROM muestras_fluido
+        ORDER BY fecha DESC, id DESC
+      `,
+      [],
+      []
+    ),
+    safeQuery(
+      `
+        SELECT *
+        FROM bombas_historial
+        ORDER BY fecha_inst DESC, id DESC
+      `,
+      [],
+      []
+    ),
+    safeQuery(
+      `
+        SELECT *
+        FROM servicios
+        ORDER BY id DESC
+      `,
+      [],
+      []
+    ),
+    safeQuery(
+      `
+        SELECT *
+        FROM vw_mapa_pozos_sync
+        ORDER BY id ASC
+      `,
+      [],
+      []
+    ),
+    safeQuery(
+      `
+        SELECT *
+        FROM survey
+        WHERE activo = 1
+        ORDER BY id DESC
+      `,
+      [],
+      []
+    )
   ]);
+
+  /**
+   * Ordenamos explícitamente por pozo para que:
+   * - ultimoParametro = primer registro
+   * - ultimoNivel = primer registro
+   * - bombaActual = primer registro
+   */
+  const parametros = parametrosRaw.sort(sortByDateDesc('fecha'));
+  const niveles = nivelesRaw.sort(sortByDateDesc('fecha'));
+  const muestras = muestrasRaw.sort(sortByDateDesc('fecha'));
+  const bombas = bombasRaw.sort(sortByDateDesc('fecha_inst'));
+  const survey = surveyRaw.sort((a, b) => {
+    const pozoA = Number(a.id_pozo || 0);
+    const pozoB = Number(b.id_pozo || 0);
+
+    if (pozoA !== pozoB) return pozoA - pozoB;
+
+    const orderA = Number(a.fila_orden ?? a.orden ?? 0);
+    const orderB = Number(b.fila_orden ?? b.orden ?? 0);
+
+    return orderA - orderB;
+  });
+
+  const parametrosByPozo = groupRowsByPozoId(parametros);
+  const nivelesByPozo = groupRowsByPozoId(niveles);
+  const muestrasByPozo = groupRowsByPozoId(muestras);
+  const bombasByPozo = groupRowsByPozoId(bombas);
+  const surveyByPozo = groupRowsByPozoId(survey);
+  const mapaByPozo = buildMapaByPozoId(mapaPozos);
 
   const pozoDetalles = {};
 
   pozos.forEach((pozo) => {
-    if (pozo && pozo.id != null) {
-      const id = Number(pozo.id);
-      pozoDetalles[id] = {
-        id,
-        pozo,
-        parametros: Array.isArray(parametros) ? parametros.filter((row) => Number(row.id_pozo) === id) : [],
-        niveles: Array.isArray(niveles) ? niveles.filter((row) => Number(row.id_pozo) === id) : [],
-        muestras: Array.isArray(muestras) ? muestras.filter((row) => Number(row.id_pozo) === id) : [],
-        bombas: Array.isArray(bombas) ? bombas.filter((row) => Number(row.id_pozo) === id) : [],
-        survey: Array.isArray(survey) ? survey.filter((row) => Number(row.id_pozo) === id) : []
-      };
-    }
+    const id = normalizeNumber(pozo?.id);
+
+    if (!id) return;
+
+    const parametrosPozo = parametrosByPozo.get(id) || [];
+    const nivelesPozo = nivelesByPozo.get(id) || [];
+    const muestrasPozo = muestrasByPozo.get(id) || [];
+    const bombasPozo = bombasByPozo.get(id) || [];
+    const surveyPozo = surveyByPozo.get(id) || [];
+    const mapaPozo = mapaByPozo.get(id) || null;
+
+    pozoDetalles[id] = {
+      id,
+      pozo,
+      mapa: mapaPozo,
+
+      parametros: parametrosPozo,
+      niveles: nivelesPozo,
+      muestras: muestrasPozo,
+      bombas: bombasPozo,
+      survey: surveyPozo,
+
+      ultimoParametro: getLatest(parametrosPozo),
+      ultimoNivel: getLatest(nivelesPozo),
+      bombaActual: getLatest(bombasPozo),
+
+      counts: {
+        parametros: parametrosPozo.length,
+        niveles: nivelesPozo.length,
+        muestras: muestrasPozo.length,
+        bombas: bombasPozo.length,
+        survey: surveyPozo.length,
+        mapa: mapaPozo ? 1 : 0
+      }
+    };
   });
 
-  return {
-    version: new Date().toISOString(),
-    serverTime: new Date().toISOString(),
-    dashboard,
+  const offlineSummary = buildOfflineSummary({
     pozos,
-    pozoDetalles,
     parametros,
     niveles,
     muestras,
     bombas,
     servicios,
     mapaPozos,
-    survey
+    survey,
+    pozoDetalles
+  });
+
+  console.info('[OFFLINE/SNAPSHOT] Snapshot construido:', offlineSummary);
+
+  return {
+    version: new Date().toISOString(),
+    serverTime: new Date().toISOString(),
+
+    dashboard,
+    pozos,
+    pozoDetalles,
+
+    parametros,
+    niveles,
+    muestras,
+    bombas,
+    servicios,
+    mapaPozos,
+    survey,
+
+    offlineSummary
   };
 }
 
@@ -125,8 +383,10 @@ async function applyOfflineOperation(operation = {}, currentUser) {
   switch (operation.type) {
     case 'MUESTRA_REPRESENTATIVA_UPDATE':
       return applyMuestraRepresentativa(operation.payload);
+
     case 'POZO_BASIC_UPDATE':
       return applyPozoBasicUpdate(operation.payload);
+
     default:
       return {
         ok: false,
@@ -148,10 +408,9 @@ async function applyMuestraRepresentativa(payload = {}) {
 
   const [result] = await pool.query(
     `
-    UPDATE muestras_fluido
-    SET representativa = ?
-    WHERE id = ?
-      AND id_pozo = ?
+      UPDATE muestras_fluido
+      SET representativa = ?
+      WHERE id = ? AND id_pozo = ?
     `,
     [representativa ? 1 : 0, id_muestra, id_pozo]
   );
@@ -181,7 +440,16 @@ async function applyPozoBasicUpdate(payload = {}) {
     };
   }
 
-  const allowedFields = ['potencial', 'nota_operativa', 'latitud', 'longitud', 'coord_x', 'coord_y', 'visible'];
+  const allowedFields = [
+    'potencial',
+    'nota_operativa',
+    'latitud',
+    'longitud',
+    'coord_x',
+    'coord_y',
+    'visible'
+  ];
+
   const values = {};
 
   allowedFields.forEach((field) => {
@@ -212,10 +480,16 @@ async function applyPozoBasicUpdate(payload = {}) {
 
   if (setClauses.length) {
     params.push(id_pozo);
+
     const [result] = await pool.query(
-      `UPDATE pozos SET ${setClauses.join(', ')} WHERE id = ?`,
+      `
+        UPDATE pozos
+        SET ${setClauses.join(', ')}
+        WHERE id = ?
+      `,
       params
     );
+
     affectedRows += result.affectedRows;
   }
 
@@ -232,10 +506,16 @@ async function applyPozoBasicUpdate(payload = {}) {
 
   if (diagramSetClauses.length) {
     diagramParams.push(id_pozo);
+
     const [diagramResult] = await pool.query(
-      `UPDATE pozos_diagrama SET ${diagramSetClauses.join(', ')} WHERE id_pozo = ?`,
+      `
+        UPDATE pozos_diagrama
+        SET ${diagramSetClauses.join(', ')}
+        WHERE id_pozo = ?
+      `,
       diagramParams
     );
+
     affectedRows += diagramResult.affectedRows;
   }
 

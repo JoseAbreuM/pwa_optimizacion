@@ -39,12 +39,73 @@
   }
 
   function getPozoId(row) {
-    return Number(
+    const id = Number(
       row?.id_pozo ??
       row?.pozo_id ??
-      row?.idPozo ??
-      row?.id
+      row?.idPozo
     );
+
+    return Number.isFinite(id) ? id : null;
+  }
+
+  function getOwnId(row) {
+    const id = Number(row?.id);
+    return Number.isFinite(id) ? id : null;
+  }
+
+  function samePozo(row, idPozo) {
+    const wanted = Number(idPozo);
+
+    if (!Number.isFinite(wanted)) return false;
+
+    const explicitPozoId = getPozoId(row);
+
+    if (explicitPozoId) {
+      return explicitPozoId === wanted;
+    }
+
+    /**
+     * Para mapa_pozos algunos registros usan id como id_pozo.
+     */
+    const ownId = getOwnId(row);
+    return ownId === wanted;
+  }
+
+  function ensureArray(value) {
+    return Array.isArray(value) ? value : [];
+  }
+
+  function firstValid(...values) {
+    for (const value of values) {
+      if (value !== undefined && value !== null && value !== '') {
+        return value;
+      }
+    }
+
+    return null;
+  }
+
+  function normalizeDetalle(detalle = {}, idPozo = null) {
+    const pozo = detalle.pozo && typeof detalle.pozo === 'object'
+      ? detalle.pozo
+      : null;
+
+    const fallbackPozo = detalle.codigo || detalle.area || detalle.estado || detalle.estado_nombre
+      ? detalle
+      : null;
+
+    const finalPozo = pozo || fallbackPozo || null;
+    const finalId = Number(
+      detalle.id ??
+      finalPozo?.id ??
+      idPozo
+    );
+
+    return {
+      ...detalle,
+      id: Number.isFinite(finalId) ? finalId : idPozo,
+      pozo: finalPozo
+    };
   }
 
   async function safeGetAll(storeName) {
@@ -61,7 +122,6 @@
     try {
       const db = getDB();
       const value = await db.get(storeName, key);
-
       return value ?? fallbackValue;
     } catch (error) {
       console.warn(`[OfflineStore] No se pudo leer ${storeName}:`, error);
@@ -73,7 +133,6 @@
     try {
       const db = getDB();
       const value = await db.getMetadata(key);
-
       return value ?? fallbackValue;
     } catch (error) {
       console.warn('[OfflineStore] getMetadata:', error);
@@ -99,7 +158,7 @@
       snapshotVersion,
       serverTime,
       counts: snapshotCounts || {},
-      hasSnapshot: Boolean(lastSnapshotAt)
+      hasSnapshot: Boolean(lastSnapshotAt) && Number(snapshotCounts?.pozos || 0) > 0
     };
   }
 
@@ -114,7 +173,6 @@
 
   async function getPozos() {
     const pozos = await safeGetAll('pozos');
-
     return pozos.sort(sortByCodigo);
   }
 
@@ -128,15 +186,20 @@
         pozo.area,
         pozo.estado,
         pozo.estado_nombre,
+        pozo.estado_pozo,
         pozo.categoria,
         pozo.yacimiento,
         pozo.metodo_levantamiento,
+        pozo.metodo,
+        pozo.metodo_nombre,
         pozo.cabezal,
         pozo.variador
       ].join(' ')).includes(cleanQuery);
 
+      const estadoPozo = pozo.estado || pozo.estado_nombre || pozo.estado_pozo;
+
       const matchesArea = !filters.area || normalizeText(pozo.area) === normalizeText(filters.area);
-      const matchesEstado = !filters.estado || normalizeText(pozo.estado || pozo.estado_nombre) === normalizeText(filters.estado);
+      const matchesEstado = !filters.estado || normalizeText(estadoPozo) === normalizeText(filters.estado);
       const matchesCategoria = !filters.categoria || String(pozo.categoria || '') === String(filters.categoria);
 
       return matchesQuery && matchesArea && matchesEstado && matchesCategoria;
@@ -146,17 +209,27 @@
   async function getPozoDetalle(id) {
     const numericId = normalizeId(id);
 
+    /**
+     * Camino principal:
+     * pozo_detalles guardado por snapshot.
+     */
     const detalle = await safeGet('pozo_detalles', numericId, null);
 
-    if (detalle) return detalle;
+    if (detalle) {
+      return normalizeDetalle(detalle, Number(id));
+    }
 
+    /**
+     * Fallback:
+     * reconstruir desde store pozos.
+     */
     const pozos = await getPozos();
     const pozo = pozos.find((item) => Number(item.id) === Number(id));
 
     if (!pozo) return null;
 
     return {
-      id: pozo.id,
+      id: Number(pozo.id),
       pozo
     };
   }
@@ -193,7 +266,7 @@
     const rows = await getParametros();
 
     return rows
-      .filter((row) => getPozoId(row) === Number(idPozo))
+      .filter((row) => samePozo(row, idPozo))
       .sort(sortByFechaDesc('fecha'));
   }
 
@@ -201,7 +274,7 @@
     const rows = await getNiveles();
 
     return rows
-      .filter((row) => getPozoId(row) === Number(idPozo))
+      .filter((row) => samePozo(row, idPozo))
       .sort(sortByFechaDesc('fecha'));
   }
 
@@ -209,7 +282,7 @@
     const rows = await getMuestras();
 
     return rows
-      .filter((row) => getPozoId(row) === Number(idPozo))
+      .filter((row) => samePozo(row, idPozo))
       .sort(sortByFechaDesc('fecha'));
   }
 
@@ -217,7 +290,7 @@
     const rows = await getBombas();
 
     return rows
-      .filter((row) => getPozoId(row) === Number(idPozo))
+      .filter((row) => samePozo(row, idPozo))
       .sort(sortByFechaDesc('fecha_inst'));
   }
 
@@ -225,7 +298,7 @@
     const rows = await getSurvey();
 
     return rows
-      .filter((row) => getPozoId(row) === Number(idPozo))
+      .filter((row) => samePozo(row, idPozo))
       .sort((a, b) => {
         const orderA = Number(a.fila_orden ?? a.orden ?? 0);
         const orderB = Number(b.fila_orden ?? b.orden ?? 0);
@@ -237,7 +310,7 @@
   async function getMapaPozo(idPozo) {
     const rows = await getMapaPozos();
 
-    return rows.find((row) => Number(row.id) === Number(idPozo) || Number(row.id_pozo) === Number(idPozo)) || null;
+    return rows.find((row) => samePozo(row, idPozo)) || null;
   }
 
   async function getPendingQueue() {
@@ -250,17 +323,50 @@
     }
   }
 
+  function mergeRows(primaryRows = [], fallbackRows = [], dateField = 'fecha') {
+    const rows = ensureArray(primaryRows).length
+      ? ensureArray(primaryRows)
+      : ensureArray(fallbackRows);
+
+    return rows.sort(sortByFechaDesc(dateField));
+  }
+
+  function getBombaActual(detalle, bombas) {
+    return firstValid(
+      detalle?.bombaActual,
+      detalle?.bomba_actual,
+      detalle?.bomba,
+      ensureArray(bombas)[0]
+    );
+  }
+
+  function getUltimoParametro(detalle, parametros) {
+    return firstValid(
+      detalle?.ultimoParametro,
+      detalle?.ultimo_parametro,
+      ensureArray(parametros)[0]
+    );
+  }
+
+  function getUltimoNivel(detalle, niveles) {
+    return firstValid(
+      detalle?.ultimoNivel,
+      detalle?.ultimo_nivel,
+      ensureArray(niveles)[0]
+    );
+  }
+
   async function getPozoFull(idPozo) {
+    const detalle = await getPozoDetalle(idPozo);
+
     const [
-      detalle,
-      parametros,
-      niveles,
-      muestras,
-      bombas,
-      survey,
-      mapa
+      parametrosFromStore,
+      nivelesFromStore,
+      muestrasFromStore,
+      bombasFromStore,
+      surveyFromStore,
+      mapaFromStore
     ] = await Promise.all([
-      getPozoDetalle(idPozo),
       getParametrosByPozo(idPozo),
       getNivelesByPozo(idPozo),
       getMuestrasByPozo(idPozo),
@@ -269,21 +375,70 @@
       getMapaPozo(idPozo)
     ]);
 
-    const pozo = detalle?.pozo || detalle || null;
+    const normalizedDetalle = detalle ? normalizeDetalle(detalle, Number(idPozo)) : null;
+
+    const pozo = normalizedDetalle?.pozo || null;
+
+    const parametros = mergeRows(
+      normalizedDetalle?.parametros,
+      parametrosFromStore,
+      'fecha'
+    );
+
+    const niveles = mergeRows(
+      normalizedDetalle?.niveles,
+      nivelesFromStore,
+      'fecha'
+    );
+
+    const muestras = mergeRows(
+      normalizedDetalle?.muestras,
+      muestrasFromStore,
+      'fecha'
+    );
+
+    const bombas = mergeRows(
+      normalizedDetalle?.bombas,
+      bombasFromStore,
+      'fecha_inst'
+    );
+
+    const survey = ensureArray(normalizedDetalle?.survey).length
+      ? ensureArray(normalizedDetalle.survey)
+      : surveyFromStore;
+
+    const mapa = normalizedDetalle?.mapa || mapaFromStore || null;
+
+    const ultimoParametro = getUltimoParametro(normalizedDetalle, parametros);
+    const ultimoNivel = getUltimoNivel(normalizedDetalle, niveles);
+    const bombaActual = getBombaActual(normalizedDetalle, bombas);
 
     return {
       id: Number(idPozo),
       pozo,
-      detalle,
+      detalle: normalizedDetalle,
       mapa,
+
       parametros,
       niveles,
       muestras,
       bombas,
       survey,
-      ultimoParametro: parametros[0] || null,
-      ultimoNivel: niveles[0] || null,
-      bombaActual: bombas[0] || null
+
+      ultimoParametro,
+      ultimoNivel,
+      bombaActual,
+
+      counts: {
+        parametros: parametros.length,
+        niveles: niveles.length,
+        muestras: muestras.length,
+        bombas: bombas.length,
+        survey: survey.length,
+        mapa: mapa ? 1 : 0
+      },
+
+      hasData: Boolean(pozo) || parametros.length > 0 || niveles.length > 0 || bombas.length > 0
     };
   }
 
@@ -298,7 +453,7 @@
 
     const estados = [...new Set(
       pozos
-        .map((pozo) => pozo.estado || pozo.estado_nombre)
+        .map((pozo) => pozo.estado || pozo.estado_nombre || pozo.estado_pozo)
         .filter(Boolean)
     )].sort((a, b) => String(a).localeCompare(String(b), 'es'));
 
@@ -327,7 +482,8 @@
       muestras,
       servicios,
       mapaPozos,
-      survey
+      survey,
+      detalles
     ] = await Promise.all([
       getDashboard(),
       getPozos(),
@@ -339,11 +495,12 @@
       getMuestras(),
       getServicios(),
       getMapaPozos(),
-      getSurvey()
+      getSurvey(),
+      safeGetAll('pozo_detalles')
     ]);
 
     const activos = pozos.filter((pozo) => {
-      const estado = normalizeText(pozo.estado || pozo.estado_nombre);
+      const estado = normalizeText(pozo.estado || pozo.estado_nombre || pozo.estado_pozo);
       return estado === 'activo' || estado.includes('activo');
     }).length;
 
@@ -358,6 +515,7 @@
       counts: {
         dashboard: dashboard ? 1 : 0,
         pozos: pozos.length,
+        pozo_detalles: detalles.length,
         parametros: parametros.length,
         niveles: niveles.length,
         bombas: bombas.length,
@@ -370,15 +528,59 @@
     };
   }
 
+  async function getCoverageSample(limit = 20) {
+    const pozos = await getPozos();
+    const detalles = await safeGetAll('pozo_detalles');
+
+    const detalleIds = new Set(
+      detalles
+        .map((detalle) => Number(detalle.id || detalle.pozo?.id))
+        .filter((id) => Number.isFinite(id))
+    );
+
+    const missingDetails = pozos
+      .filter((pozo) => !detalleIds.has(Number(pozo.id)))
+      .slice(0, limit)
+      .map((pozo) => ({
+        id: pozo.id,
+        codigo: pozo.codigo,
+        area: pozo.area
+      }));
+
+    const sample = [];
+
+    for (const pozo of pozos.slice(0, limit)) {
+      const full = await getPozoFull(pozo.id);
+
+      sample.push({
+        id: pozo.id,
+        codigo: pozo.codigo,
+        area: pozo.area,
+        hasPozo: Boolean(full.pozo),
+        counts: full.counts,
+        hasData: full.hasData
+      });
+    }
+
+    return {
+      totalPozos: pozos.length,
+      totalDetalles: detalles.length,
+      missingDetails,
+      sample
+    };
+  }
+
   async function getDiagnostics() {
     try {
       const resumen = await getResumen();
+      const coverage = await getCoverageSample(20);
 
       return {
         ok: true,
         online: navigator.onLine,
         metadata: resumen.info,
-        counts: resumen.counts
+        counts: resumen.counts,
+        coverage
       };
     } catch (error) {
       return {
@@ -398,6 +600,7 @@
     getDashboard,
     getPozos,
     findPozos,
+
     getPozoDetalle,
     getPozoFull,
 
@@ -419,6 +622,7 @@
     getPendingQueue,
     getFilterOptions,
     getResumen,
+    getCoverageSample,
     getDiagnostics
   };
 })();

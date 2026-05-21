@@ -30,14 +30,28 @@
   }
 
   function emitStatus(detail = {}) {
+    const payload = {
+      online: navigator.onLine,
+      syncInProgress,
+      lastSyncError,
+      timestamp: new Date().toISOString(),
+      ...detail
+    };
+
     window.dispatchEvent(new CustomEvent('petro:offline-status', {
-      detail: {
-        online: navigator.onLine,
-        syncInProgress,
-        lastSyncError,
-        ...detail
-      }
+      detail: payload
     }));
+
+    /**
+     * Ayuda para depurar en móvil/desktop.
+     * Puedes verlo en consola con:
+     * localStorage.getItem('petro-offline-last-status')
+     */
+    try {
+      localStorage.setItem('petro-offline-last-status', JSON.stringify(payload));
+    } catch (error) {
+      // No bloquear si localStorage falla.
+    }
   }
 
   function emitUpdated(detail = {}) {
@@ -113,6 +127,10 @@
     };
   }
 
+  function hasUsefulCounts(counts = {}) {
+    return Number(counts.pozos || 0) > 0;
+  }
+
   async function getPendingQueueCount() {
     const db = getDB();
 
@@ -152,7 +170,7 @@
     ]);
 
     return {
-      hasSnapshot: Boolean(lastSnapshotAt),
+      hasSnapshot: Boolean(lastSnapshotAt) && hasUsefulCounts(counts || {}),
       lastSnapshotAt,
       snapshotVersion,
       serverTime,
@@ -160,7 +178,7 @@
     };
   }
 
-  async function clearSnapshotStores() {
+  async function clearSnapshotStores(counts = {}) {
     const db = getDB();
 
     if (!db) return;
@@ -168,7 +186,8 @@
     emitStatus({
       state: 'saving',
       message: 'Limpiando almacenamiento local anterior...',
-      progress: 15
+      progress: 15,
+      counts
     });
 
     for (const store of REQUIRED_STORES) {
@@ -190,6 +209,7 @@
       {
         label: 'Dashboard',
         progress: 20,
+        countKey: 'dashboard',
         run: async () => {
           await db.put('dashboard', {
             key: 'main',
@@ -200,46 +220,55 @@
       {
         label: 'Pozos',
         progress: 30,
+        countKey: 'pozos',
         run: async () => db.putMany('pozos', snapshot.pozos)
       },
       {
         label: 'Fichas de pozos',
         progress: 40,
+        countKey: 'pozoDetalles',
         run: async () => db.putMany('pozo_detalles', snapshot.pozoDetalles)
       },
       {
         label: 'Parámetros',
         progress: 52,
+        countKey: 'parametros',
         run: async () => db.putMany('parametros', snapshot.parametros)
       },
       {
         label: 'Niveles',
         progress: 64,
+        countKey: 'niveles',
         run: async () => db.putMany('niveles', snapshot.niveles)
       },
       {
         label: 'Muestras',
         progress: 74,
+        countKey: 'muestras',
         run: async () => db.putMany('muestras', snapshot.muestras)
       },
       {
         label: 'Bombas',
         progress: 84,
+        countKey: 'bombas',
         run: async () => db.putMany('bombas', snapshot.bombas)
       },
       {
         label: 'Servicios',
         progress: 90,
+        countKey: 'servicios',
         run: async () => db.putMany('servicios', snapshot.servicios)
       },
       {
         label: 'Mapa',
         progress: 95,
+        countKey: 'mapaPozos',
         run: async () => db.putMany('mapa_pozos', snapshot.mapaPozos)
       },
       {
         label: 'Survey',
         progress: 98,
+        countKey: 'survey',
         run: async () => db.putMany('survey', snapshot.survey)
       }
     ];
@@ -252,16 +281,19 @@
     });
 
     /**
-     * Importante:
-     * Solo limpiamos stores después de validar que el snapshot trae pozos.
-     * Así evitamos borrar datos buenos por una respuesta inválida del servidor.
+     * Solo limpiamos después de validar que el snapshot trae pozos.
+     * Así evitamos borrar datos buenos por una respuesta inválida.
      */
-    await clearSnapshotStores();
+    await clearSnapshotStores(counts);
 
     for (const step of steps) {
+      const stepCount = counts[step.countKey];
+
       emitStatus({
         state: 'saving',
-        message: `Guardando ${step.label}...`,
+        message: typeof stepCount === 'number'
+          ? `Guardando ${step.label} (${stepCount})...`
+          : `Guardando ${step.label}...`,
         progress: step.progress,
         counts
       });
@@ -305,11 +337,13 @@
 
     if (!db) {
       lastSyncError = 'IndexedDB no está disponible.';
+
       emitStatus({
         state: 'error',
         message: lastSyncError,
         progress: 0
       });
+
       return null;
     }
 
@@ -334,6 +368,7 @@
         message: 'Sincronización offline ya está en proceso.',
         progress: 8
       });
+
       return null;
     }
 
@@ -365,17 +400,23 @@
         throw new Error('El snapshot no devolvió JSON. Probablemente la sesión expiró.');
       }
 
-      const payload = await response.json();
-
       emitStatus({
-        state: 'saving',
-        message: 'Snapshot descargado. Preparando almacenamiento local...',
+        state: 'loading',
+        message: 'Snapshot recibido. Leyendo respuesta...',
         progress: 10
       });
+
+      const payload = await response.json();
 
       if (!payload.ok) {
         throw new Error(payload.message || 'Snapshot inválido.');
       }
+
+      emitStatus({
+        state: 'saving',
+        message: 'Snapshot descargado. Preparando almacenamiento local...',
+        progress: 11
+      });
 
       const result = await saveSnapshot(payload.snapshot);
 
@@ -415,13 +456,15 @@
       emitQueueUpdated({
         queueLength: 0
       });
+
       return [];
     }
 
     emitStatus({
       state: 'syncing-queue',
       message: `Sincronizando ${pendingQueue.length} cambio(s) pendiente(s)...`,
-      progress: 8
+      progress: 8,
+      queueLength: pendingQueue.length
     });
 
     try {
@@ -505,11 +548,13 @@
 
     if (!db) {
       lastSyncError = 'IndexedDB no está disponible.';
+
       emitStatus({
         state: 'error',
         message: lastSyncError,
         progress: 0
       });
+
       return null;
     }
 
@@ -527,6 +572,12 @@
 
       return null;
     }
+
+    emitStatus({
+      state: 'loading',
+      message: 'Preparando sincronización offline...',
+      progress: 5
+    });
 
     await flushQueue();
 
@@ -647,11 +698,13 @@
 
     if (!db) {
       lastSyncError = 'PetroDB no está inicializado.';
+
       emitStatus({
         state: 'error',
         message: lastSyncError,
         progress: 0
       });
+
       return;
     }
 
@@ -724,10 +777,14 @@
   };
 
   if (document.readyState === 'complete' || document.readyState === 'interactive') {
-    window.PetroSync.init().catch(() => {});
+    window.PetroSync.init().catch((error) => {
+      console.warn('PetroSync.init:', error);
+    });
   } else {
     window.addEventListener('DOMContentLoaded', () => {
-      window.PetroSync.init().catch(() => {});
+      window.PetroSync.init().catch((error) => {
+        console.warn('PetroSync.init:', error);
+      });
     });
   }
 })();
