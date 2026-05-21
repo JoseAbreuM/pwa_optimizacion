@@ -8,6 +8,131 @@ const SAFE_SQL_ERRORS = new Set([
   'ER_BAD_FIELD_ERROR'
 ]);
 
+const CHUNK_STORE_CONFIG = {
+  dashboard: {
+    pageSize: 1,
+    countSql: 'SELECT 1 AS total',
+    dataSql: null
+  },
+
+  pozos: {
+    pageSize: 500,
+    countSql: `
+      SELECT COUNT(*) AS total
+      FROM pozos p
+    `,
+    dataSql: `
+      SELECT
+        p.*,
+        ep.nombre AS estado_nombre
+      FROM pozos p
+      LEFT JOIN estado_pozo ep ON ep.id = p.id_estado
+      ORDER BY p.codigo ASC
+      LIMIT ? OFFSET ?
+    `
+  },
+
+  parametros: {
+    pageSize: 1000,
+    countSql: `
+      SELECT COUNT(*) AS total
+      FROM parametros_diarios
+    `,
+    dataSql: `
+      SELECT *
+      FROM parametros_diarios
+      ORDER BY fecha DESC, id DESC
+      LIMIT ? OFFSET ?
+    `
+  },
+
+  niveles: {
+    pageSize: 1000,
+    countSql: `
+      SELECT COUNT(*) AS total
+      FROM tomas_nivel
+    `,
+    dataSql: `
+      SELECT *
+      FROM tomas_nivel
+      ORDER BY fecha DESC, id DESC
+      LIMIT ? OFFSET ?
+    `
+  },
+
+  muestras: {
+    pageSize: 1000,
+    countSql: `
+      SELECT COUNT(*) AS total
+      FROM muestras_fluido
+    `,
+    dataSql: `
+      SELECT *
+      FROM muestras_fluido
+      ORDER BY fecha DESC, id DESC
+      LIMIT ? OFFSET ?
+    `
+  },
+
+  bombas: {
+    pageSize: 1000,
+    countSql: `
+      SELECT COUNT(*) AS total
+      FROM bombas_historial
+    `,
+    dataSql: `
+      SELECT *
+      FROM bombas_historial
+      ORDER BY fecha_inst DESC, id DESC
+      LIMIT ? OFFSET ?
+    `
+  },
+
+  servicios: {
+    pageSize: 500,
+    countSql: `
+      SELECT COUNT(*) AS total
+      FROM servicios
+    `,
+    dataSql: `
+      SELECT *
+      FROM servicios
+      ORDER BY id DESC
+      LIMIT ? OFFSET ?
+    `
+  },
+
+  mapa_pozos: {
+    pageSize: 500,
+    countSql: `
+      SELECT COUNT(*) AS total
+      FROM vw_mapa_pozos_sync
+    `,
+    dataSql: `
+      SELECT *
+      FROM vw_mapa_pozos_sync
+      ORDER BY id ASC
+      LIMIT ? OFFSET ?
+    `
+  },
+
+  survey: {
+    pageSize: 1000,
+    countSql: `
+      SELECT COUNT(*) AS total
+      FROM survey
+      WHERE activo = 1
+    `,
+    dataSql: `
+      SELECT *
+      FROM survey
+      WHERE activo = 1
+      ORDER BY id_pozo ASC, COALESCE(fila_orden, orden, 0) ASC, id ASC
+      LIMIT ? OFFSET ?
+    `
+  }
+};
+
 async function safeQuery(sql, params = [], fallback = []) {
   try {
     const [rows] = await pool.query(sql, params);
@@ -137,7 +262,7 @@ function buildOfflineSummary({
   };
 }
 
-async function buildOfflineSnapshot(currentUser) {
+async function getDashboardSnapshot(currentUser) {
   let dashboardSource = {
     kpis: null,
     categorias: [],
@@ -157,7 +282,7 @@ async function buildOfflineSnapshot(currentUser) {
     console.warn('[OFFLINE/SNAPSHOT] No se pudo cargar dashboard:', error.message || error);
   }
 
-  const dashboard = {
+  return {
     kpis: dashboardSource.kpis || null,
     categorias: dashboardSource.categorias || [],
     servicios: dashboardSource.servicios || [],
@@ -169,13 +294,119 @@ async function buildOfflineSnapshot(currentUser) {
       colors: []
     }
   };
+}
 
-  /**
-   * Pozos base.
-   * Importante:
-   * Se deja estado_nombre para que el frontend offline pueda filtrar
-   * aunque el campo estado no venga directo desde pozos.
-   */
+async function getCountFromSql(sql) {
+  const rows = await safeQuery(sql, [], [{ total: 0 }]);
+  return Number(rows[0]?.total || 0);
+}
+
+async function buildOfflineManifest(currentUser) {
+  const dashboard = await getDashboardSnapshot(currentUser);
+
+  const entries = await Promise.all(
+    Object.entries(CHUNK_STORE_CONFIG).map(async ([store, config]) => {
+      if (store === 'dashboard') {
+        return [
+          store,
+          {
+            store,
+            total: 1,
+            pageSize: 1,
+            pages: 1
+          }
+        ];
+      }
+
+      const total = await getCountFromSql(config.countSql);
+      const pageSize = Number(config.pageSize || 1000);
+      const pages = Math.max(1, Math.ceil(total / pageSize));
+
+      return [
+        store,
+        {
+          store,
+          total,
+          pageSize,
+          pages
+        }
+      ];
+    })
+  );
+
+  const tables = Object.fromEntries(entries);
+
+  return {
+    version: new Date().toISOString(),
+    serverTime: new Date().toISOString(),
+    tables,
+    dashboard
+  };
+}
+
+async function getOfflineChunk(storeName, options = {}, currentUser = null) {
+  const store = String(storeName || '').trim();
+
+  if (!CHUNK_STORE_CONFIG[store]) {
+    return {
+      ok: false,
+      store,
+      message: `Store offline no soportado: ${store}`
+    };
+  }
+
+  const config = CHUNK_STORE_CONFIG[store];
+
+  const requestedPage = Number(options.page || 1);
+  const requestedPageSize = Number(options.pageSize || config.pageSize || 1000);
+
+  const page = Number.isFinite(requestedPage) && requestedPage > 0 ? requestedPage : 1;
+  const pageSize = Number.isFinite(requestedPageSize) && requestedPageSize > 0
+    ? Math.min(requestedPageSize, 5000)
+    : config.pageSize;
+
+  if (store === 'dashboard') {
+    const dashboard = await getDashboardSnapshot(currentUser);
+
+    return {
+      ok: true,
+      store,
+      page: 1,
+      pageSize: 1,
+      total: 1,
+      pages: 1,
+      rows: [{
+        key: 'main',
+        ...dashboard
+      }]
+    };
+  }
+
+  const total = await getCountFromSql(config.countSql);
+  const pages = Math.max(1, Math.ceil(total / pageSize));
+  const safePage = Math.min(page, pages);
+  const offset = (safePage - 1) * pageSize;
+
+  const rows = await safeQuery(
+    config.dataSql,
+    [pageSize, offset],
+    []
+  );
+
+  return {
+    ok: true,
+    store,
+    page: safePage,
+    pageSize,
+    total,
+    pages,
+    rows
+  };
+}
+
+async function buildOfflineSnapshot(currentUser) {
+  const dashboard = await getDashboardSnapshot(currentUser);
+
   const pozos = await safeQuery(
     `
       SELECT
@@ -189,10 +420,6 @@ async function buildOfflineSnapshot(currentUser) {
     []
   );
 
-  /**
-   * Datos históricos.
-   * Estos arrays son los que luego se guardan en IndexedDB.
-   */
   const [
     parametrosRaw,
     nivelesRaw,
@@ -268,12 +495,6 @@ async function buildOfflineSnapshot(currentUser) {
     )
   ]);
 
-  /**
-   * Ordenamos explícitamente por pozo para que:
-   * - ultimoParametro = primer registro
-   * - ultimoNivel = primer registro
-   * - bombaActual = primer registro
-   */
   const parametros = parametrosRaw.sort(sortByDateDesc('fecha'));
   const niveles = nivelesRaw.sort(sortByDateDesc('fecha'));
   const muestras = muestrasRaw.sort(sortByDateDesc('fecha'));
@@ -535,6 +756,8 @@ async function applyPozoBasicUpdate(payload = {}) {
 
 module.exports = {
   buildOfflineSnapshot,
+  buildOfflineManifest,
+  getOfflineChunk,
   applyOfflineOperation,
   safeQuery
 };
