@@ -8,9 +8,10 @@
   (isoMatch) return isoMatch[1]; const parsed=new Date(text); if (!Number.isNaN(parsed.getTime())) { const
   parsedYear=parsed.getFullYear(); const parsedMonth=String(parsed.getMonth() + 1).padStart(2, '0' ); const
   parsedDay=String(parsed.getDate()).padStart(2, '0' ); return `${parsedYear}-${parsedMonth}-${parsedDay}`; } return ''
-  ; } function isMuestraRepresentativa(value) { return ( value===true || value===1 || value==='1' ||
-  String(value).toLowerCase()==='true' || String(value).toLowerCase()==='si' || String(value).toLowerCase()==='sí' ); }
-  %>
+  ; } function normalizeText(value) { return String(value ?? '' ) .trim() .toLowerCase() .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '' ); } function isMuestraRepresentativa(value) { const normalized=normalizeText(value);
+  return ( value===true || value===1 || normalized==='1' || normalized==='true' || normalized==='si' ||
+  normalized==='yes' || normalized==='representativa' ); } %>
 
   <div id="tab-muestras-pozo"
     class="space-y-4 rounded-2xl bg-slate-50 p-3 text-slate-900 dark:bg-slate-950 dark:text-slate-100 sm:p-4">
@@ -57,13 +58,16 @@
           <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
             <% if (muestras.length) { %>
               <% muestras.forEach(function(muestra, index) { const muestraId=muestra.id || muestra.id_muestra ||
-                muestra.id_muestras || '' ; const fechaIso=getDateKey(muestra.fecha); const
-                proxIso=getDateKey(muestra.prox_muestra || muestra.proxima_muestra); const aysValue=muestra.ays !=null ?
-                muestra.ays : muestra.porcentaje_ays; const apiValue=muestra.api !=null ? muestra.api :
-                muestra.gravedad_api; const proxMuestra=muestra.prox_muestra || muestra.proxima_muestra; const
-                isRepresentativa=isMuestraRepresentativa(muestra.representativa); %>
+                muestra.id_muestras || muestra.muestra_id || '' ; const fechaIso=getDateKey(muestra.fecha); const
+                proxMuestra=muestra.prox_muestra || muestra.proxima_muestra; const proxIso=getDateKey(proxMuestra);
+                const aysValue=muestra.ays !=null && muestra.ays !=='' ? muestra.ays : muestra.porcentaje_ays; const
+                apiValue=muestra.api !=null && muestra.api !=='' ? muestra.api : muestra.gravedad_api; const
+                representativaRaw=muestra.representativa !=null ? muestra.representativa : ( muestra.es_representativa
+                !=null ? muestra.es_representativa : muestra.muestra_representativa ); const
+                isRepresentativa=isMuestraRepresentativa(representativaRaw); %>
                 <tr
                   class="<%= index % 2 === 0 ? 'bg-white dark:bg-slate-900' : 'bg-slate-50/70 dark:bg-slate-800/40' %> hover:bg-slate-50 dark:hover:bg-slate-800/70">
+
                   <td class="whitespace-nowrap px-4 py-3 font-semibold text-slate-900 dark:text-white"
                     data-order="<%= fechaIso %>">
                     <%= fallback(formatDate(muestra.fecha)) %>
@@ -71,11 +75,11 @@
 
                   <td class="whitespace-nowrap px-4 py-3 font-medium text-slate-700 dark:text-slate-200"
                     data-order="<%= aysValue != null ? aysValue : '' %>">
-                    <%= fallback(formatNumber(aysValue, 2)) %>
+                    <%= aysValue !=null && aysValue !=='' ? fallback(formatNumber(aysValue, 2)) : '—' %>
                   </td>
 
                   <td class="whitespace-nowrap px-4 py-3" data-order="<%= apiValue != null ? apiValue : '' %>">
-                    <%= fallback(formatNumber(apiValue, 2)) %>
+                    <%= apiValue !=null && apiValue !=='' ? fallback(formatNumber(apiValue, 2)) : '—' %>
                   </td>
 
                   <td class="whitespace-nowrap px-4 py-3" data-order="<%= proxIso %>">
@@ -92,17 +96,18 @@
                   </td>
 
                   <td class="whitespace-nowrap px-4 py-3 text-center" data-order="<%= isRepresentativa ? 1 : 0 %>">
-                    <label class="inline-flex cursor-pointer items-center justify-center">
-                      <input type="checkbox" class="peer sr-only" data-muestra-representativa
+
+                    <label class="inline-flex cursor-pointer select-none items-center justify-center gap-2">
+                      <input type="checkbox" class="peer sr-only" data-muestra-representativa="true"
                         data-muestra-id="<%= muestraId %>" data-pozo-id="<%= idPozo %>" data-fecha="<%= fechaIso %>"
                         data-ays="<%= aysValue != null ? aysValue : '' %>" <%=isRepresentativa ? 'checked' : '' %>>
 
                       <span
-                        class="relative h-6 w-11 rounded-full bg-slate-300 transition after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:shadow after:transition peer-checked:bg-emerald-600 peer-checked:after:translate-x-5 dark:bg-slate-700">
+                        class="relative h-6 w-11 shrink-0 rounded-full bg-slate-300 transition after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:shadow after:transition peer-checked:bg-emerald-600 peer-checked:after:translate-x-5 dark:bg-slate-700">
                       </span>
 
-                      <span
-                        class="ml-2 text-xs font-semibold text-slate-500 peer-checked:text-emerald-700 dark:text-slate-400 dark:peer-checked:text-emerald-300">
+                      <span data-muestra-switch-label
+                        class="min-w-[18px] text-left text-xs font-semibold <%= isRepresentativa ? 'text-emerald-700 dark:text-emerald-300' : 'text-slate-500 dark:text-slate-400' %>">
                         <%= isRepresentativa ? 'Sí' : 'No' %>
                       </span>
                     </label>

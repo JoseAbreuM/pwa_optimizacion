@@ -346,270 +346,223 @@
     });
   }
 
-  function initMuestrasTable() {
-    const selector = '#tabla-muestras-pozo';
+function initMuestrasTable() {
+  const selector = '#tabla-muestras-pozo';
+  const tableEl = document.querySelector(selector);
 
-    initDataTable(selector, {
-      scrollY: null,
-      scrollX: true,
-      pageLength: 10,
-      ordering: true,
-      expectedColumns: 6,
-      order: [[0, 'desc']]
-    });
+  initDataTable(selector, {
+    scrollY: null,
+    scrollX: true,
+    pageLength: 10,
+    ordering: true,
+    expectedColumns: 6,
+    order: [[0, 'desc']]
+  });
 
-    document.querySelectorAll('[data-muestra-representativa]').forEach((input) => {
-      const label = input.closest('label');
-      const text = label?.querySelector('span:last-child');
+  if (!tableEl) return;
 
-      bindOnce(input, 'MuestraRepresentativa', async () => {
-        const previousValue = !input.checked;
+  bindOnce(tableEl, 'MuestrasRepresentativasDelegated', async (event) => {
+    const input = event.target.closest('[data-muestra-representativa]');
+    if (!input) return;
 
-        updateMuestraSwitchLabel(input, text);
+    const previousValue = !input.checked;
+    const label = input.closest('label');
+    const text =
+      label?.querySelector('[data-muestra-switch-label]') ||
+      label?.querySelector('span:last-child');
 
-        try {
-          await updateMuestraRepresentativa(input);
-          renderMuestrasChart();
-        } catch (error) {
-          input.checked = previousValue;
-          updateMuestraSwitchLabel(input, text);
-          renderMuestrasChart();
-
-          console.error(error);
-          showToast(error.message || 'No se pudo actualizar la muestra.', 'error');
-        }
-      }, 'change');
-    });
-  }
-
-  function updateMuestraSwitchLabel(input, textEl) {
-    if (!textEl) return;
-
-    textEl.textContent = input.checked ? 'Sí' : 'No';
-
-    textEl.classList.toggle('text-emerald-700', input.checked);
-    textEl.classList.toggle('dark:text-emerald-300', input.checked);
-  }
-
-  async function updateMuestraRepresentativa(input) {
-    const muestraId = input.dataset.muestraId;
-    const pozoId = input.dataset.pozoId;
-    const representativa = Boolean(input.checked);
-
-    if (!muestraId || !pozoId) {
-      throw new Error('No se pudo identificar la muestra.');
-    }
-
-    if (!navigator.onLine) {
-      await enqueueOfflineMuestraUpdate(pozoId, muestraId, representativa);
-      return;
-    }
+    updateMuestraSwitchLabel(input, text);
+    updateMuestrasJsonRepresentativa(input.dataset.muestraId, input.checked);
+    renderMuestrasChart();
 
     try {
-      const response = await fetch(`/pozos/${pozoId}/muestras/${muestraId}/representativa`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          representativa
-        })
-      });
-
-      const result = await response.json().catch(() => ({}));
-
-      if (!response.ok || result.ok === false) {
-        throw new Error(result.message || 'No se pudo actualizar la muestra.');
-      }
-
-      showToast(
-        representativa
-          ? 'Muestra añadida a la gráfica.'
-          : 'Muestra quitada de la gráfica.',
-        'success'
-      );
+      await updateMuestraRepresentativa(input);
     } catch (error) {
-      if (!navigator.onLine || error instanceof TypeError) {
-        await enqueueOfflineMuestraUpdate(pozoId, muestraId, representativa);
-        return;
-      }
+      input.checked = previousValue;
+      updateMuestraSwitchLabel(input, text);
+      updateMuestrasJsonRepresentativa(input.dataset.muestraId, previousValue);
+      renderMuestrasChart();
 
-      throw error;
+      console.error(error);
+      showToast(error.message || 'No se pudo actualizar la muestra.', 'error');
     }
+  }, 'change');
+}
+
+function updateMuestraSwitchLabel(input, textEl) {
+  if (!textEl) return;
+
+  textEl.textContent = input.checked ? 'Sí' : 'No';
+
+  textEl.classList.toggle('text-emerald-700', input.checked);
+  textEl.classList.toggle('dark:text-emerald-300', input.checked);
+  textEl.classList.toggle('text-slate-500', !input.checked);
+  textEl.classList.toggle('dark:text-slate-400', !input.checked);
+}
+
+function getMuestrasRowsFromTable() {
+  const jsonRows = getMuestrasJsonRows();
+  const domRows = getMuestrasRowsFromDom();
+
+  if (!jsonRows.length) {
+    return domRows;
   }
 
-  async function enqueueOfflineMuestraUpdate(pozoId, muestraId, representativa) {
-    if (!window.PetroSync || typeof window.PetroSync.enqueueOperation !== 'function') {
-      throw new Error('Funcionalidad offline no disponible.');
-    }
+  const domById = new Map(
+    domRows
+      .filter((row) => row.id)
+      .map((row) => [String(row.id), row])
+  );
 
-    await window.PetroSync.enqueueOperation({
-      type: 'MUESTRA_REPRESENTATIVA_UPDATE',
-      payload: {
-        id_pozo: Number(pozoId),
-        id_muestra: Number(muestraId),
+  const rowsFromJson = jsonRows
+    .map((row) => {
+      const id = getMuestraId(row);
+      const domRow = id ? domById.get(String(id)) : null;
+
+      const fecha =
+        domRow?.fecha ||
+        getDateKey(row.fecha);
+
+      const ays =
+        Number.isFinite(domRow?.ays)
+          ? domRow.ays
+          : parseChartNumber(
+            row.ays ??
+            row.porcentaje_ays ??
+            row.porcentaje_agua_sedimentos
+          );
+
+      const representativa =
+        typeof domRow?.representativa === 'boolean'
+          ? domRow.representativa
+          : normalizeBoolean(
+            row.representativa ??
+            row.es_representativa ??
+            row.muestra_representativa
+          );
+
+      return {
+        id,
+        pozoId:
+          domRow?.pozoId ||
+          row.id_pozo ||
+          row.pozo_id ||
+          row.idPozo ||
+          '',
+        fecha,
+        ays,
         representativa
-      }
-    });
+      };
+    })
+    .filter((row) => row.id && row.fecha);
 
-    showToast('Sin conexión: cambio guardado para sincronizar.', 'success');
+  const jsonIds = new Set(rowsFromJson.map((row) => String(row.id)));
+
+  const extraDomRows = domRows.filter((row) => {
+    if (!row.id) return false;
+    return !jsonIds.has(String(row.id));
+  });
+
+  return [...rowsFromJson, ...extraDomRows];
+}
+
+function getMuestrasRowsFromDom() {
+  return Array.from(document.querySelectorAll('[data-muestra-representativa]'))
+    .map((input) => ({
+      id: input.dataset.muestraId,
+      pozoId: input.dataset.pozoId,
+      fecha: input.dataset.fecha,
+      ays: parseChartNumber(input.dataset.ays),
+      representativa: input.checked
+    }))
+    .filter((row) => row.id && row.fecha);
+}
+
+function getMuestrasJsonRows() {
+  const dataEl = document.getElementById('muestras-data-json');
+
+  if (!dataEl) return [];
+
+  const rows = readJsonData(dataEl, []);
+
+  return Array.isArray(rows) ? rows : [];
+}
+
+function setMuestrasJsonRows(rows) {
+  const dataEl = document.getElementById('muestras-data-json');
+
+  if (!dataEl) return;
+
+  try {
+    dataEl.textContent = JSON.stringify(rows || []);
+  } catch (error) {
+    console.warn('No se pudo actualizar muestras-data-json:', error);
   }
+}
 
-  function initMuestrasChart() {
-    const chartEl = document.getElementById('chart-muestras-pozo');
+function updateMuestrasJsonRepresentativa(muestraId, representativa) {
+  if (!muestraId) return;
 
-    if (!chartEl) return;
+  const rows = getMuestrasJsonRows();
 
-    if (typeof window.ApexCharts === 'undefined') {
-      renderChartMessage(chartEl, 'ApexCharts no está cargado en el layout.');
-      return;
-    }
+  if (!rows.length) return;
 
-    renderMuestrasChart();
-  }
+  const updatedRows = rows.map((row) => {
+    const id = getMuestraId(row);
 
-  function renderMuestrasChart() {
-    const chartEl = document.getElementById('chart-muestras-pozo');
+    if (String(id) !== String(muestraId)) return row;
 
-    if (!chartEl) return;
-
-    if (typeof window.ApexCharts === 'undefined') {
-      renderChartMessage(chartEl, 'ApexCharts no está cargado en el layout.');
-      return;
-    }
-
-    const rows = getMuestrasRowsFromTable()
-      .filter((row) => row.representativa && row.fecha && Number.isFinite(row.ays))
-      .sort((a, b) => {
-        const dateA = parseDateKey(a.fecha)?.getTime() || 0;
-        const dateB = parseDateKey(b.fecha)?.getTime() || 0;
-
-        return dateA - dateB;
-      });
-
-    if (!rows.length) {
-      renderChartMessage(
-        chartEl,
-        'Marca una o más muestras como representativas para graficar % AyS.'
-      );
-      destroyChart('muestras');
-      return;
-    }
-
-    const data = rows.map((row) => ({
-      x: normalizeDateLabel(row.fecha),
-      y: row.ays
-    }));
-
-    chartEl.innerHTML = '';
-
-    const theme = getChartTheme();
-
-    const options = {
-      chart: {
-        id: 'muestras',
-        type: 'line',
-        height: 320,
-        foreColor: theme.foreColor,
-        background: 'transparent',
-        zoom: { enabled: true },
-        toolbar: { show: true }
-      },
-      theme: {
-        mode: theme.mode
-      },
-      series: [
-        {
-          name: '% AyS',
-          data
-        }
-      ],
-      stroke: {
-        curve: 'smooth',
-        width: 3
-      },
-      markers: {
-        size: 5
-      },
-      grid: {
-        borderColor: theme.gridColor,
-        strokeDashArray: 4
-      },
-      xaxis: {
-        type: 'category',
-        labels: {
-          rotate: -45,
-          style: {
-            colors: theme.foreColor
-          }
-        },
-        axisBorder: {
-          color: theme.gridColor
-        },
-        axisTicks: {
-          color: theme.gridColor
-        }
-      },
-      yaxis: {
-        title: {
-          text: '% AyS',
-          style: {
-            color: theme.foreColor
-          }
-        },
-        labels: {
-          style: {
-            colors: theme.foreColor
-          },
-          formatter: (value) => {
-            const number = Number(value);
-            return Number.isFinite(number) ? `${number.toFixed(1)}%` : value;
-          }
-        }
-      },
-      tooltip: {
-        theme: theme.mode,
-        shared: true,
-        intersect: false,
-        y: {
-          formatter: (value) => {
-            const number = Number(value);
-            return Number.isFinite(number) ? `${number.toFixed(2)}%` : value;
-          }
-        }
-      },
-      legend: {
-        position: 'top',
-        horizontalAlign: 'left',
-        labels: {
-          colors: theme.foreColor
-        }
-      },
-      noData: {
-        text: 'Sin datos',
-        style: {
-          color: theme.foreColor
-        }
-      }
+    return {
+      ...row,
+      representativa
     };
+  });
 
-    destroyChart('muestras');
+  setMuestrasJsonRows(updatedRows);
+}
 
-    muestrasChart = new window.ApexCharts(chartEl, options);
-    muestrasChart.render();
-  }
+function getMuestraId(row) {
+  if (!row) return '';
 
-  function getMuestrasRowsFromTable() {
-    return Array.from(document.querySelectorAll('[data-muestra-representativa]'))
-      .map((input) => ({
-        id: input.dataset.muestraId,
-        pozoId: input.dataset.pozoId,
-        fecha: input.dataset.fecha,
-        ays: parseChartNumber(input.dataset.ays),
-        representativa: input.checked
-      }))
-      .filter((row) => row.id && row.fecha);
-  }
+  return (
+    row.id ??
+    row.id_muestra ??
+    row.id_muestras ??
+    row.muestra_id ??
+    ''
+  );
+}
+
+function normalizeBoolean(value) {
+  if (value === true || value === 1) return true;
+  if (value === false || value === 0) return false;
+
+  const text = String(value ?? '')
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+
+  return (
+    text === '1' ||
+    text === 'true' ||
+    text === 'si' ||
+    text === 'yes' ||
+    text === 'representativa'
+  );
+}
+
+function getDateKey(value) {
+  const date = parseDateKey(value);
+
+  if (!date) return '';
+
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+
+  return `${year}-${month}-${day}`;
+}
 
   function initSurveyTable() {
     const selector = '#tabla-survey-pozo';
