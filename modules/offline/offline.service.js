@@ -120,14 +120,21 @@ const CHUNK_STORE_CONFIG = {
     pageSize: 1000,
     countSql: `
       SELECT COUNT(*) AS total
-      FROM survey
-      WHERE activo = 1
+      FROM pozo_survey ps
+      INNER JOIN pozos p ON p.id = ps.id_pozo
     `,
     dataSql: `
-      SELECT *
-      FROM survey
-      WHERE activo = 1
-      ORDER BY id_pozo ASC, COALESCE(fila_orden, orden, 0) ASC, id ASC
+      SELECT
+        ps.*,
+        ps.id_pozo AS pozo_id,
+        p.codigo AS codigo_pozo
+      FROM pozo_survey ps
+      INNER JOIN pozos p ON p.id = ps.id_pozo
+      ORDER BY
+        ps.id_pozo ASC,
+        COALESCE(ps.fila_orden, 0) ASC,
+        COALESCE(ps.md, 0) ASC,
+        ps.id ASC
       LIMIT ? OFFSET ?
     `
   }
@@ -191,6 +198,25 @@ function sortByDateDesc(fieldName = 'fecha') {
   };
 }
 
+function sortSurveyRows(a, b) {
+  const pozoA = Number(a?.id_pozo ?? a?.pozo_id ?? 0);
+  const pozoB = Number(b?.id_pozo ?? b?.pozo_id ?? 0);
+
+  if (pozoA !== pozoB) return pozoA - pozoB;
+
+  const orderA = Number(a?.fila_orden ?? a?.orden ?? 0);
+  const orderB = Number(b?.fila_orden ?? b?.orden ?? 0);
+
+  if (orderA !== orderB) return orderA - orderB;
+
+  const mdA = Number(a?.md ?? 0);
+  const mdB = Number(b?.md ?? 0);
+
+  if (mdA !== mdB) return mdA - mdB;
+
+  return Number(a?.id || 0) - Number(b?.id || 0);
+}
+
 function getLatest(rows = []) {
   return Array.isArray(rows) && rows.length ? rows[0] : null;
 }
@@ -234,6 +260,10 @@ function buildOfflineSummary({
     .filter((detalle) => !detalle.bombas?.length)
     .map((detalle) => detalle.pozo?.codigo || detalle.id);
 
+  const pozosSinSurvey = detalles
+    .filter((detalle) => !detalle.survey?.length)
+    .map((detalle) => detalle.pozo?.codigo || detalle.id);
+
   return {
     totals: {
       pozos: pozos.length,
@@ -257,7 +287,8 @@ function buildOfflineSummary({
     samples: {
       pozosSinParametros: pozosSinParametros.slice(0, 20),
       pozosSinNiveles: pozosSinNiveles.slice(0, 20),
-      pozosSinBombas: pozosSinBombas.slice(0, 20)
+      pozosSinBombas: pozosSinBombas.slice(0, 20),
+      pozosSinSurvey: pozosSinSurvey.slice(0, 20)
     }
   };
 }
@@ -485,10 +516,17 @@ async function buildOfflineSnapshot(currentUser) {
     ),
     safeQuery(
       `
-        SELECT *
-        FROM survey
-        WHERE activo = 1
-        ORDER BY id DESC
+        SELECT
+          ps.*,
+          ps.id_pozo AS pozo_id,
+          p.codigo AS codigo_pozo
+        FROM pozo_survey ps
+        INNER JOIN pozos p ON p.id = ps.id_pozo
+        ORDER BY
+          ps.id_pozo ASC,
+          COALESCE(ps.fila_orden, 0) ASC,
+          COALESCE(ps.md, 0) ASC,
+          ps.id ASC
       `,
       [],
       []
@@ -499,17 +537,7 @@ async function buildOfflineSnapshot(currentUser) {
   const niveles = nivelesRaw.sort(sortByDateDesc('fecha'));
   const muestras = muestrasRaw.sort(sortByDateDesc('fecha'));
   const bombas = bombasRaw.sort(sortByDateDesc('fecha_inst'));
-  const survey = surveyRaw.sort((a, b) => {
-    const pozoA = Number(a.id_pozo || 0);
-    const pozoB = Number(b.id_pozo || 0);
-
-    if (pozoA !== pozoB) return pozoA - pozoB;
-
-    const orderA = Number(a.fila_orden ?? a.orden ?? 0);
-    const orderB = Number(b.fila_orden ?? b.orden ?? 0);
-
-    return orderA - orderB;
-  });
+  const survey = surveyRaw.sort(sortSurveyRows);
 
   const parametrosByPozo = groupRowsByPozoId(parametros);
   const nivelesByPozo = groupRowsByPozoId(niveles);

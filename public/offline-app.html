@@ -22,8 +22,8 @@
     })();
   </script>
 
-  <link rel="stylesheet" href="/css/tailwind.css?v=20260522-03" />
-  <link rel="stylesheet" href="/css/app.css?v=20260522-03" />
+  <link rel="stylesheet" href="/css/tailwind.css?v=20260522-04" />
+  <link rel="stylesheet" href="/css/app.css?v=20260522-04" />
 
   <!-- Librerías necesarias para que la ficha offline se comporte igual que online -->
   <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
@@ -207,7 +207,7 @@
 
   <script>
     window.PETRO_OFFLINE_BOOT = {
-      version: '20260522-03',
+      version: '20260522-04',
       requestedPath: window.location.pathname,
       requestedSearch: window.location.search,
       startedAt: new Date().toISOString()
@@ -256,17 +256,17 @@
   </script>
 
   <!-- Orden crítico: DB -> Store -> Sync -> detalle online -> shell offline -->
-  <script src="/js/offline/db.js?v=20260522-03"></script>
-  <script src="/js/offline/store.js?v=20260522-03"></script>
-  <script src="/js/offline/sync.js?v=20260522-03"></script>
+  <script src="/js/offline/db.js?v=20260522-04"></script>
+  <script src="/js/offline/store.js?v=20260522-04"></script>
+  <script src="/js/offline/sync.js?v=20260522-04"></script>
 
   <!-- Necesario para tabs, modales, DataTables y gráficas del detalle -->
-  <script src="/js/modules/pozo-detalle.js?v=20260522-03"></script>
+  <script src="/js/modules/pozo-detalle.js?v=20260522-04"></script>
 
   <!-- Shell que debe reconstruir /pozos/:id desde IndexedDB -->
-  <script src="/js/offline/app-shell.js?v=20260522-03"></script>
+  <script src="/js/offline/app-shell.js?v=20260522-04"></script>
 
-  <script src="/js/sw-register.js?v=20260522-03"></script>
+  <script src="/js/sw-register.js?v=20260522-04"></script>
 </body>
 
 </html>

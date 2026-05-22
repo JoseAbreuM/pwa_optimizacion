@@ -376,7 +376,7 @@
           </div>
 
           <div class="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700">
-            <table class="min-w-[900px] w-full text-left text-sm text-slate-600 dark:text-slate-300">
+            <table id="offline-tabla-pozos" class="min-w-[900px] w-full text-left text-sm text-slate-600 dark:text-slate-300">
               <thead class="bg-slate-50 text-xs uppercase text-slate-500 dark:bg-slate-800 dark:text-slate-400">
                 <tr>
                   <th class="px-4 py-3">Pozo</th>
@@ -403,8 +403,58 @@
       `;
 
       bindPozosEvents();
+      initOfflinePozosDataTable();
     } catch (error) {
       handleRenderError(error, 'No se pudo cargar la lista de pozos offline.');
+    }
+  }
+
+  function initOfflinePozosDataTable() {
+    const tableEl = document.getElementById('offline-tabla-pozos');
+    if (!tableEl) return;
+
+    try {
+      if (window.DataTable) {
+        if (window.DataTable.isDataTable?.('#offline-tabla-pozos')) {
+          return;
+        }
+
+        new window.DataTable('#offline-tabla-pozos', {
+          pageLength: 25,
+          lengthMenu: [10, 25, 50, 100],
+          searchable: true,
+          sortable: true,
+          labels: {
+            placeholder: 'Buscar...',
+            searchTitle: 'Buscar en la tabla',
+            pageTitle: 'Página {page}',
+            perPage: 'registros por página',
+            noRows: 'No se encontraron pozos',
+            info: 'Mostrando {start} a {end} de {rows} registros'
+          }
+        });
+
+        return;
+      }
+
+      if (window.simpleDatatables?.DataTable) {
+        new window.simpleDatatables.DataTable(tableEl, {
+          searchable: true,
+          sortable: true,
+          perPage: 25,
+          perPageSelect: [10, 25, 50, 100],
+          labels: {
+            placeholder: 'Buscar...',
+            searchTitle: 'Buscar en la tabla',
+            pageTitle: 'Página {page}',
+            perPage: 'registros por página',
+            noRows: 'No se encontraron pozos',
+            info: 'Mostrando {start} a {end} de {rows} registros'
+          }
+        });
+      }
+    } catch (error) {
+      console.warn('[OfflineShell] No se pudo inicializar DataTable offline:', error);
     }
   }
 
@@ -590,6 +640,129 @@
     });
   }
 
+  function injectOfflineDetailStyles() {
+    if (document.getElementById('offline-detail-dark-styles')) return;
+
+    const style = document.createElement('style');
+    style.id = 'offline-detail-dark-styles';
+
+    style.textContent = `
+      html.dark [data-offline-pozo-detail="true"] {
+        color: rgb(226 232 240);
+      }
+
+      html.dark [data-offline-pozo-detail="true"] .bg-white {
+        background-color: rgb(15 23 42);
+      }
+
+      html.dark [data-offline-pozo-detail="true"] .bg-slate-50,
+      html.dark [data-offline-pozo-detail="true"] .bg-slate-100\/80 {
+        background-color: rgb(30 41 59);
+      }
+
+      html.dark [data-offline-pozo-detail="true"] .text-slate-900,
+      html.dark [data-offline-pozo-detail="true"] .text-slate-800,
+      html.dark [data-offline-pozo-detail="true"] .text-slate-700 {
+        color: rgb(241 245 249);
+      }
+
+      html.dark [data-offline-pozo-detail="true"] .text-slate-600,
+      html.dark [data-offline-pozo-detail="true"] .text-slate-500 {
+        color: rgb(148 163 184);
+      }
+
+      html.dark [data-offline-pozo-detail="true"] .border-slate-100,
+      html.dark [data-offline-pozo-detail="true"] .border-slate-200,
+      html.dark [data-offline-pozo-detail="true"] .border-slate-300 {
+        border-color: rgb(51 65 85);
+      }
+
+      html.dark [data-offline-pozo-detail="true"] input,
+      html.dark [data-offline-pozo-detail="true"] select,
+      html.dark [data-offline-pozo-detail="true"] textarea {
+        border-color: rgb(71 85 105);
+        background-color: rgb(15 23 42);
+        color: rgb(226 232 240);
+      }
+
+      html.dark [data-offline-pozo-detail="true"] table {
+        color: rgb(203 213 225);
+      }
+
+      html.dark [data-offline-pozo-detail="true"] thead {
+        background-color: rgb(30 41 59);
+        color: rgb(226 232 240);
+      }
+
+      html.dark [data-offline-pozo-detail="true"] tbody tr {
+        border-color: rgb(51 65 85);
+      }
+
+      html.dark [data-offline-pozo-detail="true"] tbody tr:hover {
+        background-color: rgba(51, 65, 85, 0.75);
+      }
+
+      html.dark [data-offline-pozo-detail="true"] .dt-container,
+      html.dark [data-offline-pozo-detail="true"] .dataTables_wrapper,
+      html.dark #offline-tabla-pozos_wrapper,
+      html.dark .dt-container {
+        color: rgb(203 213 225);
+      }
+
+      html.dark [data-offline-pozo-detail="true"] .dt-container input,
+      html.dark [data-offline-pozo-detail="true"] .dt-container select,
+      html.dark [data-offline-pozo-detail="true"] .dataTables_wrapper input,
+      html.dark [data-offline-pozo-detail="true"] .dataTables_wrapper select,
+      html.dark .dt-container input,
+      html.dark .dt-container select {
+        border-color: rgb(71 85 105);
+        background-color: rgb(15 23 42);
+        color: rgb(226 232 240);
+      }
+
+      html.dark [data-offline-pozo-detail="true"] .dt-container .dt-paging button,
+      html.dark [data-offline-pozo-detail="true"] .dataTables_wrapper .paginate_button,
+      html.dark .dt-container .dt-paging button {
+        border-color: rgb(71 85 105) !important;
+        background: rgb(15 23 42) !important;
+        color: rgb(226 232 240) !important;
+      }
+
+      html.dark [data-offline-pozo-detail="true"] .dt-container .dt-paging button:hover,
+      html.dark [data-offline-pozo-detail="true"] .dataTables_wrapper .paginate_button:hover,
+      html.dark .dt-container .dt-paging button:hover {
+        background: rgb(30 41 59) !important;
+        color: rgb(255 255 255) !important;
+      }
+
+      html.dark [data-offline-pozo-detail="true"] .apexcharts-canvas,
+      html.dark [data-offline-pozo-detail="true"] .apexcharts-svg {
+        background: transparent !important;
+      }
+
+      html.dark [data-offline-pozo-detail="true"] .apexcharts-text,
+      html.dark [data-offline-pozo-detail="true"] .apexcharts-xaxis-label,
+      html.dark [data-offline-pozo-detail="true"] .apexcharts-yaxis-label,
+      html.dark [data-offline-pozo-detail="true"] .apexcharts-legend-text {
+        fill: rgb(203 213 225) !important;
+        color: rgb(203 213 225) !important;
+      }
+
+      html.dark [data-offline-pozo-detail="true"] .apexcharts-gridline {
+        stroke: rgb(51 65 85) !important;
+      }
+
+      html.dark [data-offline-pozo-detail="true"] .apexcharts-tooltip,
+      html.dark [data-offline-pozo-detail="true"] .apexcharts-tooltip-title {
+        border-color: rgb(51 65 85) !important;
+        background-color: rgb(15 23 42) !important;
+        color: rgb(226 232 240) !important;
+      }
+    `;
+
+    document.head.appendChild(style);
+  }
+
   function renderPozoDetalleShell(data, idPozo) {
     const pozo = data.pozo || {};
     const codigoPozo = pozo.codigo || pozo.nombre || `Pozo ${idPozo}`;
@@ -598,6 +771,7 @@
     const velocidades = data.velocidades || {};
 
     setText('offline-page-title', codigoPozo);
+    injectOfflineDetailStyles();
 
     els.view.innerHTML = `
       <section class="space-y-6" data-offline-pozo-detail="true">
