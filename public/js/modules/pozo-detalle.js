@@ -7,8 +7,11 @@
 
   let activeModalId = null;
   let modalHistoryPushed = false;
+  let globalModalEventsBound = false;
 
   function init() {
+    destroyAllCharts();
+
     initTabs();
     initModals();
     initDetalleTables();
@@ -21,6 +24,23 @@
     initMuestrasTable();
     initMuestrasChart();
     initChartExports();
+    initOfflineBackLinks();
+    initPlaceholderActions();
+  }
+
+  function reinit() {
+    init();
+  }
+
+  function bindOnce(element, key, handler, eventName = 'click') {
+    if (!element) return;
+
+    const bindKey = `pozoBound${key}`;
+
+    if (element.dataset[bindKey] === 'true') return;
+
+    element.addEventListener(eventName, handler);
+    element.dataset[bindKey] = 'true';
   }
 
   function initTabs() {
@@ -30,7 +50,7 @@
     if (!buttons.length || !panels.length) return;
 
     buttons.forEach((button) => {
-      button.addEventListener('click', () => {
+      bindOnce(button, 'Tab', () => {
         const targetId = button.dataset.tabTarget;
         if (!targetId) return;
 
@@ -115,7 +135,7 @@
 
   function initModals() {
     document.querySelectorAll('[data-pozo-open-modal]').forEach((button) => {
-      button.addEventListener('click', () => {
+      bindOnce(button, 'OpenModal', () => {
         openModal(button.dataset.pozoOpenModal, {
           pushHistory: true
         });
@@ -123,7 +143,7 @@
     });
 
     document.querySelectorAll('[data-pozo-close-modal]').forEach((button) => {
-      button.addEventListener('click', () => {
+      bindOnce(button, 'CloseModal', () => {
         closeModal(button.dataset.pozoCloseModal, {
           goBack: true
         });
@@ -131,7 +151,7 @@
     });
 
     document.querySelectorAll('[role="dialog"]').forEach((modal) => {
-      modal.addEventListener('click', (event) => {
+      bindOnce(modal, 'Backdrop', (event) => {
         const clickedBackdrop = event.target === modal;
         const clickedOuterWrapper =
           event.target?.dataset?.pozoModalBackdrop === 'true';
@@ -144,26 +164,30 @@
       });
     });
 
-    document.addEventListener('keydown', (event) => {
-      if (event.key !== 'Escape') return;
+    if (!globalModalEventsBound) {
+      document.addEventListener('keydown', (event) => {
+        if (event.key !== 'Escape') return;
 
-      const openModalEl = getTopOpenModal();
-      if (!openModalEl) return;
+        const openModalEl = getTopOpenModal();
+        if (!openModalEl) return;
 
-      closeModal(openModalEl.id, {
-        goBack: true
+        closeModal(openModalEl.id, {
+          goBack: true
+        });
       });
-    });
 
-    window.addEventListener('popstate', () => {
-      if (!activeModalId) return;
+      window.addEventListener('popstate', () => {
+        if (!activeModalId) return;
 
-      const modalId = activeModalId;
+        const modalId = activeModalId;
 
-      closeModal(modalId, {
-        fromPopState: true
+        closeModal(modalId, {
+          fromPopState: true
+        });
       });
-    });
+
+      globalModalEventsBound = true;
+    }
   }
 
   function openModal(modalId, options = {}) {
@@ -338,7 +362,7 @@
       const label = input.closest('label');
       const text = label?.querySelector('span:last-child');
 
-      input.addEventListener('change', async () => {
+      bindOnce(input, 'MuestraRepresentativa', async () => {
         const previousValue = !input.checked;
 
         updateMuestraSwitchLabel(input, text);
@@ -354,7 +378,7 @@
           console.error(error);
           showToast(error.message || 'No se pudo actualizar la muestra.', 'error');
         }
-      });
+      }, 'change');
     });
   }
 
@@ -740,7 +764,7 @@
     const form = document.getElementById('form-survey-pozo');
     if (!form) return;
 
-    form.addEventListener('submit', async (event) => {
+    bindOnce(form, 'SurveySubmit', async (event) => {
       event.preventDefault();
 
       const pozoId = form.dataset.pozoId;
@@ -766,6 +790,12 @@
           submitButton.textContent = 'Guardando...';
         }
 
+        if (!navigator.onLine) {
+          await enqueueOfflineSurveyUpdate(pozoId, surveyText);
+          showSurveyMessage('Sin conexión: survey guardado para sincronizar.', 'success');
+          return;
+        }
+
         const response = await fetch(`/pozos/${pozoId}/survey`, {
           method: 'POST',
           headers: {
@@ -776,7 +806,7 @@
           })
         });
 
-        const result = await response.json();
+        const result = await response.json().catch(() => ({}));
 
         if (!response.ok || !result.ok) {
           throw new Error(result.message || 'No se pudo guardar el survey.');
@@ -788,12 +818,37 @@
           window.location.reload();
         }, 700);
       } catch (error) {
+        if (!navigator.onLine || error instanceof TypeError) {
+          try {
+            await enqueueOfflineSurveyUpdate(pozoId, surveyText);
+            showSurveyMessage('Sin conexión: survey guardado para sincronizar.', 'success');
+            return;
+          } catch (queueError) {
+            showSurveyMessage(queueError.message || 'No se pudo guardar el survey offline.', 'error');
+            return;
+          }
+        }
+
         showSurveyMessage(error.message || 'No se pudo guardar el survey.', 'error');
       } finally {
         if (submitButton) {
           submitButton.disabled = false;
           submitButton.textContent = originalText || 'Guardar survey';
         }
+      }
+    }, 'submit');
+  }
+
+  async function enqueueOfflineSurveyUpdate(pozoId, surveyText) {
+    if (!window.PetroSync || typeof window.PetroSync.enqueueOperation !== 'function') {
+      throw new Error('Funcionalidad offline no disponible.');
+    }
+
+    await window.PetroSync.enqueueOperation({
+      type: 'SURVEY_UPDATE',
+      payload: {
+        id_pozo: Number(pozoId),
+        survey_text: surveyText
       }
     });
   }
@@ -821,6 +876,7 @@
     }
 
     box.textContent = message;
+    box.classList.remove('hidden');
   }
 
   function initSurveyChart() {
@@ -838,6 +894,7 @@
 
     if (!Array.isArray(survey) || !survey.length) {
       renderChartMessage(chartEl, 'Gráfica de survey pendiente.');
+      destroyChart('survey');
       return;
     }
 
@@ -853,6 +910,7 @@
 
     if (!seriesData.length) {
       renderChartMessage(chartEl, 'El survey no tiene X Offset / Y Offset válidos para graficar.');
+      destroyChart('survey');
       return;
     }
 
@@ -921,6 +979,8 @@
       }
     };
 
+    destroyChart('survey');
+
     surveyChart = new window.ApexCharts(chartEl, options);
     surveyChart.render();
   }
@@ -951,13 +1011,11 @@
     };
 
     document.querySelectorAll('input[name="parametro-chart-field"]').forEach((input) => {
-      input.addEventListener('change', render);
+      bindOnce(input, 'ParametrosChart', render, 'change');
     });
 
     const periodoSelect = document.getElementById('parametros-periodo');
-    if (periodoSelect) {
-      periodoSelect.addEventListener('change', render);
-    }
+    bindOnce(periodoSelect, 'ParametrosPeriodo', render, 'change');
 
     render();
   }
@@ -994,13 +1052,11 @@
     };
 
     document.querySelectorAll('input[name="nivel-chart-field"]').forEach((input) => {
-      input.addEventListener('change', render);
+      bindOnce(input, 'NivelesChart', render, 'change');
     });
 
     const limiteSelect = document.getElementById('niveles-limite');
-    if (limiteSelect) {
-      limiteSelect.addEventListener('change', render);
-    }
+    bindOnce(limiteSelect, 'NivelesLimite', render, 'change');
 
     render();
   }
@@ -1037,9 +1093,7 @@
       renderComparativoChartByRow(chartEl, selectedRow);
     };
 
-    if (fechaSelect) {
-      fechaSelect.addEventListener('change', render);
-    }
+    bindOnce(fechaSelect, 'ComparativoFecha', render, 'change');
 
     render();
   }
@@ -1416,15 +1470,28 @@
       comparativoChart = null;
     }
 
+    if (chartRefName === 'survey' && surveyChart) {
+      surveyChart.destroy();
+      surveyChart = null;
+    }
+
     if (chartRefName === 'muestras' && muestrasChart) {
       muestrasChart.destroy();
       muestrasChart = null;
     }
   }
 
+  function destroyAllCharts() {
+    destroyChart('parametros');
+    destroyChart('niveles');
+    destroyChart('comparativo');
+    destroyChart('survey');
+    destroyChart('muestras');
+  }
+
   function initChartExports() {
     document.querySelectorAll('[data-export-chart]').forEach((button) => {
-      button.addEventListener('click', async () => {
+      bindOnce(button, 'ExportChart', async () => {
         const chartId = button.dataset.exportChart;
         const exportName = button.dataset.exportName || 'grafica-pozo';
         const exportKind = button.dataset.exportKind || detectExportKind(chartId, exportName);
@@ -1860,8 +1927,68 @@
     };
   }
 
+  function initOfflineBackLinks() {
+    document.querySelectorAll('[data-pozo-back="pozos"]').forEach((link) => {
+      bindOnce(link, 'BackPozos', (event) => {
+        if (!window.PetroOfflineStore) return;
+
+        event.preventDefault();
+
+        if (window.PetroOfflineShell && typeof window.PetroOfflineShell.goToPozos === 'function') {
+          window.PetroOfflineShell.goToPozos();
+          return;
+        }
+
+        window.location.href = '/pozos';
+      });
+    });
+  }
+
+  function initPlaceholderActions() {
+    document.querySelectorAll('[data-pozo-action]').forEach((button) => {
+      bindOnce(button, 'ActionPlaceholder', () => {
+        const action = button.dataset.pozoAction;
+
+        if (action === 'editar' || action === 'editar-datos') {
+          showToast('La edición de datos del pozo se conectará en la siguiente fase.', 'info');
+          return;
+        }
+
+        if (action === 'registrar-dato') {
+          showToast('El registro de datos se conectará con la cola offline en la siguiente fase.', 'info');
+          return;
+        }
+
+        if (action === 'editar-completacion') {
+          showToast('La edición de completación se conectará en la siguiente fase.', 'info');
+          return;
+        }
+
+        if (action === 'subir-diagrama') {
+          showToast('La carga/cache de diagramas PDF se conectará en la siguiente fase.', 'info');
+          return;
+        }
+
+        if (action === 'nueva-muestra' || action === 'editar-muestra') {
+          showToast('El formulario de muestras se conectará en la siguiente fase.', 'info');
+        }
+      });
+    });
+  }
+
+  window.PetroPozoDetalle = {
+    init,
+    reinit,
+    destroyCharts: destroyAllCharts,
+    openModal,
+    closeModal,
+    renderMuestrasChart
+  };
+
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
+    document.addEventListener('DOMContentLoaded', init, {
+      once: true
+    });
   } else {
     init();
   }

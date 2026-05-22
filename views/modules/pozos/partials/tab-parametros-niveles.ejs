@@ -1,18 +1,20 @@
-<% var parametros=[]; if (typeof historialParametros !=='undefined' && Array.isArray(historialParametros)) {
-  parametros=historialParametros; } else if (typeof timeline !=='undefined' && timeline &&
-  Array.isArray(timeline.parametros)) { parametros=timeline.parametros; } var niveles=[]; if (typeof historialNiveles
-  !=='undefined' && Array.isArray(historialNiveles)) { niveles=historialNiveles; } else if (typeof timeline
-  !=='undefined' && timeline && Array.isArray(timeline.niveles)) { niveles=timeline.niveles; } var comparativo=[]; if
-  (typeof comparativoParametrosNiveles !=='undefined' && Array.isArray(comparativoParametrosNiveles)) {
-  comparativo=comparativoParametrosNiveles; } else if (typeof timeline !=='undefined' && timeline &&
-  Array.isArray(timeline.comparativo)) { comparativo=timeline.comparativo; } var ultimoComparativo=comparativo &&
-  comparativo.length ? comparativo[0] : null; var
+<% const pozoSafe=typeof pozo !=='undefined' && pozo ? pozo : {}; const codigoPozo=pozoSafe.codigo || pozoSafe.nombre
+  || 'pozo' ; const timelineSafe=typeof timeline !=='undefined' && timeline ? timeline : {}; const parametros=typeof
+  historialParametros !=='undefined' && Array.isArray(historialParametros) ? historialParametros : (
+  Array.isArray(timelineSafe.parametros) ? timelineSafe.parametros : [] ); const niveles=typeof historialNiveles
+  !=='undefined' && Array.isArray(historialNiveles) ? historialNiveles : ( Array.isArray(timelineSafe.niveles) ?
+  timelineSafe.niveles : [] ); const comparativo=typeof comparativoParametrosNiveles !=='undefined' &&
+  Array.isArray(comparativoParametrosNiveles) ? comparativoParametrosNiveles : ( Array.isArray(timelineSafe.comparativo)
+  ? timelineSafe.comparativo : [] ); const ultimoParametroSafe=typeof ultimoParametro !=='undefined' && ultimoParametro
+  ? ultimoParametro : ( parametros.length ? parametros[0] : null ); const ultimoNivelSafe=typeof ultimoNivel
+  !=='undefined' && ultimoNivel ? ultimoNivel : ( niveles.length ? niveles[0] : null ); const
+  ultimoComparativo=comparativo.length ? comparativo[0] : null; const
   cardClass='min-w-0 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 shadow-sm dark:border-slate-700 dark:bg-slate-800/80'
-  ; var labelClass='truncate text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400' ; var
-  valueClass='mt-0.5 truncate text-sm font-bold text-slate-900 dark:text-white' ; var
+  ; const labelClass='truncate text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400' ;
+  const valueClass='mt-0.5 truncate text-sm font-bold text-slate-900 dark:text-white' ; const
   chipClass='inline-flex min-w-0 items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs shadow-sm dark:border-slate-700 dark:bg-slate-900/80'
-  ; var chipLabelClass='shrink-0 font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400' ; var
-  chipValueClass='min-w-0 truncate text-right font-bold text-slate-900 dark:text-white' ; var
+  ; const chipLabelClass='shrink-0 font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400' ; const
+  chipValueClass='min-w-0 truncate text-right font-bold text-slate-900 dark:text-white' ; const
   checkboxClass='inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-slate-700 shadow-sm transition hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800'
   ; %>
 
@@ -20,8 +22,8 @@
     class="space-y-5 rounded-2xl bg-slate-50 p-3 text-slate-900 dark:bg-slate-950 dark:text-slate-100 sm:p-4">
 
     <!-- =========================================================
-   RESUMEN PARAMETROS COMPACTO
-   ========================================================= -->
+       RESUMEN PARAMETROS COMPACTO
+       ========================================================= -->
     <section
       class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900">
       <div class="border-b border-slate-100 bg-slate-50 px-3 py-2 dark:border-slate-800 dark:bg-slate-800/70">
@@ -51,7 +53,7 @@
       </div>
 
       <div class="p-3">
-        <% if (typeof ultimoParametro !=='undefined' && ultimoParametro) { %>
+        <% if (ultimoParametroSafe) { %>
           <div
             class="flex flex-col gap-3 rounded-xl border border-slate-200 bg-slate-100/80 p-3 dark:border-slate-700 dark:bg-slate-900/80">
 
@@ -59,70 +61,70 @@
               <div class="<%= chipClass %>">
                 <span class="<%= chipLabelClass %>">Fecha</span>
                 <span class="<%= chipValueClass %>">
-                  <%= fallback(formatDate(ultimoParametro.fecha)) %>
+                  <%= fallback(formatDate(ultimoParametroSafe.fecha)) %>
                 </span>
               </div>
 
               <div class="<%= chipClass %>">
                 <span class="<%= chipLabelClass %>">Torque</span>
                 <span class="<%= chipValueClass %>">
-                  <%= fallback(formatNumber(ultimoParametro.torque, 2)) %>
+                  <%= fallback(formatNumber(ultimoParametroSafe.torque, 2)) %>
                 </span>
               </div>
 
               <div class="<%= chipClass %>">
                 <span class="<%= chipLabelClass %>">AMP</span>
                 <span class="<%= chipValueClass %>">
-                  <%= fallback(formatNumber(ultimoParametro.amp, 2)) %>
+                  <%= fallback(formatNumber(ultimoParametroSafe.amp, 2)) %>
                 </span>
               </div>
 
               <div class="<%= chipClass %>">
                 <span class="<%= chipLabelClass %>">Freq</span>
                 <span class="<%= chipValueClass %>">
-                  <%= fallback(formatNumber(ultimoParametro.freq, 2)) %>
+                  <%= fallback(formatNumber(ultimoParametroSafe.freq, 2)) %>
                 </span>
               </div>
 
               <div class="<%= chipClass %>">
                 <span class="<%= chipLabelClass %>">Volts</span>
                 <span class="<%= chipValueClass %>">
-                  <%= fallback(formatNumber(ultimoParametro.volts, 2)) %>
+                  <%= fallback(formatNumber(ultimoParametroSafe.volts, 2)) %>
                 </span>
               </div>
 
               <div class="<%= chipClass %>">
                 <span class="<%= chipLabelClass %>">HP</span>
                 <span class="<%= chipValueClass %>">
-                  <%= fallback(formatNumber(ultimoParametro.hp, 2)) %>
+                  <%= fallback(formatNumber(ultimoParametroSafe.hp, 2)) %>
                 </span>
               </div>
 
               <div class="<%= chipClass %>">
                 <span class="<%= chipLabelClass %>">VO</span>
                 <span class="<%= chipValueClass %>">
-                  <%= fallback(formatNumber(ultimoParametro.vel_operacional, 2)) %>
+                  <%= fallback(formatNumber(ultimoParametroSafe.vel_operacional, 2)) %>
                 </span>
               </div>
 
               <div class="<%= chipClass %>">
                 <span class="<%= chipLabelClass %>">Vel. actual</span>
                 <span class="<%= chipValueClass %>">
-                  <%= fallback(formatNumber(ultimoParametro.vel_actual, 2)) %>
+                  <%= fallback(formatNumber(ultimoParametroSafe.vel_actual, 2)) %>
                 </span>
               </div>
 
               <div class="<%= chipClass %>">
                 <span class="<%= chipLabelClass %>">P. casing</span>
                 <span class="<%= chipValueClass %>">
-                  <%= fallback(formatNumber(ultimoParametro.presion_casing, 2)) %>
+                  <%= fallback(formatNumber(ultimoParametroSafe.presion_casing, 2)) %>
                 </span>
               </div>
 
               <div class="<%= chipClass %>">
                 <span class="<%= chipLabelClass %>">P. tubing</span>
                 <span class="<%= chipValueClass %>">
-                  <%= fallback(formatNumber(ultimoParametro.presion_tubing, 2)) %>
+                  <%= fallback(formatNumber(ultimoParametroSafe.presion_tubing, 2)) %>
                 </span>
               </div>
             </div>
@@ -133,7 +135,8 @@
                 Observación:
               </span>
               <span class="font-medium text-slate-800 dark:text-slate-200">
-                <%= fallback(ultimoParametro.recomendaciones_completas || ultimoParametro.observacion) %>
+                <%= fallback(ultimoParametroSafe.recomendaciones_completas || ultimoParametroSafe.observacion ||
+                  ultimoParametroSafe.recomendacion) %>
               </span>
             </div>
           </div>
@@ -146,8 +149,8 @@
     </section>
 
     <!-- =========================================================
-   GRAFICA PARAMETROS
-   ========================================================= -->
+       GRAFICA PARAMETROS
+       ========================================================= -->
     <section class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900">
       <div class="mb-4 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div>
@@ -170,7 +173,7 @@
           </select>
 
           <button type="button" data-export-chart="chart-parametros-pozo"
-            data-export-name="parametros-<%= pozo.codigo %>" data-export-pozo="<%= pozo.codigo %>"
+            data-export-name="parametros-<%= codigoPozo %>" data-export-pozo="<%= codigoPozo %>"
             data-export-kind="parametros"
             class="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700">
             <i class="fa-solid fa-download"></i>
@@ -226,11 +229,12 @@
         </label>
       </div>
 
-      <script type="application/json" id="parametros-data-json"><%- JSON.stringify(parametros || []) %></script>
+      <script type="application/json"
+        id="parametros-data-json"><%- JSON.stringify(parametros).replace(/</g, '\\u003c') %></script>
 
       <div id="chart-parametros-pozo"
         class="min-h-[320px] rounded-xl border border-dashed border-slate-300 bg-slate-50 p-2 dark:border-slate-600 dark:bg-slate-950/40">
-        <% if (!parametros || !parametros.length) { %>
+        <% if (!parametros.length) { %>
           <div class="flex min-h-[300px] items-center justify-center">
             <p class="text-sm text-slate-500 dark:text-slate-400">
               Gráfica de parámetros pendiente.
@@ -241,8 +245,8 @@
     </section>
 
     <!-- =========================================================
-   RESUMEN NIVELES COMPACTO
-   ========================================================= -->
+       RESUMEN NIVELES COMPACTO
+       ========================================================= -->
     <section
       class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900">
       <div class="border-b border-slate-100 bg-slate-50 px-3 py-2 dark:border-slate-800 dark:bg-slate-800/70">
@@ -272,7 +276,7 @@
       </div>
 
       <div class="p-3">
-        <% if (typeof ultimoNivel !=='undefined' && ultimoNivel) { %>
+        <% if (ultimoNivelSafe) { %>
           <div
             class="flex flex-col gap-3 rounded-xl border border-slate-200 bg-slate-100/80 p-3 dark:border-slate-700 dark:bg-slate-900/80">
 
@@ -280,84 +284,84 @@
               <div class="<%= chipClass %>">
                 <span class="<%= chipLabelClass %>">Fecha</span>
                 <span class="<%= chipValueClass %>">
-                  <%= fallback(formatDate(ultimoNivel.fecha)) %>
+                  <%= fallback(formatDate(ultimoNivelSafe.fecha)) %>
                 </span>
               </div>
 
               <div class="<%= chipClass %>">
                 <span class="<%= chipLabelClass %>">NF pies</span>
                 <span class="<%= chipValueClass %>">
-                  <%= fallback(formatNumber(ultimoNivel.nf_pies, 2)) %>
+                  <%= fallback(formatNumber(ultimoNivelSafe.nf_pies, 2)) %>
                 </span>
               </div>
 
               <div class="<%= chipClass %>">
                 <span class="<%= chipLabelClass %>">SUM</span>
                 <span class="<%= chipValueClass %>">
-                  <%= fallback(formatNumber(ultimoNivel.sumergencia, 2)) %>
+                  <%= fallback(formatNumber(ultimoNivelSafe.sumergencia, 2)) %>
                 </span>
               </div>
 
               <div class="<%= chipClass %>">
                 <span class="<%= chipLabelClass %>">% Liq</span>
                 <span class="<%= chipValueClass %>">
-                  <%= fallback(formatNumber(ultimoNivel.porcentaje_liq, 2)) %>
+                  <%= fallback(formatNumber(ultimoNivelSafe.porcentaje_liq, 2)) %>
                 </span>
               </div>
 
               <div class="<%= chipClass %>">
                 <span class="<%= chipLabelClass %>">PIP</span>
                 <span class="<%= chipValueClass %>">
-                  <%= fallback(formatNumber(ultimoNivel.pip, 2)) %>
+                  <%= fallback(formatNumber(ultimoNivelSafe.pip, 2)) %>
                 </span>
               </div>
 
               <div class="<%= chipClass %>">
                 <span class="<%= chipLabelClass %>">PBHP</span>
                 <span class="<%= chipValueClass %>">
-                  <%= fallback(formatNumber(ultimoNivel.pbhp, 2)) %>
+                  <%= fallback(formatNumber(ultimoNivelSafe.pbhp, 2)) %>
                 </span>
               </div>
 
               <div class="<%= chipClass %>">
                 <span class="<%= chipLabelClass %>">Casing</span>
                 <span class="<%= chipValueClass %>">
-                  <%= fallback(formatNumber(ultimoNivel.presion_casing, 2)) %>
+                  <%= fallback(formatNumber(ultimoNivelSafe.presion_casing, 2)) %>
                 </span>
               </div>
 
               <div class="<%= chipClass %>">
                 <span class="<%= chipLabelClass %>">Tubing</span>
                 <span class="<%= chipValueClass %>">
-                  <%= fallback(formatNumber(ultimoNivel.presion_tubing, 2)) %>
+                  <%= fallback(formatNumber(ultimoNivelSafe.presion_tubing, 2)) %>
                 </span>
               </div>
 
               <div class="<%= chipClass %>">
                 <span class="<%= chipLabelClass %>">RPM</span>
                 <span class="<%= chipValueClass %>">
-                  <%= fallback(formatNumber(ultimoNivel.rpm, 2)) %>
+                  <%= fallback(formatNumber(ultimoNivelSafe.rpm, 2)) %>
                 </span>
               </div>
 
               <div class="<%= chipClass %>">
                 <span class="<%= chipLabelClass %>">Torque</span>
                 <span class="<%= chipValueClass %>">
-                  <%= fallback(formatNumber(ultimoNivel.torque, 2)) %>
+                  <%= fallback(formatNumber(ultimoNivelSafe.torque, 2)) %>
                 </span>
               </div>
 
               <div class="<%= chipClass %>">
                 <span class="<%= chipLabelClass %>">AMP</span>
                 <span class="<%= chipValueClass %>">
-                  <%= fallback(formatNumber(ultimoNivel.amp, 2)) %>
+                  <%= fallback(formatNumber(ultimoNivelSafe.amp, 2)) %>
                 </span>
               </div>
 
               <div class="<%= chipClass %>">
                 <span class="<%= chipLabelClass %>">HP</span>
                 <span class="<%= chipValueClass %>">
-                  <%= fallback(formatNumber(ultimoNivel.hp, 2)) %>
+                  <%= fallback(formatNumber(ultimoNivelSafe.hp, 2)) %>
                 </span>
               </div>
             </div>
@@ -369,7 +373,7 @@
                   Diagnóstico:
                 </span>
                 <span class="font-medium text-slate-800 dark:text-slate-200">
-                  <%= fallback(ultimoNivel.diagnostico) %>
+                  <%= fallback(ultimoNivelSafe.diagnostico) %>
                 </span>
               </div>
 
@@ -379,7 +383,7 @@
                   Recomendación:
                 </span>
                 <span class="font-medium text-slate-800 dark:text-slate-200">
-                  <%= fallback(ultimoNivel.recomendacion_ejecutada || ultimoNivel.recomendacion) %>
+                  <%= fallback(ultimoNivelSafe.recomendacion_ejecutada || ultimoNivelSafe.recomendacion) %>
                 </span>
               </div>
             </div>
@@ -393,8 +397,8 @@
     </section>
 
     <!-- =========================================================
-   GRAFICA NIVELES
-   ========================================================= -->
+       GRAFICA NIVELES
+       ========================================================= -->
     <section class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900">
       <div class="mb-4 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div>
@@ -415,8 +419,8 @@
             <option value="all">Todas</option>
           </select>
 
-          <button type="button" data-export-chart="chart-niveles-pozo" data-export-name="niveles-<%= pozo.codigo %>"
-            data-export-pozo="<%= pozo.codigo %>" data-export-kind="niveles"
+          <button type="button" data-export-chart="chart-niveles-pozo" data-export-name="niveles-<%= codigoPozo %>"
+            data-export-pozo="<%= codigoPozo %>" data-export-kind="niveles"
             class="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-emerald-700">
             <i class="fa-solid fa-download"></i>
             Exportar PNG
@@ -481,11 +485,12 @@
         </label>
       </div>
 
-      <script type="application/json" id="niveles-data-json"><%- JSON.stringify(niveles || []) %></script>
+      <script type="application/json"
+        id="niveles-data-json"><%- JSON.stringify(niveles).replace(/</g, '\\u003c') %></script>
 
       <div id="chart-niveles-pozo"
         class="min-h-[320px] rounded-xl border border-dashed border-slate-300 bg-slate-50 p-2 dark:border-slate-600 dark:bg-slate-950/40">
-        <% if (!niveles || !niveles.length) { %>
+        <% if (!niveles.length) { %>
           <div class="flex min-h-[300px] items-center justify-center">
             <p class="text-sm text-slate-500 dark:text-slate-400">
               Gráfica de niveles pendiente.
@@ -496,8 +501,8 @@
     </section>
 
     <!-- =========================================================
-   COMPARATIVO
-   ========================================================= -->
+       COMPARATIVO
+       ========================================================= -->
     <section class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900">
       <div class="mb-4 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div>
@@ -513,8 +518,8 @@
         <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
           <select id="comparativo-fecha-select"
             class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200">
-            <% if (comparativo && comparativo.length) { %>
-              <% comparativo.forEach(function(row, index) { var fechaComparativo=row.fecha_nivel || row.fecha; var
+            <% if (comparativo.length) { %>
+              <% comparativo.forEach(function(row, index) { const fechaComparativo=row.fecha_nivel || row.fecha; const
                 fechaValue=fechaComparativo ? String(fechaComparativo).slice(0, 10) : '' ; %>
                 <option value="<%= fechaValue %>" <%=index===0 ? 'selected' : '' %>>
                   <%= fallback(formatDate(fechaComparativo)) %>
@@ -532,7 +537,7 @@
           </button>
 
           <button type="button" data-export-chart="chart-comparativa-pozo"
-            data-export-name="comparativo-<%= pozo.codigo %>" data-export-pozo="<%= pozo.codigo %>"
+            data-export-name="comparativo-<%= codigoPozo %>" data-export-pozo="<%= codigoPozo %>"
             data-export-kind="comparativo"
             class="inline-flex items-center justify-center gap-2 rounded-lg bg-violet-600 px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-violet-700">
             <i class="fa-solid fa-download"></i>
@@ -542,7 +547,7 @@
       </div>
 
       <script type="application/json"
-        id="comparativo-parametros-niveles-json"><%- JSON.stringify(comparativo || []) %></script>
+        id="comparativo-parametros-niveles-json"><%- JSON.stringify(comparativo).replace(/</g, '\\u003c') %></script>
 
       <% if (ultimoComparativo) { %>
         <div class="mb-4 grid gap-2 sm:grid-cols-2 md:grid-cols-4 xl:grid-cols-7">
@@ -613,7 +618,7 @@
 
             <div id="chart-comparativa-pozo"
               class="min-h-[300px] rounded-xl border border-dashed border-slate-300 bg-slate-50 p-2 dark:border-slate-600 dark:bg-slate-950/40">
-              <% if (!comparativo || !comparativo.length) { %>
+              <% if (!comparativo.length) { %>
                 <div class="flex min-h-[260px] items-center justify-center">
                   <p class="text-sm text-slate-500 dark:text-slate-400">
                     Gráfica comparativa pendiente.
@@ -624,23 +629,23 @@
     </section>
 
     <!-- =========================================================
-           MODAL HISTORICO PARAMETROS
-           ========================================================= -->
+       MODAL HISTORICO PARAMETROS
+       ========================================================= -->
     <div id="modal-historial-parametros" class="fixed inset-0 z-50 hidden bg-slate-900/60 p-0 sm:p-4" role="dialog"
       aria-modal="true" aria-labelledby="modal-historial-parametros-title" data-pozo-modal>
 
-      <div class="flex min-h-dvh w-full items-end justify-center sm:min-h-full sm:items-center">
+      <div class="flex min-h-dvh w-full items-end justify-center sm:min-h-full sm:items-center"
+        data-pozo-modal-backdrop="true">
         <div
           class="flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-2xl bg-white shadow-xl dark:bg-slate-900 sm:max-h-[90vh] sm:max-w-7xl sm:rounded-2xl">
 
-          <!-- Header sticky -->
           <div
             class="sticky top-0 z-20 border-b border-slate-200 bg-white px-4 py-3 dark:border-slate-700 dark:bg-slate-900">
             <div class="flex items-start justify-between gap-3">
               <div class="min-w-0">
                 <h3 id="modal-historial-parametros-title"
                   class="truncate text-base font-semibold text-slate-900 dark:text-white sm:text-lg">
-                  Histórico de parámetros - <%= pozo.codigo %>
+                  Histórico de parámetros - <%= codigoPozo %>
                 </h3>
                 <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400 sm:text-sm">
                   Registros operativos asociados a este pozo.
@@ -667,7 +672,6 @@
             </div>
           </div>
 
-          <!-- Body -->
           <div class="min-h-0 flex-1 overflow-y-auto px-3 py-4 sm:p-4">
             <div class="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700">
               <table id="tabla-historial-parametros-pozo"
@@ -691,7 +695,7 @@
                 </thead>
 
                 <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
-                  <% if (parametros && parametros.length) { %>
+                  <% if (parametros.length) { %>
                     <% parametros.forEach(function(row, index) { %>
                       <tr
                         class="<%= index % 2 === 0 ? 'bg-white dark:bg-slate-900' : 'bg-slate-50/80 dark:bg-slate-800/50' %> hover:bg-blue-50 dark:hover:bg-blue-950/30">
@@ -747,7 +751,6 @@
             </div>
           </div>
 
-          <!-- Footer móvil -->
           <div class="border-t border-slate-200 bg-white px-4 py-3 dark:border-slate-700 dark:bg-slate-900 sm:hidden">
             <button type="button" data-pozo-close-modal="modal-historial-parametros"
               class="inline-flex w-full items-center justify-center rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700">
@@ -759,23 +762,23 @@
     </div>
 
     <!-- =========================================================
-           MODAL HISTORICO NIVELES
-           ========================================================= -->
+       MODAL HISTORICO NIVELES
+       ========================================================= -->
     <div id="modal-historial-niveles" class="fixed inset-0 z-50 hidden bg-slate-900/60 p-0 sm:p-4" role="dialog"
       aria-modal="true" aria-labelledby="modal-historial-niveles-title" data-pozo-modal>
 
-      <div class="flex min-h-dvh w-full items-end justify-center sm:min-h-full sm:items-center">
+      <div class="flex min-h-dvh w-full items-end justify-center sm:min-h-full sm:items-center"
+        data-pozo-modal-backdrop="true">
         <div
           class="flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-2xl bg-white shadow-xl dark:bg-slate-900 sm:max-h-[90vh] sm:max-w-7xl sm:rounded-2xl">
 
-          <!-- Header sticky -->
           <div
             class="sticky top-0 z-20 border-b border-slate-200 bg-white px-4 py-3 dark:border-slate-700 dark:bg-slate-900">
             <div class="flex items-start justify-between gap-3">
               <div class="min-w-0">
                 <h3 id="modal-historial-niveles-title"
                   class="truncate text-base font-semibold text-slate-900 dark:text-white sm:text-lg">
-                  Histórico de niveles - <%= pozo.codigo %>
+                  Histórico de niveles - <%= codigoPozo %>
                 </h3>
                 <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400 sm:text-sm">
                   Tomas de nivel asociadas a este pozo.
@@ -802,7 +805,6 @@
             </div>
           </div>
 
-          <!-- Body -->
           <div class="min-h-0 flex-1 overflow-y-auto px-3 py-4 sm:p-4">
             <div class="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700">
               <table id="tabla-historial-niveles-pozo"
@@ -828,7 +830,7 @@
                 </thead>
 
                 <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
-                  <% if (niveles && niveles.length) { %>
+                  <% if (niveles.length) { %>
                     <% niveles.forEach(function(row, index) { %>
                       <tr
                         class="<%= index % 2 === 0 ? 'bg-white dark:bg-slate-900' : 'bg-slate-50/80 dark:bg-slate-800/50' %> hover:bg-emerald-50 dark:hover:bg-emerald-950/30">
@@ -890,7 +892,6 @@
             </div>
           </div>
 
-          <!-- Footer móvil -->
           <div class="border-t border-slate-200 bg-white px-4 py-3 dark:border-slate-700 dark:bg-slate-900 sm:hidden">
             <button type="button" data-pozo-close-modal="modal-historial-niveles"
               class="inline-flex w-full items-center justify-center rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700">
@@ -902,23 +903,23 @@
     </div>
 
     <!-- =========================================================
-           MODAL COMPARATIVO
-           ========================================================= -->
+       MODAL COMPARATIVO
+       ========================================================= -->
     <div id="modal-comparativo-parametros-niveles" class="fixed inset-0 z-50 hidden bg-slate-900/60 p-0 sm:p-4"
       role="dialog" aria-modal="true" aria-labelledby="modal-comparativo-parametros-niveles-title" data-pozo-modal>
 
-      <div class="flex min-h-dvh w-full items-end justify-center sm:min-h-full sm:items-center">
+      <div class="flex min-h-dvh w-full items-end justify-center sm:min-h-full sm:items-center"
+        data-pozo-modal-backdrop="true">
         <div
           class="flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-2xl bg-white shadow-xl dark:bg-slate-900 sm:max-h-[90vh] sm:max-w-7xl sm:rounded-2xl">
 
-          <!-- Header sticky -->
           <div
             class="sticky top-0 z-20 border-b border-slate-200 bg-white px-4 py-3 dark:border-slate-700 dark:bg-slate-900">
             <div class="flex items-start justify-between gap-3">
               <div class="min-w-0">
                 <h3 id="modal-comparativo-parametros-niveles-title"
                   class="truncate text-base font-semibold text-slate-900 dark:text-white sm:text-lg">
-                  Comparativo parámetros vs niveles - <%= pozo.codigo %>
+                  Comparativo parámetros vs niveles - <%= codigoPozo %>
                 </h3>
                 <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400 sm:text-sm">
                   Diferencias entre ambas mediciones usando como base las fechas con toma de nivel.
@@ -945,7 +946,6 @@
             </div>
           </div>
 
-          <!-- Body -->
           <div class="min-h-0 flex-1 overflow-y-auto px-3 py-4 sm:p-4">
             <div class="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700">
               <table id="tabla-comparativo-parametros-niveles"
@@ -977,7 +977,7 @@
                 </thead>
 
                 <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
-                  <% if (comparativo && comparativo.length) { %>
+                  <% if (comparativo.length) { %>
                     <% comparativo.forEach(function(row, index) { %>
                       <tr
                         class="<%= index % 2 === 0 ? 'bg-white dark:bg-slate-900' : 'bg-slate-50/80 dark:bg-slate-800/50' %> hover:bg-violet-50 dark:hover:bg-violet-950/30">
@@ -1055,7 +1055,6 @@
             </div>
           </div>
 
-          <!-- Footer móvil -->
           <div class="border-t border-slate-200 bg-white px-4 py-3 dark:border-slate-700 dark:bg-slate-900 sm:hidden">
             <button type="button" data-pozo-close-modal="modal-comparativo-parametros-niveles"
               class="inline-flex w-full items-center justify-center rounded-full bg-violet-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-violet-700">
@@ -1067,57 +1066,3 @@
     </div>
 
   </div>
-
-  <style>
-    html.dark #tab-parametros-niveles {
-      background-color: rgb(2 6 23);
-      color: rgb(226 232 240);
-    }
-
-    html.dark #tab-parametros-niveles section {
-      background-color: rgb(15 23 42);
-      border-color: rgb(51 65 85);
-    }
-
-    html.dark #tab-parametros-niveles section>div:first-child {
-      background-color: rgba(30, 41, 59, 0.75);
-      border-color: rgb(51 65 85);
-    }
-
-    html.dark #tab-parametros-niveles .bg-white {
-      background-color: rgb(15 23 42);
-    }
-
-    html.dark #tab-parametros-niveles .bg-slate-50 {
-      background-color: rgb(15 23 42);
-    }
-
-    html.dark #tab-parametros-niveles .bg-slate-100\/80 {
-      background-color: rgba(15, 23, 42, 0.85);
-    }
-
-    html.dark #tab-parametros-niveles .text-slate-900 {
-      color: rgb(248 250 252);
-    }
-
-    html.dark #tab-parametros-niveles .text-slate-800 {
-      color: rgb(226 232 240);
-    }
-
-    html.dark #tab-parametros-niveles .text-slate-700 {
-      color: rgb(203 213 225);
-    }
-
-    html.dark #tab-parametros-niveles table,
-    html.dark #tab-parametros-niveles tbody,
-    html.dark #tab-parametros-niveles tr {
-      background-color: transparent;
-    }
-
-    html.dark #tab-parametros-niveles input,
-    html.dark #tab-parametros-niveles select {
-      background-color: rgb(15 23 42);
-      color: rgb(226 232 240);
-      border-color: rgb(71 85 105);
-    }
-  </style>

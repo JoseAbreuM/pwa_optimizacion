@@ -1,127 +1,142 @@
-<!-- Header principal de la ficha -->
-<div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900">
-  <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+<% const pozoSafe=typeof pozo !=='undefined' && pozo ? pozo : {}; const velocidadesSafe=typeof velocidades
+  !=='undefined' && velocidades ? velocidades : {}; const bombaActualSafe=typeof bombaActual !=='undefined' &&
+  bombaActual ? bombaActual : null; const codigoPozo=pozoSafe.codigo || pozoSafe.nombre || '—' ; const
+  estadoPozo=pozoSafe.estado || pozoSafe.estado_nombre || pozoSafe.estado_pozo || 'Sin estado' ; const
+  colorEstado=pozoSafe.color_estado_mapa || pozoSafe.color_estado || '#033F73' ; const areaPozo=pozoSafe.area
+  || 'Sin área' ; const yacimientoPozo=pozoSafe.yacimiento || 'Sin yacimiento' ; const categoriaPozo=pozoSafe.categoria
+  || '—' ; const metodoPozo=pozoSafe.metodo_levantamiento || pozoSafe.metodo || pozoSafe.metodo_nombre || '—' ; const
+  potencialPozo=pozoSafe.potencial !=null ? formatNumber(pozoSafe.potencial, 2) : '—' ; const
+  velocidadOperacional=velocidadesSafe.operacional !=null ? velocidadesSafe.operacional : ( pozoSafe.vel_operacional
+  !=null ? pozoSafe.vel_operacional : pozoSafe.velocidad_operacional ); const velocidadActual=velocidadesSafe.actual
+  !=null ? velocidadesSafe.actual : ( pozoSafe.vel_actual !=null ? pozoSafe.vel_actual : pozoSafe.velocidad_actual );
+  const tvuBomba=bombaActualSafe && bombaActualSafe.tvu_dias !=null ? `${formatNumber(bombaActualSafe.tvu_dias, 0)}
+  días` : '—' ; %>
 
-    <div>
-      <a href="/pozos"
-        class="inline-flex items-center gap-1 text-sm font-semibold text-[#033F73] hover:underline dark:text-sky-300">
-        <i class="fa-solid fa-arrow-left text-xs"></i>
-        Volver a pozos
-      </a>
+  <!-- Header principal de la ficha -->
+  <div id="pozo-detalle-header"
+    class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900"
+    data-pozo-id="<%= pozoSafe.id || '' %>" data-pozo-codigo="<%= codigoPozo %>">
 
-      <div class="mt-2 flex flex-wrap items-center gap-3">
-        <h1 class="text-2xl font-bold text-slate-900 dark:text-white">
-          Pozo <%= pozo.codigo %>
-        </h1>
+    <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
 
-        <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold text-white shadow-sm"
-          style="background-color: <%= pozo.color_estado_mapa || '#033F73' %>">
-          <%= pozo.estado || 'Sin estado' %>
-        </span>
+      <div>
+        <a href="/pozos" data-pozo-back="pozos"
+          class="inline-flex items-center gap-1 text-sm font-semibold text-[#033F73] hover:underline dark:text-sky-300">
+          <i class="fa-solid fa-arrow-left text-xs"></i>
+          Volver a pozos
+        </a>
+
+        <div class="mt-2 flex flex-wrap items-center gap-3">
+          <h1 class="text-2xl font-bold text-slate-900 dark:text-white">
+            Pozo <%= codigoPozo %>
+          </h1>
+
+          <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold text-white shadow-sm"
+            style="background-color: <%= colorEstado %>">
+            <%= estadoPozo %>
+          </span>
+        </div>
+
+        <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">
+          <%= areaPozo %> · <%= yacimientoPozo %>
+        </p>
       </div>
 
-      <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">
-        <%= pozo.area || 'Sin área' %> · <%= pozo.yacimiento || 'Sin yacimiento' %>
-      </p>
+      <!-- Acciones rápidas de la ficha -->
+      <div class="flex flex-wrap items-center gap-2 lg:justify-end">
+
+        <button type="button" id="btn-editar-pozo" data-pozo-action="editar" data-pozo-id="<%= pozoSafe.id || '' %>"
+          class="inline-flex items-center gap-1.5 rounded-full bg-[#033F73] px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-[#022f56] focus:outline-none focus:ring-2 focus:ring-[#033F73]/40 dark:bg-sky-600 dark:hover:bg-sky-500">
+          <i class="fa-solid fa-pen-to-square text-[11px]"></i>
+          Editar
+        </button>
+
+        <button type="button" id="btn-registrar-dato-pozo" data-pozo-action="registrar-dato"
+          data-pozo-id="<%= pozoSafe.id || '' %>"
+          class="inline-flex items-center gap-1.5 rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700">
+          <i class="fa-solid fa-plus text-[11px]"></i>
+          Registrar dato
+        </button>
+
+      </div>
     </div>
 
-    <!-- Acciones rápidas de la ficha -->
-    <div class="flex flex-wrap items-center gap-2 lg:justify-end">
+    <!-- KPIs compactos -->
+    <div class="mt-4 overflow-x-auto">
+      <div class="flex min-w-max gap-2 pb-1">
 
-      <button type="button"
-        class="inline-flex items-center gap-1.5 rounded-full bg-[#033F73] px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-[#022f56] focus:outline-none focus:ring-2 focus:ring-[#033F73]/40 dark:bg-sky-600 dark:hover:bg-sky-500">
-        <i class="fa-solid fa-pen-to-square text-[11px]"></i>
-        Editar
-      </button>
+        <article
+          class="flex min-w-[130px] items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-700 dark:bg-slate-800">
+          <div class="min-w-0">
+            <p class="truncate text-[11px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
+              Categoría
+            </p>
+            <p class="mt-0.5 truncate text-sm font-semibold text-slate-900 dark:text-white">
+              <%= categoriaPozo %>
+            </p>
+          </div>
+        </article>
 
-      <button type="button"
-        class="inline-flex items-center gap-1.5 rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700">
-        <i class="fa-solid fa-plus text-[11px]"></i>
-        Registrar dato
-      </button>
+        <article
+          class="flex min-w-[120px] items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-700 dark:bg-slate-800">
+          <div class="min-w-0">
+            <p class="truncate text-[11px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
+              Potencial
+            </p>
+            <p class="mt-0.5 truncate text-sm font-semibold text-slate-900 dark:text-white">
+              <%= potencialPozo %>
+            </p>
+          </div>
+        </article>
 
-    </div>
-  </div>
+        <article
+          class="flex min-w-[150px] items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-700 dark:bg-slate-800">
+          <div class="min-w-0">
+            <p class="truncate text-[11px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
+              Vel. operacional
+            </p>
+            <p class="mt-0.5 truncate text-sm font-semibold text-slate-900 dark:text-white">
+              <%= velocidadOperacional !=null ? formatNumber(velocidadOperacional, 2) : '—' %>
+            </p>
+          </div>
+        </article>
 
-  <!-- KPIs compactos -->
-  <div class="mt-4 overflow-x-auto">
-    <div class="flex min-w-max gap-2 pb-1">
+        <article
+          class="flex min-w-[130px] items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-700 dark:bg-slate-800">
+          <div class="min-w-0">
+            <p class="truncate text-[11px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
+              Vel. actual
+            </p>
+            <p class="mt-0.5 truncate text-sm font-semibold text-slate-900 dark:text-white">
+              <%= velocidadActual !=null ? formatNumber(velocidadActual, 2) : '—' %>
+            </p>
+          </div>
+        </article>
 
-      <article
-        class="flex min-w-[130px] items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-700 dark:bg-slate-800">
-        <div class="min-w-0">
-          <p class="truncate text-[11px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
-            Categoría
-          </p>
-          <p class="mt-0.5 truncate text-sm font-semibold text-slate-900 dark:text-white">
-            <%= pozo.categoria || '—' %>
-          </p>
-        </div>
-      </article>
+        <article
+          class="flex min-w-[170px] items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-700 dark:bg-slate-800">
+          <div class="min-w-0">
+            <p class="truncate text-[11px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
+              Método
+            </p>
+            <p class="mt-0.5 truncate text-sm font-semibold text-slate-900 dark:text-white">
+              <%= metodoPozo %>
+            </p>
+          </div>
+        </article>
 
-      <article
-        class="flex min-w-[120px] items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-700 dark:bg-slate-800">
-        <div class="min-w-0">
-          <p class="truncate text-[11px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
-            Potencial
-          </p>
-          <p class="mt-0.5 truncate text-sm font-semibold text-slate-900 dark:text-white">
-            <%= pozo.potencial !=null ? formatNumber(pozo.potencial, 2) : '—' %>
-          </p>
-        </div>
-      </article>
+        <article
+          class="flex min-w-[130px] items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-700 dark:bg-slate-800">
+          <div class="min-w-0">
+            <p class="truncate text-[11px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
+              TVU bomba
+            </p>
+            <p class="mt-0.5 truncate text-sm font-semibold text-slate-900 dark:text-white">
+              <%= tvuBomba %>
+            </p>
+          </div>
+        </article>
 
-      <article
-        class="flex min-w-[150px] items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-700 dark:bg-slate-800">
-        <div class="min-w-0">
-          <p class="truncate text-[11px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
-            Vel. operacional
-          </p>
-          <p class="mt-0.5 truncate text-sm font-semibold text-slate-900 dark:text-white">
-            <%= typeof velocidades !=='undefined' && velocidades.operacional !=null ?
-              formatNumber(velocidades.operacional, 2) : '—' %>
-          </p>
-        </div>
-      </article>
-
-      <article
-        class="flex min-w-[130px] items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-700 dark:bg-slate-800">
-        <div class="min-w-0">
-          <p class="truncate text-[11px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
-            Vel. actual
-          </p>
-          <p class="mt-0.5 truncate text-sm font-semibold text-slate-900 dark:text-white">
-            <%= typeof velocidades !=='undefined' && velocidades.actual !=null ? formatNumber(velocidades.actual, 2)
-              : '—' %>
-          </p>
-        </div>
-      </article>
-
-      <article
-        class="flex min-w-[170px] items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-700 dark:bg-slate-800">
-        <div class="min-w-0">
-          <p class="truncate text-[11px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
-            Método
-          </p>
-          <p class="mt-0.5 truncate text-sm font-semibold text-slate-900 dark:text-white">
-            <%= pozo.metodo_levantamiento || '—' %>
-          </p>
-        </div>
-      </article>
-
-      <article
-        class="flex min-w-[130px] items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-700 dark:bg-slate-800">
-        <div class="min-w-0">
-          <p class="truncate text-[11px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
-            TVU bomba
-          </p>
-          <p class="mt-0.5 truncate text-sm font-semibold text-slate-900 dark:text-white">
-            <%= typeof bombaActual !=='undefined' && bombaActual && bombaActual.tvu_dias !=null ?
-              `${formatNumber(bombaActual.tvu_dias, 0)} días` : '—' %>
-          </p>
-        </div>
-      </article>
-
+      </div>
     </div>
   </div>
-</div>

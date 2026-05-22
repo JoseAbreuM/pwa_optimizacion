@@ -1,58 +1,80 @@
 <section class="space-y-6">
 
-  <% const surveySafe=typeof survey !=='undefined' && Array.isArray(survey) ? survey : []; %>
+  <% const surveySafe=typeof survey !=='undefined' && Array.isArray(survey) ? survey : []; const
+    historialBombasSafe=typeof historialBombas !=='undefined' && Array.isArray(historialBombas) ? historialBombas : [];
+    const ultimasMuestrasSafe=typeof ultimasMuestras !=='undefined' && Array.isArray(ultimasMuestras) ? ultimasMuestras
+    : []; const timelineSafe=typeof timeline !=='undefined' && timeline ? timeline : {}; const velocidadesSafe=typeof
+    velocidades !=='undefined' && velocidades ? velocidades : {}; const bombaActualSafe=typeof bombaActual
+    !=='undefined' && bombaActual ? bombaActual : null; const ultimoParametroSafe=typeof ultimoParametro !=='undefined'
+    && ultimoParametro ? ultimoParametro : null; const ultimoNivelSafe=typeof ultimoNivel !=='undefined' && ultimoNivel
+    ? ultimoNivel : null; const pozoDetailPayload={ pozo, velocidades: velocidadesSafe, bombaActual: bombaActualSafe,
+    historialBombas: historialBombasSafe, ultimoParametro: ultimoParametroSafe, ultimoNivel: ultimoNivelSafe, timeline:
+    timelineSafe, ultimasMuestras: ultimasMuestrasSafe, survey: surveySafe, offline: false, source: 'server' }; %>
 
-    <%- include('./partials/detalle-header', { pozo, velocidades, bombaActual }) %>
+    <!-- Root futuro para renderer único online/offline -->
+    <div id="pozo-detail-root" class="space-y-6">
 
-      <!-- Tabs de la ficha -->
-      <div class="border-b border-slate-200 dark:border-slate-700">
-        <ul class="-mb-px flex flex-wrap text-center text-sm font-medium" id="pozo-detail-tabs" role="tablist">
+      <%- include('./partials/detalle-header', { pozo, velocidades: velocidadesSafe, bombaActual: bombaActualSafe }) %>
 
-          <li class="me-2" role="presentation">
-            <button
-              class="pozo-tab-btn active inline-block rounded-t-lg border-b-2 border-[#033F73] p-4 text-[#033F73] dark:border-sky-300 dark:text-sky-300"
-              type="button" data-tab-target="tab-general">
-              Datos generales
-            </button>
-          </li>
+        <!-- Tabs de la ficha -->
+        <div class="border-b border-slate-200 dark:border-slate-700">
+          <ul class="-mb-px flex flex-wrap text-center text-sm font-medium" id="pozo-detail-tabs" role="tablist">
 
-          <li class="me-2" role="presentation">
-            <button
-              class="pozo-tab-btn inline-block rounded-t-lg border-b-2 border-transparent p-4 text-slate-500 hover:border-slate-300 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
-              type="button" data-tab-target="tab-parametros">
-              Parámetros y niveles
-            </button>
-          </li>
+            <li class="me-2" role="presentation">
+              <button
+                class="pozo-tab-btn active inline-block rounded-t-lg border-b-2 border-[#033F73] p-4 text-[#033F73] dark:border-sky-300 dark:text-sky-300"
+                type="button" data-tab-target="tab-general">
+                Datos generales
+              </button>
+            </li>
 
-          <li class="me-2" role="presentation">
-            <button
-              class="pozo-tab-btn inline-block rounded-t-lg border-b-2 border-transparent p-4 text-slate-500 hover:border-slate-300 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
-              type="button" data-tab-target="tab-muestras">
-              Muestras
-            </button>
-          </li>
+            <li class="me-2" role="presentation">
+              <button
+                class="pozo-tab-btn inline-block rounded-t-lg border-b-2 border-transparent p-4 text-slate-500 hover:border-slate-300 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+                type="button" data-tab-target="tab-parametros">
+                Parámetros y niveles
+              </button>
+            </li>
 
-        </ul>
-      </div>
+            <li class="me-2" role="presentation">
+              <button
+                class="pozo-tab-btn inline-block rounded-t-lg border-b-2 border-transparent p-4 text-slate-500 hover:border-slate-300 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+                type="button" data-tab-target="tab-muestras">
+                Muestras
+              </button>
+            </li>
 
-      <!-- Contenido de tabs -->
-      <div>
-
-        <!-- TAB GENERAL -->
-        <div id="tab-general" class="pozo-tab-panel">
-          <%- include('./partials/tab-general', { pozo, bombaActual, historialBombas, survey: surveySafe }) %>
+          </ul>
         </div>
 
-        <!-- TAB PARÁMETROS Y NIVELES -->
-        <div id="tab-parametros" class="pozo-tab-panel hidden">
-          <%- include('./partials/tab-parametros-niveles', { pozo, ultimoParametro, ultimoNivel, timeline }) %>
+        <!-- Contenido de tabs -->
+        <div>
+
+          <!-- TAB GENERAL -->
+          <div id="tab-general" class="pozo-tab-panel">
+            <%- include('./partials/tab-general', { pozo, bombaActual: bombaActualSafe, historialBombas:
+              historialBombasSafe, survey: surveySafe }) %>
+          </div>
+
+          <!-- TAB PARÁMETROS Y NIVELES -->
+          <div id="tab-parametros" class="pozo-tab-panel hidden">
+            <%- include('./partials/tab-parametros-niveles', { pozo, ultimoParametro: ultimoParametroSafe, ultimoNivel:
+              ultimoNivelSafe, timeline: timelineSafe }) %>
+          </div>
+
+          <!-- TAB MUESTRAS -->
+          <div id="tab-muestras" class="pozo-tab-panel hidden">
+            <%- include('./partials/tab-muestras', { pozo, ultimasMuestras: ultimasMuestrasSafe, timeline: timelineSafe
+              }) %>
+          </div>
+
         </div>
 
-        <!-- TAB MUESTRAS -->
-        <div id="tab-muestras" class="pozo-tab-panel hidden">
-          <%- include('./partials/tab-muestras', { pozo, ultimasMuestras, timeline }) %>
-        </div>
+    </div>
 
-      </div>
+    <!-- Datos iniciales para Fase 3 / renderer único -->
+    <script id="pozo-detail-data" type="application/json">
+    <%- JSON.stringify(pozoDetailPayload).replace(/</g, '\\u003c') %>
+  </script>
 
 </section>
