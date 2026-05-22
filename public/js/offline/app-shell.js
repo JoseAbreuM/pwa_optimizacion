@@ -111,11 +111,11 @@
   }
 
   function getPozoEstado(pozo) {
-    return pozo.estado || pozo.estado_nombre || pozo.estado_pozo || '—';
+    return pozo?.estado || pozo?.estado_nombre || pozo?.estado_pozo || '—';
   }
 
   function getPozoMetodo(pozo) {
-    return pozo.metodo_levantamiento || pozo.metodo || pozo.metodo_nombre || '—';
+    return pozo?.metodo_levantamiento || pozo?.metodo || pozo?.metodo_nombre || '—';
   }
 
   function isActivo(pozo) {
@@ -276,7 +276,7 @@
       <section class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900">
         <div class="mb-4 flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
           <div>
-            <h3 class="text-lg font-semibold text-slate-900 dark:text-white">Pozos offline</h3>
+            <h3 class="text-lg font-semibold text-slate-900 dark:text-white">Pozos</h3>
             <p class="text-sm text-slate-500 dark:text-slate-400">
               ${pozos.length} pozo(s) encontrados en datos locales.
             </p>
@@ -436,21 +436,67 @@
     `;
   }
 
-  async function renderPozoDetalle(idPozo) {
-    hideAlert();
-    state.route = 'pozo-detalle';
-    setActiveNav('');
-
-    const full = await window.PetroOfflineStore.getPozoFull(idPozo);
+  function normalizeRendererData(full, idPozo) {
     const pozo = full.pozo || {};
 
-    if (!pozo || !pozo.id) {
-      showAlert('No se pudo abrir la ficha offline del pozo. Verifica que el snapshot haya sido descargado.', 'error');
-      setRoute('pozos');
-      return;
+    return {
+      id: full.id || pozo.id || idPozo,
+      pozo,
+      detalle: full.detalle || {},
+      mapa: full.mapa || null,
+      parametros: full.parametros || [],
+      niveles: full.niveles || [],
+      muestras: full.muestras || [],
+      bombas: full.bombas || [],
+      servicios: full.servicios || [],
+      survey: full.survey || [],
+      ultimoParametro: full.ultimoParametro || null,
+      ultimoNivel: full.ultimoNivel || null,
+      bombaActual: full.bombaActual || null,
+      counts: full.counts || {},
+      offline: true,
+      source: 'indexeddb'
+    };
+  }
+
+  function renderWithSharedRenderer(full, idPozo) {
+    const renderer = window.PetroPozoDetailRenderer;
+
+    if (!renderer || !els.view) return false;
+
+    const data = normalizeRendererData(full, idPozo);
+
+    try {
+      if (typeof renderer.render === 'function') {
+        renderer.render(els.view, data, {
+          offline: true,
+          source: 'indexeddb',
+          onBack: () => setRoute('pozos')
+        });
+
+        return true;
+      }
+
+      if (typeof renderer.renderPozoDetail === 'function') {
+        renderer.renderPozoDetail(els.view, data, {
+          offline: true,
+          source: 'indexeddb',
+          onBack: () => setRoute('pozos')
+        });
+
+        return true;
+      }
+    } catch (error) {
+      console.warn('[OfflineShell] Error usando PetroPozoDetailRenderer:', error);
     }
 
-    setText('offline-page-title', `Ficha offline - ${pozo.codigo || idPozo}`);
+    return false;
+  }
+
+  function renderFallbackPozoDetalle(full, idPozo) {
+    const pozo = full.pozo || {};
+
+    setText('offline-page-title', pozo.codigo || `Pozo ${idPozo}`);
 
     els.view.innerHTML = `
       <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -466,8 +512,8 @@
           </p>
         </div>
 
-        <span class="rounded-full border border-yellow-300 bg-yellow-50 px-3 py-1.5 text-xs font-semibold text-yellow-800 dark:border-yellow-900 dark:bg-yellow-950/40 dark:text-yellow-200">
-          Lectura offline
+        <span class="rounded-full border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200">
+          Datos locales
         </span>
       </div>
 
@@ -479,8 +525,8 @@
           ${infoCard('Categoría', pozo.categoria)}
           ${infoCard('Yacimiento', pozo.yacimiento)}
           ${infoCard('Método', getPozoMetodo(pozo))}
-          ${infoCard('Cabezal', pozo.cabezal)}
-          ${infoCard('Variador', pozo.variador)}
+          ${infoCard('Cabezal', pozo.cabezal || pozo.cabezal_nombre)}
+          ${infoCard('Variador', pozo.variador || pozo.vdf || pozo.vdf_nombre)}
           ${infoCard('Potencial', formatNumber(pozo.potencial, 2))}
         </div>
       </section>
@@ -492,6 +538,7 @@
             ${infoCard('Fecha', formatDate(full.ultimoParametro?.fecha))}
             ${infoCard('Torque', formatNumber(full.ultimoParametro?.torque, 2))}
             ${infoCard('AMP', formatNumber(full.ultimoParametro?.amp, 2))}
+            ${infoCard('Frecuencia', formatNumber(full.ultimoParametro?.freq, 2))}
             ${infoCard('P. casing', formatNumber(full.ultimoParametro?.presion_casing, 2))}
             ${infoCard('P. tubing', formatNumber(full.ultimoParametro?.presion_tubing, 2))}
           </div>
@@ -513,7 +560,8 @@
           <div class="grid gap-2">
             ${infoCard('Marca', full.bombaActual?.marca)}
             ${infoCard('Modelo', full.bombaActual?.modelo)}
-            ${infoCard('Serial', full.bombaActual?.serial || full.bombaActual?.serial_rotor || full.bombaActual?.serial_estator)}
+            ${infoCard('Serial rotor', full.bombaActual?.serial_rotor || full.bombaActual?.serial)}
+            ${infoCard('Serial estator', full.bombaActual?.serial_estator)}
             ${infoCard('Instalación', formatDate(full.bombaActual?.fecha_inst))}
             ${infoCard('TVU', full.bombaActual?.tvu_dias ? `${formatNumber(full.bombaActual.tvu_dias, 0)} días` : '—')}
           </div>
@@ -525,6 +573,7 @@
         { key: 'torque', label: 'Torque', format: formatNumber },
         { key: 'amp', label: 'AMP', format: formatNumber },
         { key: 'freq', label: 'Freq', format: formatNumber },
+        { key: 'rpm', label: 'RPM', format: formatNumber },
         { key: 'presion_casing', label: 'P. casing', format: formatNumber },
         { key: 'presion_tubing', label: 'P. tubing', format: formatNumber }
       ])}
@@ -537,11 +586,20 @@
         { key: 'pbhp', label: 'PBHP', format: formatNumber }
       ])}
 
+      ${historyTable('Muestras de fluido', full.muestras || [], [
+        { key: 'fecha', label: 'Fecha', format: formatDate },
+        { key: 'porcentaje_liq', label: '% Liq', format: formatNumber },
+        { key: 'ays', label: '% AyS', format: formatNumber },
+        { key: 'api', label: 'API', format: formatNumber },
+        { key: 'representativa', label: 'Rep.', format: (value) => value ? 'Sí' : 'No' }
+      ])}
+
       ${historyTable('Histórico de bombas', full.bombas || [], [
         { key: 'fecha_inst', label: 'Instalación', format: formatDate },
         { key: 'marca', label: 'Marca' },
         { key: 'modelo', label: 'Modelo' },
-        { key: 'serial', label: 'Serial' },
+        { key: 'serial_rotor', label: 'Rotor' },
+        { key: 'serial_estator', label: 'Estator' },
         { key: 'estatus', label: 'Estatus' },
         { key: 'tvu_dias', label: 'TVU', format: (value) => value ? `${formatNumber(value, 0)} días` : '—' }
       ])}
@@ -550,6 +608,27 @@
     $('#offline-back-pozos')?.addEventListener('click', () => {
       setRoute('pozos');
     });
+  }
+
+  async function renderPozoDetalle(idPozo) {
+    hideAlert();
+    state.route = 'pozo-detalle';
+    setActiveNav('');
+
+    const full = await window.PetroOfflineStore.getPozoFull(idPozo);
+    const pozo = full.pozo || {};
+
+    if (!pozo || !pozo.id) {
+      showAlert('No se pudo abrir la ficha del pozo desde los datos locales. Verifica que la base offline haya sido descargada.', 'error');
+      setRoute('pozos');
+      return;
+    }
+
+    const renderedBySharedRenderer = renderWithSharedRenderer(full, idPozo);
+
+    if (!renderedBySharedRenderer) {
+      renderFallbackPozoDetalle(full, idPozo);
+    }
 
     window.scrollTo({
       top: 0,
