@@ -9,8 +9,9 @@
   <link rel="manifest" href="/manifest.json" />
   <link rel="icon" type="image/png" href="/assets/icons/icono.png" />
 
-  <title>PetroField Offline | Cavallino</title>
+  <title>PetroField</title>
 
+  <!-- Tema inicial antes de pintar la pantalla -->
   <script>
     (function () {
       const storedTheme = localStorage.getItem('color-theme');
@@ -21,10 +22,22 @@
     })();
   </script>
 
-  <link rel="stylesheet" href="/css/tailwind.css" />
-  <link rel="stylesheet" href="/css/app.css" />
+  <link rel="stylesheet" href="/css/tailwind.css?v=20260522-03" />
+  <link rel="stylesheet" href="/css/app.css?v=20260522-03" />
+
+  <!-- Librerías necesarias para que la ficha offline se comporte igual que online -->
+  <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/simple-datatables@9.0.3/dist/style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/simple-datatables@9.0.3"></script>
+
+  <!-- Font Awesome: si no está disponible offline, la UI sigue funcionando igual -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
 
   <style>
+    [x-cloak] {
+      display: none !important;
+    }
+
     .offline-shell-grid {
       display: grid;
       grid-template-columns: 1fr;
@@ -47,6 +60,18 @@
       border-color: #0ea5e9;
       color: #020617;
     }
+
+    .offline-loading-card {
+      min-height: 320px;
+    }
+
+    .offline-debug {
+      display: none;
+    }
+
+    body[data-offline-debug="true"] .offline-debug {
+      display: block;
+    }
   </style>
 </head>
 
@@ -55,7 +80,7 @@
 
   <div class="offline-shell-grid min-h-screen">
 
-    <!-- Sidebar desktop -->
+    <!-- Sidebar desktop: se mantiene para que /pozos offline pueda navegar, pero no debe sentirse como otra app -->
     <aside class="hidden border-r border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 lg:block">
       <div class="sticky top-0 flex h-screen flex-col">
         <div class="border-b border-slate-200 p-4 dark:border-slate-800">
@@ -63,14 +88,16 @@
             <img src="/assets/icons/icono.png" alt="PetroField" class="h-10 w-10 rounded-xl object-cover" />
             <div>
               <h1 class="text-sm font-bold text-slate-900 dark:text-white">PetroField</h1>
-              <p class="text-xs text-slate-500 dark:text-slate-400">Modo offline</p>
+              <p id="offline-sidebar-state" class="text-xs text-slate-500 dark:text-slate-400">
+                Datos locales disponibles
+              </p>
             </div>
           </div>
         </div>
 
         <nav class="flex-1 space-y-2 p-4 text-sm">
           <button type="button" data-offline-route="dashboard"
-            class="offline-nav-btn active flex w-full items-center gap-3 rounded-xl border border-slate-200 px-3 py-2 text-left font-semibold text-slate-700 transition hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800">
+            class="offline-nav-btn flex w-full items-center gap-3 rounded-xl border border-slate-200 px-3 py-2 text-left font-semibold text-slate-700 transition hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800">
             <span>📊</span>
             Dashboard
           </button>
@@ -90,22 +117,25 @@
 
         <div class="border-t border-slate-200 p-4 text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
           <p id="offline-last-sync">Última sync: —</p>
-          <p id="offline-network-state" class="mt-1 font-semibold">—</p>
+          <p id="offline-network-state" class="mt-1 font-semibold">Sin conexión</p>
         </div>
       </div>
     </aside>
 
     <!-- Main -->
     <div class="min-w-0">
+
       <header
         class="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur dark:border-slate-800 dark:bg-slate-900/95">
         <div class="flex min-h-16 items-center justify-between gap-3 px-3 sm:px-4 lg:px-6">
           <div class="min-w-0">
-            <p class="text-xs font-semibold uppercase tracking-wide text-sky-700 dark:text-sky-300">
-              Modo offline-first
+            <p id="offline-status-label"
+              class="text-xs font-semibold uppercase tracking-wide text-sky-700 dark:text-sky-300">
+              Usando datos locales
             </p>
+
             <h2 id="offline-page-title" class="truncate text-lg font-bold text-slate-900 dark:text-white">
-              Dashboard
+              PetroField
             </h2>
           </div>
 
@@ -125,7 +155,7 @@
         <!-- Mobile nav -->
         <nav class="flex gap-2 overflow-x-auto px-3 pb-3 lg:hidden">
           <button type="button" data-offline-route="dashboard"
-            class="offline-nav-btn active whitespace-nowrap rounded-full border border-slate-200 px-3 py-1.5 text-xs font-semibold dark:border-slate-700">
+            class="offline-nav-btn whitespace-nowrap rounded-full border border-slate-200 px-3 py-1.5 text-xs font-semibold dark:border-slate-700">
             Dashboard
           </button>
 
@@ -144,21 +174,99 @@
       <main class="min-w-0 px-3 py-4 sm:px-4 lg:px-6">
         <div id="offline-alert" class="mb-4 hidden rounded-2xl border p-4 text-sm"></div>
 
+        <!-- Este contenedor es donde app-shell.js debe pintar dashboard/lista/ficha.
+             Para /pozos/:id debe renderizar la ficha del pozo, no quedarse en esta tarjeta. -->
         <section id="offline-view" class="mx-auto w-full max-w-screen-2xl space-y-5">
           <div
-            class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900">
-            Cargando datos locales...
+            class="offline-loading-card flex items-center justify-center rounded-2xl border border-slate-200 bg-white p-5 text-center shadow-sm dark:border-slate-700 dark:bg-slate-900">
+            <div>
+              <div
+                class="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300">
+                <span class="animate-pulse text-xl">🛢️</span>
+              </div>
+
+              <p class="text-sm font-semibold text-slate-800 dark:text-slate-100">
+                Cargando ficha desde datos locales...
+              </p>
+
+              <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                Si este mensaje no desaparece, falta cargar el shell offline o no existe el pozo en IndexedDB.
+              </p>
+            </div>
           </div>
+        </section>
+
+        <section id="offline-debug-panel"
+          class="offline-debug mx-auto mt-4 w-full max-w-screen-2xl rounded-2xl border border-amber-200 bg-amber-50 p-4 text-xs text-amber-800 dark:border-amber-900/50 dark:bg-amber-900/20 dark:text-amber-200">
+          <p class="font-semibold">Diagnóstico offline</p>
+          <pre id="offline-debug-output" class="mt-2 max-h-64 overflow-auto whitespace-pre-wrap"></pre>
         </section>
       </main>
     </div>
   </div>
 
-  <script src="/js/offline/db.js"></script>
-  <script src="/js/offline/store.js"></script>
-  <script src="/js/offline/sync.js"></script>
-  <script src="/js/offline/app-shell.js"></script>
-  <script src="/js/sw-register.js"></script>
+  <script>
+    window.PETRO_OFFLINE_BOOT = {
+      version: '20260522-03',
+      requestedPath: window.location.pathname,
+      requestedSearch: window.location.search,
+      startedAt: new Date().toISOString()
+    };
+
+    window.addEventListener('error', function (event) {
+      const output = document.getElementById('offline-debug-output');
+      const alert = document.getElementById('offline-alert');
+
+      document.body.dataset.offlineDebug = 'true';
+
+      if (output) {
+        output.textContent += [
+          '[window.error]',
+          event.message || '',
+          event.filename || '',
+          event.lineno || '',
+          event.colno || '',
+          ''
+        ].join(' ') + '\n';
+      }
+
+      if (alert) {
+        alert.className = 'mb-4 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-300';
+        alert.textContent = 'No se pudo inicializar la vista offline. Revisa el diagnóstico al final de la pantalla.';
+        alert.classList.remove('hidden');
+      }
+    });
+
+    window.addEventListener('unhandledrejection', function (event) {
+      const output = document.getElementById('offline-debug-output');
+      const alert = document.getElementById('offline-alert');
+
+      document.body.dataset.offlineDebug = 'true';
+
+      if (output) {
+        output.textContent += '[unhandledrejection] ' + (event.reason?.message || event.reason || '') + '\n';
+      }
+
+      if (alert) {
+        alert.className = 'mb-4 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-300';
+        alert.textContent = 'No se pudo inicializar la vista offline. Revisa el diagnóstico al final de la pantalla.';
+        alert.classList.remove('hidden');
+      }
+    });
+  </script>
+
+  <!-- Orden crítico: DB -> Store -> Sync -> detalle online -> shell offline -->
+  <script src="/js/offline/db.js?v=20260522-03"></script>
+  <script src="/js/offline/store.js?v=20260522-03"></script>
+  <script src="/js/offline/sync.js?v=20260522-03"></script>
+
+  <!-- Necesario para tabs, modales, DataTables y gráficas del detalle -->
+  <script src="/js/modules/pozo-detalle.js?v=20260522-03"></script>
+
+  <!-- Shell que debe reconstruir /pozos/:id desde IndexedDB -->
+  <script src="/js/offline/app-shell.js?v=20260522-03"></script>
+
+  <script src="/js/sw-register.js?v=20260522-03"></script>
 </body>
 
 </html>
