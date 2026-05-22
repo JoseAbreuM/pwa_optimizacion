@@ -18,8 +18,19 @@
   configuracionMotores=pozoSafe.configuracion_motor_stg || pozoSafe.configuracion_motor || pozoSafe.motores_cabezal ||
   pozoSafe.cabezal_configuracion_motor || ( cantidadMotores !=null && hpMotor !=null ? `${formatNumber(cantidadMotores,
   0)}x${formatNumber(hpMotor, 0)}` : ( cantidadMotores !=null ? `${formatNumber(cantidadMotores, 0)} motor(es)` : null )
-  ); const diagramaUrl=pozoSafe.diagrama_url || pozoSafe.diagrama_pdf || pozoSafe.diagrama_mecanico || pozoSafe.diagrama
-  || null; %>
+  ); function cleanText(value) { return String(value || '' ).trim(); } function isValidDiagramUrl(value) { const
+  text=cleanText(value); if (!text) return false; const lower=text.toLowerCase(); const invalidValues=[ 'bare-6'
+  , 'bare 6' , 'bare-este' , 'bare este' , 'bare-tradicional' , 'bare tradicional' , 'asfaltada' , 'tigra' , 'null'
+  , 'undefined' , 'na' , 'n/a' , '-' , '—' ]; if (invalidValues.includes(lower)) return false; if
+  (/^https?:\/\//i.test(text)) return true; if (/^\/uploads\//i.test(text)) return true; if (/^\/assets\//i.test(text))
+  return true; if (/^\/documents\//i.test(text)) return true; if (/^\/storage\//i.test(text)) return true; if
+  (/^\/files\//i.test(text)) return true; if (/\.(pdf|png|jpg|jpeg|webp)$/i.test(text)) return true; return false; }
+  function normalizeDiagramUrl(value) { const text=cleanText(value); if (!isValidDiagramUrl(text)) return null; if
+  (/^https?:\/\//i.test(text)) return text; if (text.startsWith('/')) return text; return `/uploads/diagramas/${text}`;
+  } const rawDiagramaUrl=pozoSafe.diagrama_url || pozoSafe.diagrama_pdf || pozoSafe.diagrama_mecanico ||
+  pozoSafe.pdf_diagrama || pozoSafe.url_diagrama || pozoSafe.archivo_diagrama || pozoSafe.diagrama || null; const
+  diagramaUrl=normalizeDiagramUrl(rawDiagramaUrl); const rawDiagramaInvalido=rawDiagramaUrl && !diagramaUrl ?
+  cleanText(rawDiagramaUrl) : null; %>
 
   <div class="space-y-4">
 
@@ -342,10 +353,31 @@
             </div>
             <% } else { %>
               <div
-                class="flex min-h-[320px] items-center justify-center rounded-xl border border-dashed border-slate-300 bg-white dark:border-slate-600 dark:bg-slate-900">
-                <p class="text-sm text-slate-500 dark:text-slate-400">
-                  Visor PDF pendiente por conectar.
-                </p>
+                class="flex min-h-[320px] items-center justify-center rounded-xl border border-dashed border-slate-300 bg-white px-4 text-center dark:border-slate-600 dark:bg-slate-900">
+                <div>
+                  <div
+                    class="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-300">
+                    <i class="fa-regular fa-file-pdf text-xl"></i>
+                  </div>
+
+                  <p class="text-sm font-semibold text-slate-700 dark:text-slate-200">
+                    Diagrama mecánico pendiente
+                  </p>
+
+                  <p class="mt-1 max-w-sm text-xs text-slate-500 dark:text-slate-400">
+                    No hay una ruta PDF válida para este pozo. Sube el archivo o revisa el campo de diagrama en la base
+                    de datos.
+                  </p>
+
+                  <% if (rawDiagramaInvalido) { %>
+                    <p
+                      class="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:bg-amber-900/20 dark:text-amber-300">
+                      Valor ignorado: <span class="font-semibold">
+                        <%= rawDiagramaInvalido %>
+                      </span>
+                    </p>
+                    <% } %>
+                </div>
               </div>
               <% } %>
         </div>
