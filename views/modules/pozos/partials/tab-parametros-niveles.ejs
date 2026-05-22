@@ -15,15 +15,15 @@
   chipClass='inline-flex min-w-0 items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs shadow-sm dark:border-slate-700 dark:bg-slate-900/80'
   ; const chipLabelClass='shrink-0 font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400' ; const
   chipValueClass='min-w-0 truncate text-right font-bold text-slate-900 dark:text-white' ; const
-  checkboxClass='inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-slate-700 shadow-sm transition hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800'
+  checkboxClass='inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-slate-700 shadow-sm transition hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800 [&_input]:accent-blue-600 dark:[&_input]:accent-sky-400'
   ; %>
 
   <div id="tab-parametros-niveles"
     class="space-y-5 rounded-2xl bg-slate-50 p-3 text-slate-900 dark:bg-slate-950 dark:text-slate-100 sm:p-4">
 
     <!-- =========================================================
-       RESUMEN PARAMETROS COMPACTO
-       ========================================================= -->
+     RESUMEN PARAMETROS COMPACTO
+     ========================================================= -->
     <section
       class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900">
       <div class="border-b border-slate-100 bg-slate-50 px-3 py-2 dark:border-slate-800 dark:bg-slate-800/70">
@@ -149,8 +149,8 @@
     </section>
 
     <!-- =========================================================
-       GRAFICA PARAMETROS
-       ========================================================= -->
+     GRAFICA PARAMETROS
+     ========================================================= -->
     <section class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900">
       <div class="mb-4 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div>
@@ -233,7 +233,7 @@
         id="parametros-data-json"><%- JSON.stringify(parametros).replace(/</g, '\\u003c') %></script>
 
       <div id="chart-parametros-pozo"
-        class="min-h-[320px] rounded-xl border border-dashed border-slate-300 bg-slate-50 p-2 dark:border-slate-600 dark:bg-slate-950/40">
+        class="min-h-[320px] rounded-xl border border-dashed border-slate-300 bg-slate-50 p-2 dark:border-slate-600 dark:bg-slate-950">
         <% if (!parametros.length) { %>
           <div class="flex min-h-[300px] items-center justify-center">
             <p class="text-sm text-slate-500 dark:text-slate-400">
@@ -245,8 +245,8 @@
     </section>
 
     <!-- =========================================================
-       RESUMEN NIVELES COMPACTO
-       ========================================================= -->
+     RESUMEN NIVELES COMPACTO
+     ========================================================= -->
     <section
       class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900">
       <div class="border-b border-slate-100 bg-slate-50 px-3 py-2 dark:border-slate-800 dark:bg-slate-800/70">
@@ -397,8 +397,8 @@
     </section>
 
     <!-- =========================================================
-       GRAFICA NIVELES
-       ========================================================= -->
+     GRAFICA NIVELES
+     ========================================================= -->
     <section class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900">
       <div class="mb-4 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div>
@@ -489,7 +489,7 @@
         id="niveles-data-json"><%- JSON.stringify(niveles).replace(/</g, '\\u003c') %></script>
 
       <div id="chart-niveles-pozo"
-        class="min-h-[320px] rounded-xl border border-dashed border-slate-300 bg-slate-50 p-2 dark:border-slate-600 dark:bg-slate-950/40">
+        class="min-h-[320px] rounded-xl border border-dashed border-slate-300 bg-slate-50 p-2 dark:border-slate-600 dark:bg-slate-950">
         <% if (!niveles.length) { %>
           <div class="flex min-h-[300px] items-center justify-center">
             <p class="text-sm text-slate-500 dark:text-slate-400">
@@ -501,8 +501,8 @@
     </section>
 
     <!-- =========================================================
-       COMPARATIVO
-       ========================================================= -->
+     COMPARATIVO
+     ========================================================= -->
     <section class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900">
       <div class="mb-4 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div>
@@ -617,7 +617,7 @@
           <% } %>
 
             <div id="chart-comparativa-pozo"
-              class="min-h-[300px] rounded-xl border border-dashed border-slate-300 bg-slate-50 p-2 dark:border-slate-600 dark:bg-slate-950/40">
+              class="min-h-[300px] rounded-xl border border-dashed border-slate-300 bg-slate-50 p-2 dark:border-slate-600 dark:bg-slate-950">
               <% if (!comparativo.length) { %>
                 <div class="flex min-h-[260px] items-center justify-center">
                   <p class="text-sm text-slate-500 dark:text-slate-400">
@@ -629,8 +629,8 @@
     </section>
 
     <!-- =========================================================
-       MODAL HISTORICO PARAMETROS
-       ========================================================= -->
+     MODAL HISTORICO PARAMETROS
+     ========================================================= -->
     <div id="modal-historial-parametros" class="fixed inset-0 z-50 hidden bg-slate-900/60 p-0 sm:p-4" role="dialog"
       aria-modal="true" aria-labelledby="modal-historial-parametros-title" data-pozo-modal>
 
@@ -762,8 +762,8 @@
     </div>
 
     <!-- =========================================================
-       MODAL HISTORICO NIVELES
-       ========================================================= -->
+     MODAL HISTORICO NIVELES
+     ========================================================= -->
     <div id="modal-historial-niveles" class="fixed inset-0 z-50 hidden bg-slate-900/60 p-0 sm:p-4" role="dialog"
       aria-modal="true" aria-labelledby="modal-historial-niveles-title" data-pozo-modal>
 
@@ -903,8 +903,8 @@
     </div>
 
     <!-- =========================================================
-       MODAL COMPARATIVO
-       ========================================================= -->
+     MODAL COMPARATIVO
+     ========================================================= -->
     <div id="modal-comparativo-parametros-niveles" class="fixed inset-0 z-50 hidden bg-slate-900/60 p-0 sm:p-4"
       role="dialog" aria-modal="true" aria-labelledby="modal-comparativo-parametros-niveles-title" data-pozo-modal>
 
@@ -1065,4 +1065,142 @@
       </div>
     </div>
 
+    <style>
+      html.dark #tab-parametros-niveles {
+        background-color: rgb(2 6 23);
+        color: rgb(226 232 240);
+      }
+
+      html.dark #tab-parametros-niveles section,
+      html.dark #tab-parametros-niveles [role="dialog"] .bg-white {
+        background-color: rgb(15 23 42);
+      }
+
+      html.dark #tab-parametros-niveles .bg-slate-50,
+      html.dark #tab-parametros-niveles .bg-slate-100\/80 {
+        background-color: rgb(30 41 59);
+      }
+
+      html.dark #tab-parametros-niveles .bg-white {
+        background-color: rgb(15 23 42);
+      }
+
+      html.dark #tab-parametros-niveles .text-slate-900,
+      html.dark #tab-parametros-niveles .text-slate-800,
+      html.dark #tab-parametros-niveles .text-slate-700 {
+        color: rgb(241 245 249);
+      }
+
+      html.dark #tab-parametros-niveles .text-slate-600,
+      html.dark #tab-parametros-niveles .text-slate-500 {
+        color: rgb(148 163 184);
+      }
+
+      html.dark #tab-parametros-niveles .border-slate-100,
+      html.dark #tab-parametros-niveles .border-slate-200,
+      html.dark #tab-parametros-niveles .border-slate-300 {
+        border-color: rgb(51 65 85);
+      }
+
+      html.dark #tab-parametros-niveles .dt-container,
+      html.dark #tab-parametros-niveles .dataTables_wrapper {
+        color: rgb(203 213 225);
+      }
+
+      html.dark #tab-parametros-niveles .dt-container label,
+      html.dark #tab-parametros-niveles .dataTables_wrapper label,
+      html.dark #tab-parametros-niveles .dt-container .dt-info,
+      html.dark #tab-parametros-niveles .dataTables_info {
+        color: rgb(203 213 225);
+      }
+
+      html.dark #tab-parametros-niveles .dt-container input,
+      html.dark #tab-parametros-niveles .dt-container select,
+      html.dark #tab-parametros-niveles .dataTables_wrapper input,
+      html.dark #tab-parametros-niveles .dataTables_wrapper select {
+        border-color: rgb(71 85 105);
+        background-color: rgb(15 23 42);
+        color: rgb(226 232 240);
+      }
+
+      html.dark #tab-parametros-niveles .dt-container input::placeholder,
+      html.dark #tab-parametros-niveles .dataTables_wrapper input::placeholder {
+        color: rgb(148 163 184);
+      }
+
+      html.dark #tab-parametros-niveles .dt-container .dt-search input,
+      html.dark #tab-parametros-niveles .dt-container .dt-length select {
+        border-color: rgb(71 85 105);
+        background-color: rgb(15 23 42);
+        color: rgb(226 232 240);
+      }
+
+      html.dark #tab-parametros-niveles .dt-container .dt-paging button,
+      html.dark #tab-parametros-niveles .dataTables_wrapper .paginate_button {
+        border-color: rgb(71 85 105) !important;
+        background: rgb(15 23 42) !important;
+        color: rgb(226 232 240) !important;
+      }
+
+      html.dark #tab-parametros-niveles .dt-container .dt-paging button:hover,
+      html.dark #tab-parametros-niveles .dataTables_wrapper .paginate_button:hover {
+        background: rgb(30 41 59) !important;
+        color: rgb(255 255 255) !important;
+      }
+
+      html.dark #tab-parametros-niveles .dt-container .dt-paging button.current,
+      html.dark #tab-parametros-niveles .dataTables_wrapper .paginate_button.current {
+        border-color: rgb(56 189 248) !important;
+        background: rgb(7 89 133) !important;
+        color: rgb(255 255 255) !important;
+      }
+
+      html.dark #tab-parametros-niveles table {
+        color: rgb(203 213 225);
+      }
+
+      html.dark #tab-parametros-niveles thead {
+        background-color: rgb(30 41 59);
+        color: rgb(226 232 240);
+      }
+
+      html.dark #tab-parametros-niveles tbody tr {
+        border-color: rgb(51 65 85);
+      }
+
+      html.dark #tab-parametros-niveles tbody tr:hover {
+        background-color: rgba(51, 65, 85, 0.75);
+      }
+
+      html.dark #tab-parametros-niveles .apexcharts-canvas,
+      html.dark #tab-parametros-niveles .apexcharts-svg {
+        background: transparent !important;
+      }
+
+      html.dark #tab-parametros-niveles .apexcharts-title-text,
+      html.dark #tab-parametros-niveles .apexcharts-text,
+      html.dark #tab-parametros-niveles .apexcharts-xaxis-label,
+      html.dark #tab-parametros-niveles .apexcharts-yaxis-label,
+      html.dark #tab-parametros-niveles .apexcharts-legend-text {
+        fill: rgb(203 213 225) !important;
+        color: rgb(203 213 225) !important;
+      }
+
+      html.dark #tab-parametros-niveles .apexcharts-gridline {
+        stroke: rgb(51 65 85) !important;
+      }
+
+      html.dark #tab-parametros-niveles .apexcharts-tooltip,
+      html.dark #tab-parametros-niveles .apexcharts-tooltip-title {
+        border-color: rgb(51 65 85) !important;
+        background-color: rgb(15 23 42) !important;
+        color: rgb(226 232 240) !important;
+      }
+
+      html.dark #tab-parametros-niveles .apexcharts-tooltip-text,
+      html.dark #tab-parametros-niveles .apexcharts-tooltip-text-y-label,
+      html.dark #tab-parametros-niveles .apexcharts-tooltip-text-y-value {
+        color: rgb(226 232 240) !important;
+      }
+    </style>
   </div>
