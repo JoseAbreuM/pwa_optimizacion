@@ -7,6 +7,7 @@ const parametroRoutes = require('./parametros/parametro.routes');
 const nivelRoutes = require('./niveles/nivel.routes');
 const servicioRoutes = require('./servicios/servicio.routes');
 const offlineRoutes = require('./offline/offline.routes');
+const mapaRoutes = require('./mapa/mapa.routes');
 
 function registerModuleRoutes(app) {
   app.use('/', authRoutes);
@@ -17,7 +18,11 @@ function registerModuleRoutes(app) {
   app.use('/parametros', parametroRoutes);
   app.use('/niveles', nivelRoutes);
   app.use('/servicios', servicioRoutes);
+
   app.use('/api', offlineRoutes);
+  app.use('/api/mapa', mapaRoutes);
 }
 
-module.exports = { registerModuleRoutes };
+module.exports = {
+  registerModuleRoutes
+};
