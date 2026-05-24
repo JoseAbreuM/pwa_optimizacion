@@ -5,29 +5,50 @@ const { ensureAuthenticated } = require('../../middleware/auth');
 const router = express.Router();
 
 /**
+ * Lectura pública para mapaBare.
+ *
+ * Estos endpoints deben poder ser consumidos desde:
+ * https://mapa-trillas-bare.web.app
+ *
+ * No usan ensureAuthenticated porque el mapa está alojado en otro dominio
+ * y no comparte sesión/cookies con la PWA de Render.
+ */
+
+/**
  * GET /api/mapa/health
  */
-router.get('/health', ensureAuthenticated, mapaController.health);
+router.get('/health', mapaController.health);
 
 /**
  * GET /api/mapa/pozos
  */
-router.get('/pozos', ensureAuthenticated, mapaController.listPozos);
+router.get('/pozos', mapaController.listPozos);
 
 /**
  * GET /api/mapa/pozos/:id
  */
-router.get('/pozos/:id', ensureAuthenticated, mapaController.getPozo);
+router.get('/pozos/:id', mapaController.getPozo);
+
+/**
+ * GET /api/mapa/servicios
+ *
+ * Público por ahora para que mapaBare pueda leer servicios activos
+ * y pintar asignaciones.
+ */
+router.get('/servicios', mapaController.listServicios);
+
+/**
+ * Escritura protegida.
+ *
+ * Estas rutas sí modifican la base de datos, por eso mantienen sesión.
+ * Más adelante podemos cambiarlas a token/API key para que mapaBare pueda
+ * editar desde otro dominio sin depender de cookies cross-site.
+ */
 
 /**
  * PATCH /api/mapa/pozos/:id
  */
 router.patch('/pozos/:id', ensureAuthenticated, mapaController.updatePozo);
-
-/**
- * GET /api/mapa/servicios
- */
-router.get('/servicios', ensureAuthenticated, mapaController.listServicios);
 
 /**
  * POST /api/mapa/servicios/asignar
