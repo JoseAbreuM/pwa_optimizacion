@@ -40,22 +40,83 @@ router.get('/servicios', mapaController.listServicios);
  * El mapa debe enviar:
  * Authorization: Bearer <MAPA_API_TOKEN>
  *
+ * También se acepta:
+ * x-api-key: <MAPA_API_TOKEN>
+ *
  * El token debe existir en Render como variable de entorno:
  * MAPA_API_TOKEN=...
  */
 
 /**
  * PATCH /api/mapa/pozos/:id
+ *
+ * Actualiza datos simples del pozo:
+ * estado, categoría, zona/área, potencial, nota, coordenadas,
+ * diagrama, fecha_arranque, alto corte de agua, etc.
  */
 router.patch('/pozos/:id', mapaApiAuth, mapaController.updatePozo);
 
 /**
  * POST /api/mapa/servicios/asignar
+ *
+ * Asigna o mueve un servicio a un pozo.
+ *
+ * Payload esperado flexible:
+ * {
+ *   id_pozo: 64,
+ *   servicio: "RIG-351"
+ * }
+ *
+ * O:
+ * {
+ *   pozo: { id: "MFB-0760", dbId: 64 },
+ *   servicio: "RIG-351"
+ * }
  */
 router.post('/servicios/asignar', mapaApiAuth, mapaController.asignarServicio);
 
 /**
+ * POST /api/mapa/servicios/desasignar
+ *
+ * Desasigna un servicio por pozo o por nombre de servicio.
+ *
+ * Payload:
+ * {
+ *   id_pozo: 64,
+ *   estadoFinal: "Activo"
+ * }
+ *
+ * O:
+ * {
+ *   servicio: "RIG-351",
+ *   estadoFinal: "Activo"
+ * }
+ */
+router.post('/servicios/desasignar', mapaApiAuth, mapaController.desasignarServicio);
+
+/**
+ * PATCH /api/mapa/servicios/:id/desasignar
+ *
+ * Compatibilidad para desasignar usando :id como id_pozo.
+ */
+router.patch('/servicios/:id/desasignar', mapaApiAuth, mapaController.desasignarServicio);
+
+/**
  * PATCH /api/mapa/servicios/:id
+ *
+ * Actualiza una asignación activa.
+ *
+ * Si recibe:
+ * {
+ *   activo: false
+ * }
+ *
+ * o:
+ * {
+ *   estado_asignacion: "cerrado"
+ * }
+ *
+ * se interpreta como desasignación.
  */
 router.patch('/servicios/:id', mapaApiAuth, mapaController.updateServicioAsignado);
 
