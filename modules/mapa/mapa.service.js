@@ -87,34 +87,35 @@ async function listPozos(filters = {}) {
   const params = [];
 
   if (filters.area) {
-    where.push('p.area = ?');
+    where.push('area = ?');
     params.push(filters.area);
   }
 
   if (filters.categoria) {
-    where.push('p.categoria = ?');
+    where.push('categoria = ?');
     params.push(filters.categoria);
   }
 
   if (filters.estado) {
-    where.push('ep.nombre = ?');
+    where.push('estado = ?');
     params.push(filters.estado);
   }
 
   if (!filters.includeDiferidos) {
-    where.push("(ep.nombre IS NULL OR ep.nombre <> 'Diferido')");
+    where.push("(estado IS NULL OR estado <> 'Diferido')");
   }
 
   if (filters.search) {
     where.push(`(
-      p.codigo LIKE ?
-      OR p.area LIKE ?
-      OR ep.nombre LIKE ?
-      OR p.yacimiento LIKE ?
+      codigo LIKE ?
+      OR area LIKE ?
+      OR estado LIKE ?
+      OR yacimiento LIKE ?
+      OR servicio_asignado LIKE ?
     )`);
 
     const like = `%${filters.search}%`;
-    params.push(like, like, like, like);
+    params.push(like, like, like, like, like);
   }
 
   const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
@@ -122,54 +123,43 @@ async function listPozos(filters = {}) {
   const [rows] = await pool.query(
     `
       SELECT
-        p.id,
-        p.codigo,
-        p.categoria,
-        ep.nombre AS estado,
-        p.area,
-        p.yacimiento,
-        p.potencial,
-        p.latitud,
-        p.longitud,
-        p.alto_corte_agua,
-        p.nota_operativa,
-        p.vel_operacional,
-        p.vel_actual,
+        id,
+        codigo,
+        categoria,
+        estado,
+        area,
+        yacimiento,
+        potencial,
+        latitud,
+        longitud,
 
-        pd.diagrama,
-        pd.coord_x,
-        pd.coord_y,
-        pd.visible AS visible_diagrama,
+        alto_corte_agua,
+        nota_operativa,
 
-        cb.nombre AS cabezal,
-        vd.nombre AS variador,
-        ml.nombre AS metodo_levantamiento,
+        cabezal,
+        variador,
+        metodo_levantamiento,
 
-        psa.id AS servicio_asignado_id,
-        psa.nombre_servicio AS servicio_asignado,
-        psa.tipo_servicio,
-        psa.estado_asignacion,
-        psa.fecha_asignacion,
-        psa.observacion AS observacion_servicio
+        fecha_arranque,
+        vel_operacional,
+        vel_actual,
 
-      FROM pozos p
-      LEFT JOIN estado_pozo ep
-        ON ep.id = p.id_estado
-      LEFT JOIN pozos_diagrama pd
-        ON pd.id_pozo = p.id
-      LEFT JOIN cabezales cb
-        ON cb.id = p.id_cabezal
-      LEFT JOIN vdfs vd
-        ON vd.id = p.id_vdf
-      LEFT JOIN metodos_levantamiento ml
-        ON ml.id = p.id_metodo_levantamiento
-      LEFT JOIN pozo_servicios_asignados psa
-        ON psa.id_pozo = p.id
-       AND psa.activo = 1
+        diagrama,
+        coord_x,
+        coord_y,
+        vista_diagrama AS visible_diagrama,
+
+        servicio_asignado,
+        tipo_servicio,
+        fecha_asignacion,
+        estado_asignacion,
+        observacion_servicio
+
+      FROM vw_mapa_pozos_sync
 
       ${whereSql}
 
-      ORDER BY p.codigo ASC
+      ORDER BY codigo ASC
     `,
     params
   );
@@ -181,55 +171,46 @@ async function getPozoById(id) {
   const [rows] = await pool.query(
     `
       SELECT
-        p.id,
-        p.codigo,
-        p.categoria,
-        ep.nombre AS estado,
-        p.area,
-        p.yacimiento,
-        p.potencial,
-        p.latitud,
-        p.longitud,
-        p.alto_corte_agua,
-        p.nota_operativa,
-        p.vel_operacional,
-        p.vel_actual,
+        id,
+        codigo,
+        categoria,
+        estado,
+        area,
+        yacimiento,
+        potencial,
+        latitud,
+        longitud,
 
-        pd.diagrama,
-        pd.coord_x,
-        pd.coord_y,
-        pd.visible AS visible_diagrama,
+        alto_corte_agua,
+        nota_operativa,
 
-        cb.nombre AS cabezal,
-        vd.nombre AS variador,
-        ml.nombre AS metodo_levantamiento,
+        cabezal,
+        variador,
+        metodo_levantamiento,
 
-        psa.id AS servicio_asignado_id,
-        psa.nombre_servicio AS servicio_asignado,
-        psa.tipo_servicio,
-        psa.estado_asignacion,
-        psa.fecha_asignacion,
-        psa.observacion AS observacion_servicio
+        fecha_arranque,
+        vel_operacional,
+        vel_actual,
 
-      FROM pozos p
-      LEFT JOIN estado_pozo ep
-        ON ep.id = p.id_estado
-      LEFT JOIN pozos_diagrama pd
-        ON pd.id_pozo = p.id
-      LEFT JOIN cabezales cb
-        ON cb.id = p.id_cabezal
-      LEFT JOIN vdfs vd
-        ON vd.id = p.id_vdf
-      LEFT JOIN metodos_levantamiento ml
-        ON ml.id = p.id_metodo_levantamiento
-      LEFT JOIN pozo_servicios_asignados psa
-        ON psa.id_pozo = p.id
-       AND psa.activo = 1
+        diagrama,
+        coord_x,
+        coord_y,
+        vista_diagrama AS visible_diagrama,
 
-      WHERE p.id = ?
+        servicio_asignado,
+        tipo_servicio,
+        fecha_asignacion,
+        estado_asignacion,
+        observacion_servicio
+
+      FROM vw_mapa_pozos_sync
+
+      WHERE id = ?
+         OR codigo = ?
+
       LIMIT 1
     `,
-    [id]
+    [id, id]
   );
 
   return rows[0] ? toMapaPozo(rows[0]) : null;
