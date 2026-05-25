@@ -1,7 +1,7 @@
 const { pool } = require('../../config/db');
 
-const ACTIVE_SERVICE_STATUSES = ['asignado', 'activo', 'en servicio', 'en-servicio'];
-const CLOSED_SERVICE_STATUS = 'cerrado';
+const ACTIVE_ASSIGNMENT_STATUS = 'asignado';
+const CLOSED_ASSIGNMENT_STATUS = 'finalizado';
 
 function normalizeText(value) {
   const text = String(value ?? '').trim();
@@ -28,7 +28,7 @@ function normalizeBoolean(value) {
 
   const text = normalizeLower(value);
 
-  if (['true', '1', 'si', 'yes', 'y'].includes(text)) return 1;
+  if (['true', '1', 'si', 'sí', 'yes', 'y'].includes(text)) return 1;
   if (['false', '0', 'no', 'n'].includes(text)) return 0;
 
   return null;
@@ -123,10 +123,6 @@ function formatDateDdMmYyyy(value) {
   return `${day}-${month}-${year}`;
 }
 
-function activeStatusesPlaceholders() {
-  return ACTIVE_SERVICE_STATUSES.map(() => '?').join(', ');
-}
-
 function getPayloadPozoId(payload = {}) {
   const directId = normalizeNumber(payload.id_pozo ?? payload.idPozo ?? payload.pozoId ?? payload.dbId);
   if (directId) return directId;
@@ -137,6 +133,7 @@ function getPayloadPozoId(payload = {}) {
 
 function getPayloadCodigoPozo(payload = {}) {
   const pozo = payload.pozo || payload.well || null;
+
   return normalizeCodigoPozo(
     payload.codigo ??
     payload.codigo_pozo ??
@@ -162,21 +159,6 @@ function getPayloadServicio(payload = {}) {
   );
 }
 
-function getPayloadTipoServicio(payload = {}) {
-  const servicio = getPayloadServicio(payload);
-  const explicit = normalizeText(payload.tipo_servicio ?? payload.tipoServicio ?? payload.tipo);
-
-  if (explicit) return explicit;
-  if (!servicio) return 'servicio';
-
-  const normalized = servicio.toLowerCase();
-  if (normalized === 'ct') return 'CT';
-  if (normalized === 'wt') return 'WT';
-  if (normalized.includes('rig') || normalized.includes('ranger')) return 'Taladro';
-
-  return 'servicio';
-}
-
 function getEstadoSaliente(payload = {}) {
   return normalizeEstadoNombre(
     payload.estadoSaliente ??
@@ -196,6 +178,23 @@ function getCausaDiferido(payload = {}) {
     payload.observacionDiferido ??
     payload.observacion
   );
+}
+
+function buildObservationUpdateSql(alias = '') {
+  const prefix = alias ? `${alias}.` : '';
+
+  return `
+    ${prefix}observacion = CASE
+      WHEN ? IS NULL OR ? = '' THEN ${prefix}observacion
+      WHEN ${prefix}observacion IS NULL OR ${prefix}observacion = '' THEN ?
+      ELSE CONCAT(${prefix}observacion, ' | ', ?)
+    END
+  `;
+}
+
+function observationParams(observacion) {
+  const value = normalizeText(observacion);
+  return [value, value, value, value];
 }
 
 async function resolvePozoId(conn, payloadOrId) {
@@ -239,6 +238,43 @@ async function resolveEstadoId(conn, estado) {
   return rows[0]?.id || null;
 }
 
+async function resolveServicio(conn, nombreServicio) {
+  const servicio = normalizeText(nombreServicio);
+  if (!servicio) return null;
+
+  const [exactRows] = await conn.query(
+    `
+      SELECT
+        id,
+        nombre,
+        tipo_servicio,
+        subtipo
+      FROM servicios
+      WHERE BINARY nombre = BINARY ?
+      LIMIT 1
+    `,
+    [servicio]
+  );
+
+  if (exactRows[0]) return exactRows[0];
+
+  const [looseRows] = await conn.query(
+    `
+      SELECT
+        id,
+        nombre,
+        tipo_servicio,
+        subtipo
+      FROM servicios
+      WHERE LOWER(nombre) = LOWER(?)
+      LIMIT 1
+    `,
+    [servicio]
+  );
+
+  return looseRows[0] || null;
+}
+
 async function setPozoEstado(conn, idPozo, estado, options = {}) {
   const idEstado = await resolveEstadoId(conn, estado);
   if (!idEstado) return false;
@@ -278,6 +314,10 @@ function toMapaPozo(row) {
   const fechaArranque = normalizeDateOnly(row.fecha_arranque);
   const fechaArranqueFormateada = row.fecha_arranque_formateada || formatDateDdMmYyyy(row.fecha_arranque);
 
+  /**
+   * Leaflet CRS.Simple usa [y, x].
+   * Base de datos guarda coord_x / coord_y.
+   */
   const coordsDiagrama = row.coord_x != null && row.coord_y != null
     ? [Number(row.coord_y), Number(row.coord_x)]
     : null;
@@ -329,6 +369,7 @@ function toMapaPozo(row) {
     servicioAsignado: row.servicio_asignado,
     taladro: row.servicio_asignado,
     tipoServicio: row.tipo_servicio,
+    subtipoServicio: row.subtipo,
     estadoAsignacion: row.estado_asignacion,
     fechaAsignacion: row.fecha_asignacion,
     observacionServicio: row.observacion_servicio,
@@ -383,6 +424,7 @@ function buildMapaSelectSql() {
 
       servicio_asignado,
       tipo_servicio,
+      subtipo,
       fecha_asignacion,
       estado_asignacion,
       observacion_servicio,
@@ -416,13 +458,15 @@ async function listPozos(filters = {}) {
   }
 
   if (filters.search) {
-    where.push(`(
-      codigo LIKE ?
-      OR area LIKE ?
-      OR estado LIKE ?
-      OR yacimiento LIKE ?
-      OR servicio_asignado LIKE ?
-    )`);
+    where.push(`
+      (
+        codigo LIKE ?
+        OR area LIKE ?
+        OR estado LIKE ?
+        OR yacimiento LIKE ?
+        OR servicio_asignado LIKE ?
+      )
+    `);
 
     const like = `%${filters.search}%`;
     params.push(like, like, like, like, like);
@@ -589,63 +633,35 @@ async function updatePozoDiagrama(conn, idPozo, payload = {}) {
         : null
     );
 
-  // Leaflet simple usa [y, x]; BD guarda coord_x y coord_y.
+  /**
+   * Leaflet simple usa [y, x]; BD guarda coord_x y coord_y.
+   */
   const coordY = coords ? normalizeNumber(coords[0]) : normalizeNumber(payload.coord_y);
   const coordX = coords ? normalizeNumber(coords[1]) : normalizeNumber(payload.coord_x);
 
   const visible = normalizeBoolean(payload.vistaMapa ?? payload.visible);
   const diagrama = payload.diagrama !== undefined ? normalizeText(payload.diagrama) : undefined;
 
-  const [existingRows] = await conn.query(
+  /**
+   * Evita duplicados en pozos_diagrama.
+   * Como no hay garantía de PK única por id_pozo, eliminamos las filas previas
+   * y reinsertamos una sola fila válida cuando corresponde.
+   */
+  await conn.query(
     `
-      SELECT id_pozo
-      FROM pozos_diagrama
+      DELETE FROM pozos_diagrama
       WHERE id_pozo = ?
-      LIMIT 1
     `,
     [idPozo]
   );
 
-  if (existingRows.length) {
-    const fields = [];
-    const params = [];
+  const shouldInsert =
+    diagrama &&
+    diagrama !== 'sin-asignar' &&
+    coordX !== null &&
+    coordY !== null;
 
-    if (diagrama !== undefined) {
-      fields.push('diagrama = ?');
-      params.push(diagrama);
-    }
-
-    if (coordX !== null) {
-      fields.push('coord_x = ?');
-      params.push(coordX);
-    }
-
-    if (coordY !== null) {
-      fields.push('coord_y = ?');
-      params.push(coordY);
-    }
-
-    if (visible !== null) {
-      fields.push('visible = ?');
-      params.push(visible);
-    }
-
-    if (!fields.length) return;
-
-    fields.push('updated_at = NOW()');
-    params.push(idPozo);
-
-    await conn.query(
-      `
-        UPDATE pozos_diagrama
-        SET ${fields.join(', ')}
-        WHERE id_pozo = ?
-      `,
-      params
-    );
-
-    return;
-  }
+  if (!shouldInsert) return;
 
   await conn.query(
     `
@@ -662,7 +678,7 @@ async function updatePozoDiagrama(conn, idPozo, payload = {}) {
     `,
     [
       idPozo,
-      diagrama ?? null,
+      diagrama,
       coordX,
       coordY,
       visible ?? 1
@@ -692,15 +708,26 @@ async function listServicios() {
   return rows;
 }
 
-async function getActiveAssignmentsByService(conn, nombreServicio) {
+async function getActiveAssignmentsByServiceId(conn, idServicio) {
   const [rows] = await conn.query(
     `
-      SELECT id_pozo, servicio_asignado, estado_asignacion
-      FROM pozo_servicio_asignacion
-      WHERE BINARY servicio_asignado = BINARY ?
-        AND LOWER(estado_asignacion) IN (${activeStatusesPlaceholders()})
+      SELECT
+        psa.id,
+        psa.id_pozo,
+        psa.id_servicio,
+        psa.fecha_asignacion,
+        psa.estado_asignacion,
+        psa.observacion,
+        s.nombre AS servicio_asignado,
+        s.tipo_servicio,
+        s.subtipo
+      FROM pozo_servicio_asignacion psa
+      INNER JOIN servicios s
+        ON s.id = psa.id_servicio
+      WHERE psa.id_servicio = ?
+        AND psa.activo = 1
     `,
-    [nombreServicio, ...ACTIVE_SERVICE_STATUSES]
+    [idServicio]
   );
 
   return rows;
@@ -709,42 +736,67 @@ async function getActiveAssignmentsByService(conn, nombreServicio) {
 async function getActiveAssignmentsByPozo(conn, idPozo) {
   const [rows] = await conn.query(
     `
-      SELECT id_pozo, servicio_asignado, estado_asignacion
-      FROM pozo_servicio_asignacion
-      WHERE id_pozo = ?
-        AND LOWER(estado_asignacion) IN (${activeStatusesPlaceholders()})
+      SELECT
+        psa.id,
+        psa.id_pozo,
+        psa.id_servicio,
+        psa.fecha_asignacion,
+        psa.estado_asignacion,
+        psa.observacion,
+        s.nombre AS servicio_asignado,
+        s.tipo_servicio,
+        s.subtipo
+      FROM pozo_servicio_asignacion psa
+      INNER JOIN servicios s
+        ON s.id = psa.id_servicio
+      WHERE psa.id_pozo = ?
+        AND psa.activo = 1
     `,
-    [idPozo, ...ACTIVE_SERVICE_STATUSES]
+    [idPozo]
   );
 
   return rows;
 }
 
-async function closeActiveAssignmentsByService(conn, nombreServicio, observacion = null) {
+async function closeActiveAssignmentsByServiceId(conn, idServicio, observacion = null) {
   await conn.query(
     `
-      UPDATE pozo_servicio_asignacion
+      UPDATE pozo_servicio_asignacion psa
       SET
-        estado_asignacion = ?,
-        observacion = COALESCE(?, observacion)
-      WHERE BINARY servicio_asignado = BINARY ?
-        AND LOWER(estado_asignacion) IN (${activeStatusesPlaceholders()})
+        psa.activo = 0,
+        psa.estado_asignacion = ?,
+        psa.fecha_desasignacion = NOW(),
+        ${buildObservationUpdateSql('psa')},
+        psa.updated_at = NOW()
+      WHERE psa.id_servicio = ?
+        AND psa.activo = 1
     `,
-    [CLOSED_SERVICE_STATUS, observacion, nombreServicio, ...ACTIVE_SERVICE_STATUSES]
+    [
+      CLOSED_ASSIGNMENT_STATUS,
+      ...observationParams(observacion),
+      idServicio
+    ]
   );
 }
 
 async function closeActiveAssignmentsByPozo(conn, idPozo, observacion = null) {
   await conn.query(
     `
-      UPDATE pozo_servicio_asignacion
+      UPDATE pozo_servicio_asignacion psa
       SET
-        estado_asignacion = ?,
-        observacion = COALESCE(?, observacion)
-      WHERE id_pozo = ?
-        AND LOWER(estado_asignacion) IN (${activeStatusesPlaceholders()})
+        psa.activo = 0,
+        psa.estado_asignacion = ?,
+        psa.fecha_desasignacion = NOW(),
+        ${buildObservationUpdateSql('psa')},
+        psa.updated_at = NOW()
+      WHERE psa.id_pozo = ?
+        AND psa.activo = 1
     `,
-    [CLOSED_SERVICE_STATUS, observacion, idPozo, ...ACTIVE_SERVICE_STATUSES]
+    [
+      CLOSED_ASSIGNMENT_STATUS,
+      ...observationParams(observacion),
+      idPozo
+    ]
   );
 }
 
@@ -758,10 +810,8 @@ async function asignarServicio(payload = {}, currentUser = null) {
     };
   }
 
-  const tipoServicio = getPayloadTipoServicio(payload);
-  const estadoAsignacion = normalizeText(payload.estado_asignacion ?? payload.estadoAsignacion ?? 'activo') || 'activo';
   const observacion = normalizeText(payload.observacion ?? payload.nota ?? payload.observacionServicio);
-  const fechaAsignacion = normalizeDateOnly(payload.fecha_asignacion ?? payload.fechaAsignacion) || null;
+  const fechaAsignacion = normalizeDateOnly(payload.fecha_asignacion ?? payload.fechaAsignacion);
   const estadoSaliente = getEstadoSaliente(payload);
   const causaDiferido = getCausaDiferido(payload);
 
@@ -780,18 +830,33 @@ async function asignarServicio(payload = {}, currentUser = null) {
       };
     }
 
-    const previousServiceAssignments = await getActiveAssignmentsByService(conn, nombreServicio);
+    const servicio = await resolveServicio(conn, nombreServicio);
+
+    if (!servicio) {
+      await conn.rollback();
+      return {
+        ok: false,
+        message: `No se encontró el servicio "${nombreServicio}" en el catálogo servicios.`
+      };
+    }
+
+    const previousServiceAssignments = await getActiveAssignmentsByServiceId(conn, servicio.id);
     const previousDestinoAssignments = await getActiveAssignmentsByPozo(conn, idPozoDestino);
 
-    const pozosSalientes = [
-      ...previousServiceAssignments
-        .map(row => row.id_pozo)
-        .filter(idPozo => idPozo && Number(idPozo) !== Number(idPozoDestino))
+    const uniquePozosSalientes = [
+      ...new Set(
+        previousServiceAssignments
+          .map(row => row.id_pozo)
+          .filter(idPozo => idPozo && Number(idPozo) !== Number(idPozoDestino))
+      )
     ];
 
-    const uniquePozosSalientes = [...new Set(pozosSalientes)];
-
-    await closeActiveAssignmentsByService(conn, nombreServicio, observacion);
+    /**
+     * Cierra:
+     * 1) El mismo servicio si estaba en otro pozo.
+     * 2) Cualquier servicio que ya tuviera el pozo destino.
+     */
+    await closeActiveAssignmentsByServiceId(conn, servicio.id, observacion);
     await closeActiveAssignmentsByPozo(conn, idPozoDestino, observacion);
 
     for (const idPozoSaliente of uniquePozosSalientes) {
@@ -804,20 +869,22 @@ async function asignarServicio(payload = {}, currentUser = null) {
       `
         INSERT INTO pozo_servicio_asignacion (
           id_pozo,
-          servicio_asignado,
-          tipo_servicio,
+          id_servicio,
           fecha_asignacion,
+          fecha_desasignacion,
           estado_asignacion,
-          observacion
+          observacion,
+          activo,
+          created_at,
+          updated_at
         )
-        VALUES (?, ?, ?, COALESCE(?, NOW()), ?, ?)
+        VALUES (?, ?, COALESCE(?, NOW()), NULL, ?, ?, 1, NOW(), NOW())
       `,
       [
         idPozoDestino,
-        nombreServicio,
-        tipoServicio,
+        servicio.id,
         fechaAsignacion,
-        estadoAsignacion,
+        ACTIVE_ASSIGNMENT_STATUS,
         observacion
       ]
     );
@@ -850,6 +917,8 @@ async function desasignarServicio(payload = {}, currentUser = null) {
   );
 
   const causaDiferido = getCausaDiferido(payload);
+  const observacion = causaDiferido || normalizeText(payload.observacion);
+
   const conn = await pool.getConnection();
 
   try {
@@ -857,8 +926,9 @@ async function desasignarServicio(payload = {}, currentUser = null) {
 
     const idPozo = await resolvePozoId(conn, payload);
     const nombreServicio = getPayloadServicio(payload);
+    const servicio = nombreServicio ? await resolveServicio(conn, nombreServicio) : null;
 
-    if (!idPozo && !nombreServicio) {
+    if (!idPozo && !servicio) {
       await conn.rollback();
       return {
         ok: false,
@@ -866,24 +936,29 @@ async function desasignarServicio(payload = {}, currentUser = null) {
       };
     }
 
+    const where = ['psa.activo = 1'];
     const params = [];
-    const where = [`LOWER(estado_asignacion) IN (${activeStatusesPlaceholders()})`];
-    params.push(...ACTIVE_SERVICE_STATUSES);
 
     if (idPozo) {
-      where.push('id_pozo = ?');
+      where.push('psa.id_pozo = ?');
       params.push(idPozo);
     }
 
-    if (nombreServicio) {
-      where.push('BINARY servicio_asignado = BINARY ?');
-      params.push(nombreServicio);
+    if (servicio) {
+      where.push('psa.id_servicio = ?');
+      params.push(servicio.id);
     }
 
     const [activeRows] = await conn.query(
       `
-        SELECT id_pozo, servicio_asignado
-        FROM pozo_servicio_asignacion
+        SELECT
+          psa.id,
+          psa.id_pozo,
+          psa.id_servicio,
+          s.nombre AS servicio_asignado
+        FROM pozo_servicio_asignacion psa
+        INNER JOIN servicios s
+          ON s.id = psa.id_servicio
         WHERE ${where.join(' AND ')}
       `,
       params
@@ -891,17 +966,30 @@ async function desasignarServicio(payload = {}, currentUser = null) {
 
     await conn.query(
       `
-        UPDATE pozo_servicio_asignacion
+        UPDATE pozo_servicio_asignacion psa
         SET
-          estado_asignacion = ?,
-          observacion = COALESCE(?, observacion)
+          psa.activo = 0,
+          psa.estado_asignacion = ?,
+          psa.fecha_desasignacion = NOW(),
+          ${buildObservationUpdateSql('psa')},
+          psa.updated_at = NOW()
         WHERE ${where.join(' AND ')}
       `,
-      [CLOSED_SERVICE_STATUS, causaDiferido, ...params]
+      [
+        CLOSED_ASSIGNMENT_STATUS,
+        ...observationParams(observacion),
+        ...params
+      ]
     );
 
-    const affectedPozoIds = [...new Set(activeRows.map(row => row.id_pozo).filter(Boolean))];
+    const affectedPozoIds = [
+      ...new Set(activeRows.map(row => row.id_pozo).filter(Boolean))
+    ];
 
+    /**
+     * Si no había asignación activa pero vino id_pozo,
+     * igual actualizamos estado para que el mapa/PWA queden consistentes.
+     */
     if (!affectedPozoIds.length && idPozo) {
       affectedPozoIds.push(idPozo);
     }
@@ -933,7 +1021,8 @@ async function updateServicioAsignado(id, payload = {}, currentUser = null) {
   const shouldClose =
     payload.activo === false ||
     payload.activo === 0 ||
-    estadoAsignacion === CLOSED_SERVICE_STATUS ||
+    estadoAsignacion === CLOSED_ASSIGNMENT_STATUS ||
+    estadoAsignacion === 'cerrado' ||
     action === 'desasignar' ||
     action === 'cerrar';
 
@@ -942,41 +1031,6 @@ async function updateServicioAsignado(id, payload = {}, currentUser = null) {
       ...payload,
       id_pozo: payload.id_pozo ?? payload.idPozo ?? payload.pozoId ?? id
     }, currentUser);
-  }
-
-  const fields = [];
-  const params = [];
-
-  if (payload.nombre_servicio !== undefined || payload.nombreServicio !== undefined || payload.servicio !== undefined) {
-    fields.push('servicio_asignado = ?');
-    params.push(normalizeText(payload.nombre_servicio ?? payload.nombreServicio ?? payload.servicio));
-  }
-
-  if (payload.tipo_servicio !== undefined || payload.tipoServicio !== undefined) {
-    fields.push('tipo_servicio = ?');
-    params.push(normalizeText(payload.tipo_servicio ?? payload.tipoServicio));
-  }
-
-  if (payload.estado_asignacion !== undefined || payload.estadoAsignacion !== undefined) {
-    fields.push('estado_asignacion = ?');
-    params.push(normalizeText(payload.estado_asignacion ?? payload.estadoAsignacion));
-  }
-
-  if (payload.observacion !== undefined) {
-    fields.push('observacion = ?');
-    params.push(normalizeText(payload.observacion));
-  }
-
-  if (payload.fecha_asignacion !== undefined || payload.fechaAsignacion !== undefined) {
-    fields.push('fecha_asignacion = ?');
-    params.push(normalizeDateOnly(payload.fecha_asignacion ?? payload.fechaAsignacion));
-  }
-
-  if (!fields.length) {
-    return {
-      ok: false,
-      message: 'No hay campos para actualizar.'
-    };
   }
 
   const conn = await pool.getConnection();
@@ -994,16 +1048,58 @@ async function updateServicioAsignado(id, payload = {}, currentUser = null) {
       };
     }
 
-    params.push(idPozo);
+    const fields = [];
+    const params = [];
+
+    if (payload.nombre_servicio !== undefined || payload.nombreServicio !== undefined || payload.servicio !== undefined) {
+      const servicio = await resolveServicio(
+        conn,
+        payload.nombre_servicio ?? payload.nombreServicio ?? payload.servicio
+      );
+
+      if (!servicio) {
+        return {
+          ok: false,
+          message: 'Servicio no encontrado en catálogo.'
+        };
+      }
+
+      fields.push('id_servicio = ?');
+      params.push(servicio.id);
+    }
+
+    if (payload.estado_asignacion !== undefined || payload.estadoAsignacion !== undefined) {
+      fields.push('estado_asignacion = ?');
+      params.push(normalizeText(payload.estado_asignacion ?? payload.estadoAsignacion));
+    }
+
+    if (payload.observacion !== undefined) {
+      fields.push('observacion = ?');
+      params.push(normalizeText(payload.observacion));
+    }
+
+    if (payload.fecha_asignacion !== undefined || payload.fechaAsignacion !== undefined) {
+      fields.push('fecha_asignacion = ?');
+      params.push(normalizeDateOnly(payload.fecha_asignacion ?? payload.fechaAsignacion));
+    }
+
+    if (!fields.length) {
+      return {
+        ok: false,
+        message: 'No hay campos para actualizar.'
+      };
+    }
+
+    fields.push('updated_at = NOW()');
 
     await conn.query(
       `
         UPDATE pozo_servicio_asignacion
         SET ${fields.join(', ')}
         WHERE id_pozo = ?
-          AND LOWER(estado_asignacion) IN (${activeStatusesPlaceholders()})
+          AND activo = 1
       `,
-      [...params, ...ACTIVE_SERVICE_STATUSES]
+      [...params, idPozo]
     );
 
     return {
