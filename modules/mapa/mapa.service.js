@@ -422,9 +422,9 @@ function buildMapaSelectSql() {
       coord_y,
       vista_diagrama AS visible_diagrama,
 
-      servicio_asignado,
+          servicio_asignado,
       tipo_servicio,
-      subtipo,
+      NULL AS subtipo,
       fecha_asignacion,
       estado_asignacion,
       observacion_servicio,
@@ -690,15 +690,15 @@ async function listServicios() {
   const [rows] = await pool.query(
     `
       SELECT
-        psa.id_pozo,
-        p.codigo AS codigo_pozo,
-        psa.servicio_asignado,
-        psa.tipo_servicio,
-        psa.subtipo,
-        psa.fecha_asignacion,
-        psa.estado_asignacion,
-        psa.observacion
-      FROM vw_servicio_actual_pozo psa
+  psa.id_pozo,
+  p.codigo AS codigo_pozo,
+  psa.servicio_asignado,
+  psa.tipo_servicio,
+  NULL AS subtipo,
+  psa.fecha_asignacion,
+  psa.estado_asignacion,
+  psa.observacion
+FROM vw_servicio_actual_pozo psa
       INNER JOIN pozos p
         ON p.id = psa.id_pozo
       ORDER BY psa.servicio_asignado ASC, p.codigo ASC
