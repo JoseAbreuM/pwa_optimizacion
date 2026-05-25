@@ -8,20 +8,17 @@ function mapaApiAuth(req, res, next) {
     });
   }
 
+  /**
+   * El mapaBare debe enviar:
+   * Authorization: Bearer <MAPA_API_TOKEN>
+   *
+   * No usamos x-api-key para evitar problemas CORS con headers no permitidos.
+   */
   const authHeader = String(req.headers.authorization || '').trim();
 
-  const bearerToken = authHeader.toLowerCase().startsWith('bearer ')
+  const incomingToken = authHeader.toLowerCase().startsWith('bearer ')
     ? authHeader.slice('Bearer '.length).trim()
-    : null;
-
-  const apiKeyToken = String(
-    req.headers['x-api-key'] ||
-    req.headers['x-mapa-api-token'] ||
-    req.query?.token ||
-    ''
-  ).trim();
-
-  const incomingToken = bearerToken || apiKeyToken;
+    : '';
 
   if (!incomingToken || incomingToken !== expectedToken) {
     return res.status(401).json({

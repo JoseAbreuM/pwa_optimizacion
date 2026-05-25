@@ -1,7 +1,7 @@
 const mapaService = require('./mapa.service');
 
 function getCurrentUser(req) {
-  return req.session?.user || req.user || null;
+  return req.mapaApiUser || req.session?.user || req.user || null;
 }
 
 async function health(req, res, next) {
@@ -80,7 +80,7 @@ async function updatePozo(req, res, next) {
     return res.json({
       ok: true,
       message: 'Pozo actualizado correctamente.',
-      pozo: result.pozo
+      pozo: result.pozo || null
     });
   } catch (error) {
     return next(error);
@@ -115,7 +115,23 @@ async function asignarServicio(req, res, next) {
     return res.json({
       ok: true,
       message: 'Servicio asignado correctamente.',
-      pozo: result.pozo,
+
+      /**
+       * Pozo destino que quedó En servicio.
+       */
+      pozo: result.pozo || null,
+
+      /**
+       * Pozos que tenían ese servicio antes y fueron cerrados/actualizados.
+       * Esto permite que mapaBare actualice también el marcador saliente.
+       */
+      pozosSalientes: result.pozosSalientes || [],
+
+      /**
+       * Cantidad de servicios cerrados que tenía previamente el pozo destino.
+       */
+      serviciosCerradosDestino: result.serviciosCerradosDestino || 0,
+
       id: result.id || null
     });
   } catch (error) {
@@ -125,15 +141,20 @@ async function asignarServicio(req, res, next) {
 
 async function desasignarServicio(req, res, next) {
   try {
+    const body = req.body || {};
+
     const payload = {
-      ...(req.body || {}),
+      ...body,
 
       /**
        * Permite usar:
        * PATCH /api/mapa/servicios/:id/desasignar
        * donde :id puede ser id_pozo si el mapa no maneja id de asignación.
+       *
+       * En POST /api/mapa/servicios/desasignar no hay :id,
+       * así que se respeta lo enviado en el body.
        */
-      id_pozo: req.body?.id_pozo ?? req.body?.idPozo ?? req.body?.pozoId ?? req.params.id
+      id_pozo: body.id_pozo ?? body.idPozo ?? body.pozoId ?? req.params.id
     };
 
     const result = await mapaService.desasignarServicio(
@@ -148,6 +169,11 @@ async function desasignarServicio(req, res, next) {
     return res.json({
       ok: true,
       message: 'Servicio desasignado correctamente.',
+
+      /**
+       * Lista de pozos afectados. Normalmente será 1,
+       * pero puede ser más si se desasigna por nombre de servicio.
+       */
       pozos: result.pozos || []
     });
   } catch (error) {

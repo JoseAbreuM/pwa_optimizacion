@@ -40,9 +40,6 @@ router.get('/servicios', mapaController.listServicios);
  * El mapa debe enviar:
  * Authorization: Bearer <MAPA_API_TOKEN>
  *
- * También se acepta:
- * x-api-key: <MAPA_API_TOKEN>
- *
  * El token debe existir en Render como variable de entorno:
  * MAPA_API_TOKEN=...
  */
@@ -64,14 +61,19 @@ router.patch('/pozos/:id', mapaApiAuth, mapaController.updatePozo);
  * Payload esperado flexible:
  * {
  *   id_pozo: 64,
- *   servicio: "RIG-351"
+ *   servicio: "RIG-351",
+ *   estadoAnterior: "Activo"
  * }
  *
  * O:
  * {
  *   pozo: { id: "MFB-0760", dbId: 64 },
- *   servicio: "RIG-351"
+ *   servicio: "RIG-351",
+ *   estadoAnterior: "Activo"
  * }
+ *
+ * Si el servicio estaba en otro pozo, el backend cierra esa asignación
+ * y actualiza el pozo saliente con estadoAnterior/estadoSaliente.
  */
 router.post('/servicios/asignar', mapaApiAuth, mapaController.asignarServicio);
 
@@ -114,6 +116,11 @@ router.patch('/servicios/:id/desasignar', mapaApiAuth, mapaController.desasignar
  * o:
  * {
  *   estado_asignacion: "cerrado"
+ * }
+ *
+ * o:
+ * {
+ *   action: "desasignar"
  * }
  *
  * se interpreta como desasignación.
