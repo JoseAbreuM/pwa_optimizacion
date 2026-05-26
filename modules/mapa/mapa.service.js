@@ -318,9 +318,9 @@ function toMapaPozo(row) {
    * Leaflet CRS.Simple usa [y, x].
    * Base de datos guarda coord_x / coord_y.
    */
-  const coordsDiagrama = row.coord_x != null && row.coord_y != null
-    ? [Number(row.coord_y), Number(row.coord_x)]
-    : null;
+const coordsDiagrama = row.coord_x != null && row.coord_y != null
+  ? [Number(row.coord_x), Number(row.coord_y)]
+  : null;
 
   const coordsMapa = row.latitud != null && row.longitud != null
     ? [Number(row.latitud), Number(row.longitud)]
@@ -633,11 +633,13 @@ async function updatePozoDiagrama(conn, idPozo, payload = {}) {
         : null
     );
 
-  /**
-   * Leaflet simple usa [y, x]; BD guarda coord_x y coord_y.
-   */
-  const coordY = coords ? normalizeNumber(coords[0]) : normalizeNumber(payload.coord_y);
-  const coordX = coords ? normalizeNumber(coords[1]) : normalizeNumber(payload.coord_x);
+/**
+ * Importante:
+ * La data histórica del mapa ya usa coordsDiagrama como [coord_x, coord_y].
+ * No invertir aquí, porque se descuadran todos los puntos.
+ */
+const coordX = coords ? normalizeNumber(coords[0]) : normalizeNumber(payload.coord_x);
+const coordY = coords ? normalizeNumber(coords[1]) : normalizeNumber(payload.coord_y);
 
   const visible = normalizeBoolean(payload.vistaMapa ?? payload.visible);
   const diagrama = payload.diagrama !== undefined ? normalizeText(payload.diagrama) : undefined;
