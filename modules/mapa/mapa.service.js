@@ -86,6 +86,11 @@ function getCategoriaForEstado(estado, currentCategoria) {
   const normalizedEstado = normalizeEstadoNombre(estado);
   const rawCategoria = Number(currentCategoria);
 
+  /**
+   * En servicio:
+   * - Si venía Cat 2 o Cat 3, conserva esa categoría.
+   * - Si venía Cat 1, pasa a Cat 2.
+   */
   if (normalizedEstado === 'En servicio') {
     if (Number.isFinite(rawCategoria) && [2, 3].includes(rawCategoria)) {
       return String(rawCategoria);
@@ -94,14 +99,23 @@ function getCategoriaForEstado(estado, currentCategoria) {
     return '2';
   }
 
+  /**
+   * Activo y diagnóstico = Cat 1.
+   */
   if (normalizedEstado === 'Activo' || normalizedEstado === 'Diagnóstico') {
     return '1';
   }
 
+  /**
+   * En espera de servicio = Cat 2.
+   */
   if (normalizedEstado === 'Inactivo en espera por servicio') {
     return '2';
   }
 
+  /**
+   * Candidato y diferido = Cat 3.
+   */
   if (normalizedEstado === 'Candidato' || normalizedEstado === 'Diferido') {
     return '3';
   }
@@ -321,14 +335,23 @@ async function resolveServicio(conn, nombreServicio) {
 
 async function setPozoEstado(conn, idPozo, estado, options = {}) {
   const normalizedEstado = normalizeEstadoNombre(estado);
-  const idEstado = await resolveEstadoId(conn, estado);
+  const idEstado = await resolveEstadoId(conn, normalizedEstado);
+
   if (!idEstado) return false;
 
   const categoria = await normalizeEstadoCategoria(conn, idPozo, normalizedEstado);
   const causaDiferido = normalizeText(options.causaDiferido);
 
-  const updateFields = ['id_estado = ?', 'categoria = ?', 'updated_at = NOW()'];
-  const updateParams = [idEstado, categoria];
+  const updateFields = [
+    'id_estado = ?',
+    'categoria = ?',
+    'updated_at = NOW()'
+  ];
+
+  const updateParams = [
+    idEstado,
+    categoria
+  ];
 
   if (normalizedEstado === 'Diferido' && causaDiferido) {
     updateFields.splice(2, 0, 'nota_operativa = ?');
@@ -338,8 +361,7 @@ async function setPozoEstado(conn, idPozo, estado, options = {}) {
   await conn.query(
     `
       UPDATE pozos
-      SET
-        ${updateFields.join(',\n          ')}
+      SET ${updateFields.join(',\n          ')}
       WHERE id = ?
     `,
     [...updateParams, idPozo]
@@ -560,29 +582,36 @@ async function updatePozo(id, payload = {}, currentUser = null) {
     const fields = [];
     const params = [];
 
-    let computedCategoria = null;
+ let computedCategoria = null;
 
-    if (payload.estado !== undefined) {
-      const normalizedEstado = normalizeEstadoNombre(payload.estado);
-      const idEstado = await resolveEstadoId(conn, payload.estado);
+if (payload.estado !== undefined) {
+  const normalizedEstado = normalizeEstadoNombre(payload.estado);
+  const idEstado = await resolveEstadoId(conn, normalizedEstado);
 
-      if (idEstado) {
-        fields.push('id_estado = ?');
-        params.push(idEstado);
-      }
+  if (idEstado) {
+    fields.push('id_estado = ?');
+    params.push(idEstado);
+  }
 
-      if (normalizedEstado) {
-        computedCategoria = await normalizeEstadoCategoria(conn, idPozo, normalizedEstado);
-      }
-    }
+  if (normalizedEstado) {
+    computedCategoria = await normalizeEstadoCategoria(conn, idPozo, normalizedEstado);
+  }
+}
 
-    if (payload.categoria !== undefined) {
-      fields.push('categoria = ?');
-      params.push(normalizeText(payload.categoria));
-    } else if (computedCategoria !== null) {
-      fields.push('categoria = ?');
-      params.push(computedCategoria);
-    }
+/**
+ * Regla oficial:
+ * Si viene estado, la categoría la decide la PWA/backend.
+ * No se respeta una categoría vieja enviada por el mapa.
+ *
+ * Si NO viene estado, entonces sí se permite actualizar categoría directa.
+ */
+if (computedCategoria !== null) {
+  fields.push('categoria = ?');
+  params.push(computedCategoria);
+} else if (payload.categoria !== undefined) {
+  fields.push('categoria = ?');
+  params.push(normalizeText(payload.categoria));
+}
 
     if (payload.area !== undefined || payload.zona !== undefined) {
       fields.push('area = ?');
@@ -629,15 +658,6 @@ async function updatePozo(id, payload = {}, currentUser = null) {
     if (payload.longitud !== undefined) {
       fields.push('longitud = ?');
       params.push(normalizeNumber(payload.longitud));
-    }
-
-    if (payload.estado !== undefined) {
-      const idEstado = await resolveEstadoId(conn, payload.estado);
-
-      if (idEstado) {
-        fields.push('id_estado = ?');
-        params.push(idEstado);
-      }
     }
 
     if (fields.length) {
@@ -1177,6 +1197,58 @@ async function updateServicioAsignado(id, payload = {}, currentUser = null) {
   } finally {
     conn.release();
   }
+}
+
+function resolveCategoriaPorEstado(estado, categoriaActual) {
+  const normalizedEstado = String(estado || '')
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+
+  const currentCategoria = Number(categoriaActual);
+
+  if (normalizedEstado === 'activo') {
+    return 1;
+  }
+
+  if (normalizedEstado === 'diagnostico' || normalizedEstado === 'diagnóstico') {
+    return 1;
+  }
+
+  if (
+    normalizedEstado === 'inactivo-servicio' ||
+    normalizedEstado === 'inactivo en espera por servicio' ||
+    normalizedEstado === 'en espera de servicio' ||
+    normalizedEstado === 'espera de servicio'
+  ) {
+    return 2;
+  }
+
+  if (normalizedEstado === 'en servicio' || normalizedEstado === 'en-servicio') {
+    /**
+     * En servicio conserva categoría anterior si era 2 o 3.
+     * Si era Cat 1, pasa a Cat 2.
+     */
+    if (currentCategoria === 2 || currentCategoria === 3) {
+      return currentCategoria;
+    }
+
+    return 2;
+  }
+
+  if (
+    normalizedEstado === 'candidato' ||
+    normalizedEstado === 'diferido'
+  ) {
+    return 3;
+  }
+
+  if ([1, 2, 3].includes(currentCategoria)) {
+    return currentCategoria;
+  }
+
+  return 3;
 }
 
 module.exports = {
