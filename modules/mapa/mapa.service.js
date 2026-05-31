@@ -82,6 +82,50 @@ function normalizeEstadoNombre(value) {
   return aliases[text] || normalizeText(value);
 }
 
+function getCategoriaForEstado(estado, currentCategoria) {
+  const normalizedEstado = normalizeEstadoNombre(estado);
+  const rawCategoria = Number(currentCategoria);
+
+  if (normalizedEstado === 'En servicio') {
+    if (Number.isFinite(rawCategoria) && [2, 3].includes(rawCategoria)) {
+      return String(rawCategoria);
+    }
+
+    return '2';
+  }
+
+  if (normalizedEstado === 'Activo' || normalizedEstado === 'Diagnóstico') {
+    return '1';
+  }
+
+  if (normalizedEstado === 'Inactivo en espera por servicio') {
+    return '2';
+  }
+
+  if (normalizedEstado === 'Candidato' || normalizedEstado === 'Diferido') {
+    return '3';
+  }
+
+  return Number.isFinite(rawCategoria) && [1, 2, 3].includes(rawCategoria)
+    ? String(rawCategoria)
+    : '3';
+}
+
+async function normalizeEstadoCategoria(conn, idPozo, estado) {
+  const [rows] = await conn.query(
+    `
+      SELECT categoria
+      FROM pozos
+      WHERE id = ?
+      LIMIT 1
+    `,
+    [idPozo]
+  );
+
+  const currentCategoria = rows[0]?.categoria ?? null;
+  return getCategoriaForEstado(estado, currentCategoria);
+}
+
 function normalizeDateOnly(value) {
   if (!value) return null;
 
@@ -276,36 +320,30 @@ async function resolveServicio(conn, nombreServicio) {
 }
 
 async function setPozoEstado(conn, idPozo, estado, options = {}) {
+  const normalizedEstado = normalizeEstadoNombre(estado);
   const idEstado = await resolveEstadoId(conn, estado);
   if (!idEstado) return false;
 
+  const categoria = await normalizeEstadoCategoria(conn, idPozo, normalizedEstado);
   const causaDiferido = normalizeText(options.causaDiferido);
-  const normalizedEstado = normalizeEstadoNombre(estado);
+
+  const updateFields = ['id_estado = ?', 'categoria = ?', 'updated_at = NOW()'];
+  const updateParams = [idEstado, categoria];
 
   if (normalizedEstado === 'Diferido' && causaDiferido) {
-    await conn.query(
-      `
-        UPDATE pozos
-        SET
-          id_estado = ?,
-          nota_operativa = ?,
-          updated_at = NOW()
-        WHERE id = ?
-      `,
-      [idEstado, causaDiferido, idPozo]
-    );
-  } else {
-    await conn.query(
-      `
-        UPDATE pozos
-        SET
-          id_estado = ?,
-          updated_at = NOW()
-        WHERE id = ?
-      `,
-      [idEstado, idPozo]
-    );
+    updateFields.splice(2, 0, 'nota_operativa = ?');
+    updateParams.splice(2, 0, causaDiferido);
   }
+
+  await conn.query(
+    `
+      UPDATE pozos
+      SET
+        ${updateFields.join(',\n          ')}
+      WHERE id = ?
+    `,
+    [...updateParams, idPozo]
+  );
 
   return true;
 }
@@ -522,9 +560,28 @@ async function updatePozo(id, payload = {}, currentUser = null) {
     const fields = [];
     const params = [];
 
+    let computedCategoria = null;
+
+    if (payload.estado !== undefined) {
+      const normalizedEstado = normalizeEstadoNombre(payload.estado);
+      const idEstado = await resolveEstadoId(conn, payload.estado);
+
+      if (idEstado) {
+        fields.push('id_estado = ?');
+        params.push(idEstado);
+      }
+
+      if (normalizedEstado) {
+        computedCategoria = await normalizeEstadoCategoria(conn, idPozo, normalizedEstado);
+      }
+    }
+
     if (payload.categoria !== undefined) {
       fields.push('categoria = ?');
       params.push(normalizeText(payload.categoria));
+    } else if (computedCategoria !== null) {
+      fields.push('categoria = ?');
+      params.push(computedCategoria);
     }
 
     if (payload.area !== undefined || payload.zona !== undefined) {
@@ -692,18 +749,27 @@ async function listServicios() {
   const [rows] = await pool.query(
     `
       SELECT
-  psa.id_pozo,
-  p.codigo AS codigo_pozo,
-  psa.servicio_asignado,
-  psa.tipo_servicio,
-  NULL AS subtipo,
-  psa.fecha_asignacion,
-  psa.estado_asignacion,
-  psa.observacion
-FROM vw_servicio_actual_pozo psa
-      INNER JOIN pozos p
+        s.id,
+        s.nombre AS servicio,
+        s.tipo_servicio,
+        s.subtipo,
+        psa.id_pozo,
+        p.codigo AS pozo_codigo,
+        ep.nombre AS estado_pozo,
+        psa.fecha_asignacion,
+        psa.estado_asignacion,
+        psa.observacion,
+        CASE WHEN psa.id IS NOT NULL THEN 1 ELSE 0 END AS asignado
+      FROM servicios s
+      LEFT JOIN pozo_servicio_asignacion psa
+        ON psa.id_servicio = s.id
+        AND psa.activo = 1
+      LEFT JOIN pozos p
         ON p.id = psa.id_pozo
-      ORDER BY psa.servicio_asignado ASC, p.codigo ASC
+      LEFT JOIN estado_pozo ep
+        ON ep.id = p.id_estado
+      WHERE s.activo = 1
+      ORDER BY s.nombre ASC
     `
   );
 
