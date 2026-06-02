@@ -563,6 +563,131 @@ async function getPozoById(id) {
   return rows[0] ? toMapaPozo(rows[0]) : null;
 }
 
+async function resolveCabezalId(conn, cabezalNombre) {
+  const nombre = normalizeText(cabezalNombre);
+  if (!nombre) return null;
+
+  const [exactRows] = await conn.query(
+    `
+      SELECT id
+      FROM cabezales
+      WHERE BINARY marca = BINARY ?
+      LIMIT 1
+    `,
+    [nombre]
+  );
+
+  if (exactRows[0]) return exactRows[0].id;
+
+  const [looseRows] = await conn.query(
+    `
+      SELECT id
+      FROM cabezales
+      WHERE LOWER(TRIM(marca)) = LOWER(TRIM(?))
+      LIMIT 1
+    `,
+    [nombre]
+  );
+
+  if (looseRows[0]) return looseRows[0].id;
+
+  await conn.query(
+    `
+      INSERT INTO cabezales (marca)
+      VALUES (?)
+    `,
+    [nombre]
+  );
+
+  const [createdRows] = await conn.query(
+    `
+      SELECT id
+      FROM cabezales
+      WHERE BINARY marca = BINARY ?
+      LIMIT 1
+    `,
+    [nombre]
+  );
+
+  return createdRows[0]?.id || null;
+}
+
+async function upsertPozoEquipoActual(conn, idPozo, payload = {}) {
+  const cabezal = normalizeText(payload.cabezal);
+  const variador = normalizeText(payload.variador);
+
+  if (cabezal === null && variador === null) return;
+
+  const idCabezal = cabezal ? await resolveCabezalId(conn, cabezal) : null;
+
+  const [rows] = await conn.query(
+    `
+      SELECT id
+      FROM pozo_equipos_actuales
+      WHERE id_pozo = ?
+      ORDER BY id DESC
+      LIMIT 1
+    `,
+    [idPozo]
+  );
+
+  if (rows[0]) {
+    const fields = [];
+    const params = [];
+
+    if (cabezal !== null) {
+      fields.push('cabezal_nombre_original = ?');
+      params.push(cabezal);
+    }
+
+    if (idCabezal !== null) {
+      fields.push('id_cabezal = ?');
+      params.push(idCabezal);
+    }
+
+    if (variador !== null) {
+      fields.push('variador_nombre_original = ?');
+      params.push(variador);
+    }
+
+    if (fields.length) {
+      fields.push('updated_at = NOW()');
+      params.push(rows[0].id);
+
+      await conn.query(
+        `
+          UPDATE pozo_equipos_actuales
+          SET ${fields.join(', ')}
+          WHERE id = ?
+        `,
+        params
+      );
+    }
+
+    return;
+  }
+
+  await conn.query(
+    `
+      INSERT INTO pozo_equipos_actuales (
+        id_pozo,
+        id_cabezal,
+        cabezal_nombre_original,
+        variador_nombre_original,
+        created_at,
+        updated_at
+      )
+      VALUES (?, ?, ?, ?, NOW(), NOW())
+    `,
+    [
+      idPozo,
+      idCabezal,
+      cabezal,
+      variador
+    ]
+  );
+}
+
 async function updatePozo(id, payload = {}, currentUser = null) {
   const conn = await pool.getConnection();
 
@@ -641,7 +766,22 @@ if (computedCategoria !== null) {
     if (payload.velocidadOperacional !== undefined || payload.vel_operacional !== undefined) {
       fields.push('vel_operacional = ?');
       params.push(normalizeNumber(payload.velocidadOperacional ?? payload.vel_operacional));
-    }
+    }if (
+  payload.velocidadActual !== undefined ||
+  payload.vel_actual !== undefined ||
+  payload.velocidad_actual !== undefined ||
+  payload.rpm !== undefined
+) {
+  fields.push('vel_actual = ?');
+  params.push(
+    normalizeNumber(
+      payload.velocidadActual ??
+      payload.vel_actual ??
+      payload.velocidad_actual ??
+      payload.rpm
+    )
+  );
+}
 
     if (payload.coordsMapa && Array.isArray(payload.coordsMapa)) {
       fields.push('latitud = ?');
@@ -673,6 +813,25 @@ if (computedCategoria !== null) {
         params
       );
     }
+
+    if (payload.cabezal !== undefined || payload.variador !== undefined) {
+  await upsertPozoEquipoActual(conn, idPozo, payload);
+
+  if (payload.cabezal !== undefined) {
+    const idCabezal = await resolveCabezalId(conn, payload.cabezal);
+
+    if (idCabezal) {
+      await conn.query(
+        `
+          UPDATE pozos
+          SET id_cabezal = ?, updated_at = NOW()
+          WHERE id = ?
+        `,
+        [idCabezal, idPozo]
+      );
+    }
+  }
+}
 
     await updatePozoDiagrama(conn, idPozo, payload);
 
