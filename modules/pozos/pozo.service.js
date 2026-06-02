@@ -116,28 +116,106 @@ async function listPozos(filters = {}) {
   const where = [];
   const params = [];
 
-  const [
-    pozosColumns,
-    estadoColumns,
-    parametrosColumns,
-    vdfsColumns,
-    cabezalesColumns,
-    metodosColumns,
-    bombasColumns
-  ] = await Promise.all([
-    getExistingColumns('pozos'),
-    getExistingColumns('estado_pozo'),
-    getExistingColumns('parametros_diarios'),
-    getExistingColumns('vdfs'),
-    getExistingColumns('cabezales'),
-    getExistingColumns('metodos_levantamiento'),
-    getExistingColumns('bombas_historial')
-  ]);
+ const [
+  pozosColumns,
+  estadoColumns,
+  parametrosColumns,
+  vdfsColumns,
+  cabezalesColumns,
+  metodosColumns,
+  bombasColumns,
+  equiposColumns
+] = await Promise.all([
+  getExistingColumns('pozos'),
+  getExistingColumns('estado_pozo'),
+  getExistingColumns('parametros_diarios'),
+  getExistingColumns('vdfs'),
+  getExistingColumns('cabezales'),
+  getExistingColumns('metodos_levantamiento'),
+  getExistingColumns('bombas_historial'),
+  getExistingColumns('pozo_equipos_actuales')
+]);
 
   const pIdEstado = pozosColumns.has('id_estado') ? 'p.id_estado' : 'NULL';
   const pIdMetodo = pozosColumns.has('id_metodo') ? 'p.id_metodo' : 'NULL';
   const pIdCabezal = pozosColumns.has('id_cabezal') ? 'p.id_cabezal' : 'NULL';
   const pIdVdf = pozosColumns.has('id_vdf') ? 'p.id_vdf' : 'NULL';
+
+    const equipoOrderParts = [];
+
+if (equiposColumns.has('fecha_referencia')) {
+  equipoOrderParts.push('pea.fecha_referencia DESC');
+}
+
+if (equiposColumns.has('updated_at')) {
+  equipoOrderParts.push('pea.updated_at DESC');
+}
+
+if (equiposColumns.has('created_at')) {
+  equipoOrderParts.push('pea.created_at DESC');
+}
+
+if (equiposColumns.has('id')) {
+  equipoOrderParts.push('pea.id DESC');
+}
+
+const equipoOrderSql = equipoOrderParts.length
+  ? equipoOrderParts.join(', ')
+  : 'pea.id_pozo DESC';
+
+const equipoCabezalExpr = equiposColumns.has('cabezal_nombre_original')
+  ? `
+    (
+      SELECT pea.cabezal_nombre_original
+      FROM pozo_equipos_actuales pea
+      WHERE pea.id_pozo = p.id
+        AND pea.cabezal_nombre_original IS NOT NULL
+        AND pea.cabezal_nombre_original <> ''
+      ORDER BY ${equipoOrderSql}
+      LIMIT 1
+    )
+  `
+  : 'NULL';
+
+const equipoVariadorExpr = equiposColumns.has('variador_nombre_original')
+  ? `
+    (
+      SELECT pea.variador_nombre_original
+      FROM pozo_equipos_actuales pea
+      WHERE pea.id_pozo = p.id
+        AND pea.variador_nombre_original IS NOT NULL
+        AND pea.variador_nombre_original <> ''
+      ORDER BY ${equipoOrderSql}
+      LIMIT 1
+    )
+  `
+  : 'NULL';
+
+const equipoVariadorHpExpr = equiposColumns.has('variador_capacidad_hp')
+  ? `
+    (
+      SELECT pea.variador_capacidad_hp
+      FROM pozo_equipos_actuales pea
+      WHERE pea.id_pozo = p.id
+        AND pea.variador_capacidad_hp IS NOT NULL
+      ORDER BY ${equipoOrderSql}
+      LIMIT 1
+    )
+  `
+  : 'NULL';
+
+const equipoVariadorKvaExpr = equiposColumns.has('variador_capacidad_kva')
+  ? `
+    (
+      SELECT pea.variador_capacidad_kva
+      FROM pozo_equipos_actuales pea
+      WHERE pea.id_pozo = p.id
+        AND pea.variador_capacidad_kva IS NOT NULL
+      ORDER BY ${equipoOrderSql}
+      LIMIT 1
+    )
+  `
+  : 'NULL';
 
   const pColorEstado = pozosColumns.has('color_estado_mapa')
     ? 'p.color_estado_mapa'
@@ -238,6 +316,12 @@ async function listPozos(filters = {}) {
       )
     `
     : 'NULL';
+    const cabezalListadoExpr = `
+  COALESCE(
+    ${equipoCabezalExpr},
+    ${cabezalExpr}
+  )
+`;
 
   const variadorCandidates = [];
 
@@ -264,6 +348,12 @@ async function listPozos(filters = {}) {
       )
     `
     : 'NULL';
+    const variadorListadoExpr = `
+  COALESCE(
+    ${equipoVariadorExpr},
+    ${variadorExpr}
+  )
+`;
 
   const variadorModeloExpr = vdfsColumns.has('modelo')
     ? `
@@ -293,7 +383,8 @@ async function listPozos(filters = {}) {
     `
     : 'NULL';
 
-  const variadorPotenciaExpr = vdfsColumns.has('potencia_hp')
+
+      const variadorPotenciaExpr = vdfsColumns.has('potencia_hp')
     ? `
       (
         SELECT vd.potencia_hp
@@ -316,6 +407,24 @@ async function listPozos(filters = {}) {
         )
       `
       : 'NULL';
+
+    const variadorCapacidadListadoExpr = `
+  COALESCE(
+    ${equipoVariadorKvaExpr},
+    ${equipoVariadorHpExpr},
+    ${variadorCapacidadExpr},
+    ${variadorPotenciaExpr}
+  )
+`;
+
+
+
+      const variadorPotenciaListadoExpr = `
+  COALESCE(
+    ${equipoVariadorHpExpr},
+    ${variadorPotenciaExpr}
+  )
+`;
 
   const pdFechaOrder = parametrosColumns.has('fecha') ? 'pd.fecha DESC,' : '';
   const pdIdOrder = parametrosColumns.has('id') ? 'pd.id DESC' : 'pd.id_pozo DESC';
@@ -445,8 +554,8 @@ async function listPozos(filters = {}) {
         OR p.area LIKE ?
         OR p.yacimiento LIKE ?
         OR ${estadoForSearch} LIKE ?
-        OR ${cabezalExpr} LIKE ?
-        OR ${variadorExpr} LIKE ?
+        OR ${cabezalListadoExpr} LIKE ? 
+        OR ${variadorListadoExpr} LIKE ?
         OR ${metodoNombreExpr} LIKE ?
       )
     `);
@@ -522,11 +631,11 @@ async function listPozos(filters = {}) {
       NULL AS causa_diferido,
 
       ${estadoForSearch} AS estado,
-      ${cabezalExpr} AS cabezal,
-      ${variadorExpr} AS variador,
-      ${variadorModeloExpr} AS variador_modelo,
-      ${variadorCapacidadExpr} AS variador_capacidad,
-      ${variadorPotenciaExpr} AS variador_potencia_hp,
+      ${cabezalListadoExpr} AS cabezal,
+${variadorListadoExpr} AS variador,
+${variadorModeloExpr} AS variador_modelo,
+${variadorCapacidadListadoExpr} AS variador_capacidad,
+${variadorPotenciaListadoExpr} AS variador_potencia_hp,
       ${metodoNombreExpr} AS metodo_levantamiento,
 
       ${bombaMarcaExpr} AS bomba_marca,
@@ -1781,6 +1890,8 @@ async function getMotoresCabezalActuales(pozoId) {
 
   if (!row) return null;
 
+
+
   const cantidad = normalizeNumericDisplay(row.cantidad_motores || 1);
   const hp = normalizeNumericDisplay(row.hp);
 
@@ -1806,7 +1917,8 @@ function normalizePozoFicha(pozo) {
   const variadorPotencia = firstUsefulServiceValue([
     pozo.variador_capacidad_hp,
     pozo.variador_potencia_hp,
-    pozo.variador_catalogo_potencia_hp
+    pozo.variador_catalogo_potencia_hp,
+    pozo.variador_catalogo_hp
   ]);
 
   const variadorCapacidad = firstUsefulServiceValue([
@@ -1815,7 +1927,8 @@ function normalizePozoFicha(pozo) {
     pozo.variador_catalogo_capacidad,
     pozo.variador_capacidad_hp,
     pozo.variador_potencia_hp,
-    pozo.variador_catalogo_potencia_hp
+    pozo.variador_catalogo_potencia_hp,
+    pozo.variador_catalogo_hp
   ]);
 
   const cabezalNombre = firstUsefulServiceValue([
@@ -1839,19 +1952,27 @@ function normalizePozoFicha(pozo) {
     ])
   );
 
+  const variadorNombreNormalizado = cleanServiceDisplayValue(variadorNombre);
+  const cabezalNombreNormalizado = cleanServiceDisplayValue(cabezalNombre);
+
+  const variadorPotenciaNormalizada = normalizePowerHpDisplay(variadorPotencia);
+  const variadorCapacidadNormalizada = normalizePowerHpDisplay(variadorCapacidad);
+  const variadorCapacidadHpNormalizada = normalizePowerHpDisplay(pozo.variador_capacidad_hp);
+  const variadorCapacidadKvaNormalizada = normalizeNumericDisplay(pozo.variador_capacidad_kva);
+
   return {
     ...pozo,
 
-    variador: cleanServiceDisplayValue(variadorNombre),
-    variador_nombre: cleanServiceDisplayValue(variadorNombre),
+    variador: variadorNombreNormalizado,
+    variador_nombre: variadorNombreNormalizado,
 
-    variador_potencia_hp: normalizeNumericDisplay(variadorPotencia),
-    variador_capacidad: normalizeNumericDisplay(variadorCapacidad),
-    variador_capacidad_kva: normalizeNumericDisplay(pozo.variador_capacidad_kva),
-    variador_capacidad_hp: normalizeNumericDisplay(pozo.variador_capacidad_hp),
+    variador_potencia_hp: variadorPotenciaNormalizada,
+    variador_capacidad: variadorCapacidadNormalizada,
+    variador_capacidad_hp: variadorCapacidadHpNormalizada,
+    variador_capacidad_kva: variadorCapacidadKvaNormalizada,
 
-    cabezal: cleanServiceDisplayValue(cabezalNombre),
-    cabezal_nombre: cleanServiceDisplayValue(cabezalNombre),
+    cabezal: cabezalNombreNormalizado,
+    cabezal_nombre: cabezalNombreNormalizado,
 
     cabezal_motores: cabezalMotores,
     cabezal_configuracion_motor: cabezalMotores
@@ -1907,6 +2028,47 @@ function normalizeNumericDisplay(value) {
 
   if (!Number.isFinite(number)) {
     return String(clean).trim();
+  }
+
+  if (Number.isInteger(number)) {
+    return String(number);
+  }
+
+  return String(number).replace(/\.00$/, '');
+}
+
+  function normalizePowerHpDisplay(value) {
+  const clean = firstUsefulServiceValue([value]);
+  if (clean === null) return null;
+
+  const number = Number(String(clean).trim().replace(',', '.'));
+
+  if (!Number.isFinite(number)) {
+    return String(clean).trim();
+  }
+
+  const standardValues = [
+    25,
+    30,
+    40,
+    50,
+    60,
+    75,
+    100,
+    125,
+    150,
+    200,
+    250
+  ];
+
+  const nearest = standardValues.reduce((best, current) => {
+    return Math.abs(current - number) < Math.abs(best - number)
+      ? current
+      : best;
+  }, standardValues[0]);
+
+  if (Math.abs(nearest - number) <= 3) {
+    return String(nearest);
   }
 
   if (Number.isInteger(number)) {
