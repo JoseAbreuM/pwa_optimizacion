@@ -63,10 +63,12 @@
     const production = byDate(data.produccion);
     const latestCompletion = production.at(-1)?.completacion || '';
     const selectedProduction = production.filter(row => (row.completacion || '') === latestCompletion);
+    const dailyProduction = selectedProduction.filter(row => Number(row.dias) > 0);
+    const latestDaily = dailyProduction.at(-1);
     const productionSeries = [
-      dateSeries(selectedProduction, 'petroleo', '#059669', 'Petróleo'),
-      dateSeries(selectedProduction, 'agua', '#2563eb', 'Agua'),
-      dateSeries(selectedProduction, 'gas', '#dc2626', 'Gas')
+      dateSeries(dailyProduction, 'petroleo_diario', '#059669', 'Petróleo diario'),
+      dateSeries(dailyProduction, 'agua_diaria', '#2563eb', 'Agua diaria'),
+      dateSeries(dailyProduction, 'gas_diario', '#dc2626', 'Gas diario')
     ];
     const survey = list(data.survey).map(row => ({ x: Number(row.x_offset), y: Number(row.tvd) }))
       .filter(point => Number.isFinite(point.x) && Number.isFinite(point.y));
@@ -78,7 +80,7 @@
       dateSeries(parametros.slice(-60), 'torque', '#7c3aed', 'Torque'),
       dateSeries(parametros.slice(-60), 'amp', '#0891b2', 'Amperaje')
     ];
-    const productionDates = selectedProduction.map(row => dateKey(row.fecha)).filter(Boolean);
+    const productionDates = dailyProduction.map(row => dateKey(row.fecha)).filter(Boolean);
     const sampleDates = samples.map(row => dateKey(row.fecha)).filter(Boolean);
     const parameterDates = parametros.map(row => dateKey(row.fecha)).filter(Boolean);
     const generated = new Date().toLocaleString('es-VE');
@@ -89,9 +91,9 @@
       <h1>Reporte del pozo ${esc(codigo)}</h1><p class="muted">Generado ${esc(generated)} · Datos disponibles en esta ficha${data.offline ? ' · modo offline' : ''}</p>
       <div class="meta"><span>Estado: ${esc(estado)}</span><span>Área: ${esc(text(pozo.area))}</span><span>Yacimiento: ${esc(text(pozo.yacimiento))}</span></div>
       <section class="block"><h2>Últimas dos bombas</h2>${table(['Marca','Modelo','Serial','Instalación','Falla','TVU','Fuente'], pumps.map(row => [row.marca,row.modelo,row.serial,dateKey(row.fecha_inst)||'—',dateKey(row.fecha_falla)||'—',number(row.tvu_dias ?? row.tvu),row.fuente_actual || row.fuente]))}</section>
-      <section class="block"><h2>Producción</h2><p class="muted">Completación más reciente: ${esc(text(latestCompletion))}. Cada variable se muestra como porcentaje de su máximo del período; verde petróleo, azul agua y rojo gas. Fuente: ${esc([...new Set(selectedProduction.map(row=>row.fuente).filter(Boolean))].join(', ') || 'Sin información')}.</p>
-        ${lineChart(productionSeries,{relative:true,label:'Tendencia de producción',from:productionDates[0],to:productionDates.at(-1)})}
-        ${table(['Variable','Último valor'],[['Petróleo',number(selectedProduction.at(-1)?.petroleo)],['Agua',number(selectedProduction.at(-1)?.agua)],['Gas',number(selectedProduction.at(-1)?.gas)]])}</section>
+      <section class="block"><h2>Promedios diarios del período mensual</h2><p class="muted">Completación más reciente: ${esc(text(latestCompletion))}. Cada variable se muestra como porcentaje de su máxima tasa diaria visible; verde petróleo, azul agua y rojo gas. Los totales mensuales originales no se utilizan como tasas. Fuente: ${esc([...new Set(selectedProduction.map(row=>row.fuente).filter(Boolean))].join(', ') || 'Sin información')}.</p>
+        ${lineChart(productionSeries,{relative:true,label:'Promedios diarios de producción por período mensual',from:productionDates[0],to:productionDates.at(-1)})}
+        ${table(['Variable','Último promedio diario','Total mensual original','Días activos'],[['Petróleo',number(latestDaily?.petroleo_diario),number(latestDaily?.petroleo),number(latestDaily?.dias)],['Agua',number(latestDaily?.agua_diaria),number(latestDaily?.agua),number(latestDaily?.dias)],['Gas',number(latestDaily?.gas_diario),number(latestDaily?.gas),number(latestDaily?.dias)]])}</section>
       <section class="block"><h2>Trayectoria / survey</h2><p class="muted">${survey.length} puntos · X Offset horizontal, TVD vertical.</p>${lineChart([{name:'Trayectoria',color:'#0f766e',points:survey}],{reverseY:true,label:'Trayectoria del survey'})}</section>
       <section class="block"><h2>Muestras · % AyS</h2><p class="muted">${sampleSeries[0].points.length} muestras con valor disponible. Fuentes: ${esc([...new Set(samples.map(row=>row.fuente).filter(Boolean))].join(', ') || 'Sin información')}.</p>${lineChart(sampleSeries,{label:'Porcentaje de agua y sedimentos',from:sampleDates[0],to:sampleDates.at(-1)})}</section>
       ${active ? `<section class="block"><h2>Comportamiento actual de parámetros</h2><p class="muted">Últimos registros: torque y amperaje, cada serie respecto a su propio máximo.</p>${lineChart(parameterSeries,{relative:true,label:'Parámetros recientes',from:parameterDates[0],to:parameterDates.at(-1)})}${table(['Última fecha','Torque','AMP','Frecuencia','Voltaje','HP'],currentParam?[[dateKey(currentParam.fecha),number(currentParam.torque),number(currentParam.amp),number(currentParam.freq),number(currentParam.volts),number(currentParam.hp)]]:[])}</section>` : ''}

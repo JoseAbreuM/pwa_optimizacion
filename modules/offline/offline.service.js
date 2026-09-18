@@ -125,7 +125,10 @@ const CHUNK_STORE_CONFIG = {
   produccion: {
     pageSize: 1000,
     countSql: 'SELECT COUNT(*) AS total FROM vw_pozo_produccion_historial',
-    dataSql: `SELECT id, id_pozo, fecha, completacion, petroleo, agua, gas,
+    dataSql: `SELECT id, id_pozo, fecha, completacion, petroleo, agua, gas, dias, bpd,
+      CASE WHEN dias > 0 THEN bpd ELSE NULL END AS petroleo_diario,
+      CASE WHEN dias > 0 THEN agua / dias ELSE NULL END AS agua_diaria,
+      CASE WHEN dias > 0 THEN gas / dias ELSE NULL END AS gas_diario,
       fuente, origen_archivo FROM vw_pozo_produccion_historial
       ORDER BY id ASC LIMIT ? OFFSET ?`
   },

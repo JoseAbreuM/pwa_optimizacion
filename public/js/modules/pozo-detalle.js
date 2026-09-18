@@ -1192,11 +1192,12 @@
     if (!dataEl || !selector || !period || typeof window.ApexCharts === 'undefined') return;
 
     const variables = [
-      { field: 'petroleo', label: 'Petróleo', color: '#10b981' },
-      { field: 'agua', label: 'Agua', color: '#3b82f6' },
-      { field: 'gas', label: 'Gas', color: '#ef4444' }
+      { field: 'petroleo', rateField: 'petroleo_diario', label: 'Petróleo', color: '#10b981' },
+      { field: 'agua', rateField: 'agua_diaria', label: 'Agua', color: '#3b82f6' },
+      { field: 'gas', rateField: 'gas_diario', label: 'Gas', color: '#ef4444' }
     ];
     const rows = readJsonData(dataEl, []);
+    const oldOfflineRows = rows.some(row => !Object.prototype.hasOwnProperty.call(row, 'dias'));
     const completaciones = [...new Set(rows.map(row => String(row.completacion || 'Sin información')))];
     const previousSelection = selector.value;
     selector.innerHTML = '<option value="__all__">Todas (series separadas)</option>' +
@@ -1208,7 +1209,29 @@
       const key = String(value || '').slice(0, 10);
       return /^\d{4}-\d{2}-\d{2}$/.test(key) ? new Date(`${key}T12:00:00`).getTime() : NaN;
     };
-    const numberText = value => Number(value).toLocaleString('es-VE', { maximumFractionDigits: 2 });
+    const numberText = value => value == null ? '—' : Number(value).toLocaleString('es-VE', { maximumFractionDigits: 4 });
+    const quartile = (sorted, fraction) => {
+      const index = (sorted.length - 1) * fraction;
+      const lower = Math.floor(index);
+      return sorted[lower] + (sorted[Math.ceil(index)] - sorted[lower]) * (index - lower);
+    };
+    const outlierReasons = (data, variable) => {
+      if (data.length < 4) return () => [];
+      const rates = data.map(row => Number(row[variable.rateField])).sort((a, b) => a - b);
+      const days = data.map(row => Number(row.dias)).sort((a, b) => a - b);
+      const rateQ1 = quartile(rates, 0.25);
+      const rateQ3 = quartile(rates, 0.75);
+      const daysQ1 = quartile(days, 0.25);
+      const daysQ3 = quartile(days, 0.75);
+      const upperRate = rateQ3 + 1.5 * (rateQ3 - rateQ1);
+      const lowerDays = daysQ1 - 1.5 * (daysQ3 - daysQ1);
+      return row => [
+        ...(Number(row[variable.rateField]) > upperRate ? ['tasa diaria alta'] : []),
+        ...(Number(row.dias) < lowerDays ? ['pocos días activos'] : [])
+      ];
+    };
+    const outlierMarkers = (series, color) => series.flatMap((item, seriesIndex) => item.data.flatMap((point, dataPointIndex) =>
+      point.outlier.length ? [{ seriesIndex, dataPointIndex, fillColor: color, strokeColor: '#f59e0b', size: 8, shape: 'circle' }] : []));
     const render = () => {
       produccionCharts.forEach(chart => chart.destroy());
       produccionCharts = [];
@@ -1220,12 +1243,12 @@
       const visible = rows.filter(row => selected.includes(String(row.completacion || 'Sin información')) &&
         Number.isFinite(fechaMs(row.fecha)) && (!cutoff || fechaMs(row.fecha) >= cutoff.getTime()));
       document.getElementById('produccion-contexto').textContent =
-        `Completación: ${selector.value === '__all__' ? 'Todas, sin sumar completaciones' : selected[0]}. Período: ${period.selectedOptions[0].textContent}. ${visible.length} registros visibles.`;
+        `Completación: ${selector.value === '__all__' ? 'Todas, sin sumar completaciones' : selected[0]}. Período: ${period.selectedOptions[0].textContent}. ${visible.length} registros visibles.${oldOfflineRows ? ' Actualiza manualmente los datos sin conexión para recibir días y tasas diarias.' : ''}`;
       const theme = getChartTheme();
       const grid = { borderColor: theme.gridColor, strokeDashArray: 4 };
-      const formatTooltip = (point, label, relative = false) => `<div class="rounded-lg bg-white p-3 text-xs text-slate-800 shadow-lg dark:bg-slate-800 dark:text-slate-100"><strong>${escapeChartText(label)}: ${numberText(point.valor ?? point.y)}${relative ? ` (${numberText(point.y)}% del máximo)` : ''}</strong><br>${new Date(point.x).toLocaleDateString('es-VE')}<br>Fuente: ${escapeChartText(point.fuente)}<br>Archivo: ${escapeChartText(point.archivo)}</div>`;
-      const pointFor = (row, field) => ({ x: fechaMs(row.fecha), y: Number(row[field]), fuente: row.fuente || 'Sin información', archivo: row.origen_archivo || '—' });
-      const validRows = field => visible.filter(row => row[field] != null && Number.isFinite(Number(row[field])));
+      const formatTooltip = (point, label, relative = false) => `<div class="rounded-lg bg-white p-3 text-xs text-slate-800 shadow-lg dark:bg-slate-800 dark:text-slate-100"><strong>${escapeChartText(label)}</strong><br>Fecha: ${new Date(point.x).toLocaleDateString('es-VE')}<br>Promedio diario: ${numberText(point.daily)}${relative ? ` (${numberText(point.y)}% del máximo diario visible)` : ''}<br>Producción mensual original: ${numberText(point.monthly)}<br>Días activos: ${numberText(point.days)}<br>Completación: ${escapeChartText(point.completion)}<br>Fuente: ${escapeChartText(point.fuente)}<br>Archivo: ${escapeChartText(point.archivo)}${point.outlier.length ? `<br><strong>Valor atípico: ${escapeChartText(point.outlier.join(' y '))}</strong>` : ''}</div>`;
+      const pointFor = (row, variable, reasons) => ({ x: fechaMs(row.fecha), y: Number(row[variable.rateField]), daily: Number(row[variable.rateField]), monthly: row[variable.field], days: row.dias, completion: row.completacion || 'Sin información', fuente: row.fuente || 'Sin información', archivo: row.origen_archivo || '—', outlier: reasons(row) });
+      const validRows = variable => visible.filter(row => Number(row.dias) > 0 && row[variable.rateField] != null && Number.isFinite(Number(row[variable.rateField])));
       const scaleFor = field => {
         const minEl = document.getElementById(`produccion-${field}-min`);
         const maxEl = document.getElementById(`produccion-${field}-max`);
@@ -1243,14 +1266,16 @@
       for (const variable of variables) {
         const target = document.getElementById(`chart-produccion-${variable.field}`);
         if (!target) continue;
-        const data = validRows(variable.field);
+        const data = validRows(variable);
+        const reasons = outlierReasons(data, variable);
+        const unusual = data.filter(row => reasons(row).length).length;
         const maxObserved = document.getElementById(`produccion-${variable.field}-max-observado`);
-        if (maxObserved) maxObserved.textContent = data.length ? `Máximo visible: ${numberText(Math.max(...data.map(row => Number(row[variable.field]))))}` : 'Sin valores en el período';
+        if (maxObserved) maxObserved.textContent = data.length ? `Máximo diario visible: ${numberText(Math.max(...data.map(row => Number(row[variable.rateField]))))} · ${unusual} valores atípicos marcados` : 'Sin tasas diarias válidas en el período';
         const series = selected.map(name => ({
           name: selected.length === 1 ? variable.label : name,
-          data: data.filter(row => String(row.completacion || 'Sin información') === name).map(row => pointFor(row, variable.field))
+          data: data.filter(row => String(row.completacion || 'Sin información') === name).map(row => pointFor(row, variable, reasons))
         })).filter(item => item.data.length);
-        if (!series.length) { renderChartMessage(target, `Sin datos de ${variable.label.toLowerCase()} para el filtro.`); continue; }
+        if (!series.length) { renderChartMessage(target, oldOfflineRows ? 'Actualiza los datos sin conexión para ver tasas diarias.' : `Sin tasas diarias de ${variable.label.toLowerCase()} con días activos válidos.`); continue; }
         target.innerHTML = '';
         const chart = new window.ApexCharts(target, {
           chart: { type: 'area', height: 300, foreColor: theme.foreColor, background: 'transparent', zoom: { enabled: true }, toolbar: { show: true } },
@@ -1258,9 +1283,9 @@
           dataLabels: { enabled: false },
           stroke: { curve: 'smooth', width: 2.5, dashArray: series.map((_, index) => index ? 4 + index * 2 : 0) },
           fill: { type: 'gradient', gradient: { opacityFrom: 0.22, opacityTo: 0.01 } },
-          markers: { size: data.length < 40 ? 3 : 0 }, grid,
+          markers: { size: data.length < 40 ? 3 : 0, discrete: outlierMarkers(series, variable.color) }, grid,
           xaxis: { type: 'datetime', title: { text: 'Fecha' } },
-          yaxis: { title: { text: variable.label }, decimalsInFloat: 2, ...scaleFor(variable.field) },
+          yaxis: { title: { text: `Promedio diario de ${variable.label.toLowerCase()}` }, decimalsInFloat: 2, ...scaleFor(variable.field) },
           legend: { show: series.length > 1, position: 'top', horizontalAlign: 'left' },
           tooltip: { custom: ({ seriesIndex, dataPointIndex, w }) => formatTooltip(w.config.series[seriesIndex].data[dataPointIndex], variable.label) }
         });
@@ -1274,16 +1299,19 @@
       const crossSeries = [];
       const crossColors = [];
       const crossDashes = [];
+      const crossMarkers = [];
       for (const variable of variables) {
-        const data = validRows(variable.field);
-        const maximum = Math.max(0, ...data.map(row => Number(row[variable.field])));
+        const data = validRows(variable);
+        const reasons = outlierReasons(data, variable);
+        const maximum = Math.max(0, ...data.map(row => Number(row[variable.rateField])));
         let visibleSeriesIndex = 0;
         for (const name of selected) {
           const points = data.filter(row => String(row.completacion || 'Sin información') === name).map(row => {
-            const point = pointFor(row, variable.field);
-            return { ...point, valor: point.y, y: maximum > 0 ? (point.y / maximum) * 100 : 0 };
+            const point = pointFor(row, variable, reasons);
+            return { ...point, y: maximum > 0 ? (point.daily / maximum) * 100 : 0 };
           });
           if (points.length) {
+            crossMarkers.push(...outlierMarkers([{ data: points }], variable.color).map(marker => ({ ...marker, seriesIndex: crossSeries.length })));
             crossSeries.push({ name: selected.length === 1 ? variable.label : `${variable.label} · ${name}`, data: points });
             crossColors.push(variable.color);
             crossDashes.push(visibleSeriesIndex ? 4 + visibleSeriesIndex * 2 : 0);
@@ -1298,8 +1326,8 @@
         theme: { mode: theme.mode }, colors: crossColors, series: crossSeries,
         dataLabels: { enabled: false },
         stroke: { curve: 'smooth', width: 2.5, dashArray: crossDashes },
-        markers: { size: 0 }, grid, xaxis: { type: 'datetime', title: { text: 'Fecha' } },
-        yaxis: { min: 0, max: 100, title: { text: '% del máximo visible por variable' }, labels: { formatter: value => `${Number(value).toFixed(0)}%` } },
+        markers: { size: 0, discrete: crossMarkers }, grid, xaxis: { type: 'datetime', title: { text: 'Fecha' } },
+        yaxis: { min: 0, max: 100, title: { text: '% del máximo diario visible por variable' }, labels: { formatter: value => `${Number(value).toFixed(0)}%` } },
         legend: { position: 'bottom', horizontalAlign: 'center' },
         tooltip: { custom: ({ seriesIndex, dataPointIndex, w }) => formatTooltip(w.config.series[seriesIndex].data[dataPointIndex], w.config.series[seriesIndex].name, true) }
       });
@@ -2030,7 +2058,7 @@
     }
 
     if (kind === 'produccion') {
-      return `Historial de producción · ${getSelectValue('produccion-periodo') || 'todo el período'} · fuente disponible en los puntos`;
+      return `Promedios diarios del período mensual · ${getSelectValue('produccion-periodo') || 'todo el período'} · fuente disponible en los puntos`;
     }
 
     if (kind === 'pruebas') return 'Pruebas OFM · % AyS';

@@ -1,6 +1,6 @@
 const { pool } = require('../../config/db');
 
-const POZO_SERVICE_VERSION = 'pozo.service.ofm-pruebas-produccion-2026-09-18-v2';
+const POZO_SERVICE_VERSION = 'pozo.service.ofm-produccion-diaria-2026-09-18-v3';
 
 console.log(`[POZO_SERVICE] cargado: ${POZO_SERVICE_VERSION}`);
 console.log('[POZO_SERVICE] archivo:', __filename);
@@ -1468,11 +1468,15 @@ async function getSurveyActivoByPozo(pozoId) {
 }
 
 async function getProduccionByPozo(pozoId) {
-  const rows = await query(`SELECT id, id_pozo, fecha, completacion, petroleo, agua, gas,
+  const rows = await query(`SELECT id, id_pozo, fecha, completacion, petroleo, agua, gas, dias, bpd,
+    CASE WHEN dias > 0 THEN bpd ELSE NULL END AS petroleo_diario,
+    CASE WHEN dias > 0 THEN agua / dias ELSE NULL END AS agua_diaria,
+    CASE WHEN dias > 0 THEN gas / dias ELSE NULL END AS gas_diario,
     fuente, origen_archivo FROM vw_pozo_produccion_historial
     WHERE id_pozo = ? ORDER BY fecha ASC, id ASC`, [pozoId]);
   return rows.map(row => ({ ...row, ...Object.fromEntries(
-    ['petroleo', 'agua', 'gas'].map(key => [key, toNumber(row[key])])) }));
+    ['petroleo', 'agua', 'gas', 'dias', 'bpd', 'petroleo_diario', 'agua_diaria', 'gas_diario']
+      .map(key => [key, toNumber(row[key])])) }));
 }
 
 /**
