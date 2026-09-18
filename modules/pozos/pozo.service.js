@@ -1,6 +1,6 @@
 const { pool } = require('../../config/db');
 
-const POZO_SERVICE_VERSION = 'pozo.service.ficha-equipos-comparativo-niveles-2026-05-14-v6';
+const POZO_SERVICE_VERSION = 'pozo.service.ofm-pruebas-produccion-2026-09-18-v2';
 
 console.log(`[POZO_SERVICE] cargado: ${POZO_SERVICE_VERSION}`);
 console.log('[POZO_SERVICE] archivo:', __filename);
@@ -809,78 +809,18 @@ async function getPozoById(id) {
 }
 
 /**
- * Bomba vigente del pozo.
- *
- * Regla TVU:
- * - Si la bomba no tiene fecha_falla, el TVU se calcula contra CURDATE().
- * - Si la bomba tiene fecha_falla, el TVU queda fijo hasta la fecha de falla.
- * - Para pozos activos, se prioriza la última bomba sin fecha_falla.
+ * Bomba vigente según la vista consolidada. La vista calcula TVU y fuente.
  */
 async function getBombaActualByPozo(pozoId) {
-  const rows = await query(
-    `
-    SELECT
-      b.id,
-      b.id_pozo,
-      p.codigo,
-      p.categoria,
-      ep.nombre AS estado_pozo,
-
-      ml.nombre AS metodo,
-
-      b.marca,
-      b.modelo,
-      b.serial,
-      b.serial AS serial_rotor,
-      NULL AS serial_estator,
-
-      b.fecha_inst,
-      b.fecha_falla,
-
-      CASE
-        WHEN b.fecha_inst IS NULL THEN NULL
-        WHEN b.fecha_inst > CURDATE() THEN 0
-        WHEN b.fecha_falla IS NOT NULL THEN DATEDIFF(b.fecha_falla, b.fecha_inst)
-        ELSE DATEDIFF(CURDATE(), b.fecha_inst)
-      END AS tvu,
-
-      CASE
-        WHEN b.fecha_inst IS NULL THEN NULL
-        WHEN b.fecha_inst > CURDATE() THEN 0
-        WHEN b.fecha_falla IS NOT NULL THEN DATEDIFF(b.fecha_falla, b.fecha_inst)
-        ELSE DATEDIFF(CURDATE(), b.fecha_inst)
-      END AS tvu_dias,
-
-      b.estatus,
-      b.observaciones,
-
-      CASE
-        WHEN b.fecha_falla IS NULL THEN 'BOMBAS_HISTORIAL_ACTIVA'
-        ELSE 'BOMBAS_HISTORIAL_FALLADA'
-      END AS fuente_actual
-
-    FROM bombas_historial b
-    INNER JOIN pozos p
-      ON p.id = b.id_pozo
-    LEFT JOIN estado_pozo ep
-      ON ep.id = p.id_estado
-    LEFT JOIN metodos_levantamiento ml
-      ON ml.id = b.id_metodo
-
-    WHERE b.id_pozo = ?
-      AND b.fecha_inst IS NOT NULL
-
-    ORDER BY
-      CASE WHEN b.fecha_falla IS NULL THEN 0 ELSE 1 END ASC,
-      b.fecha_inst DESC,
-      b.id DESC
-
-    LIMIT 1
-    `,
-    [pozoId]
-  );
-
-  return rows[0] || null;
+  const consolidated = await query(`SELECT id_pozo, codigo, categoria, estado_pozo, metodo,
+    marca, modelo, serial, fecha_inst, fecha_falla, tvu, estatus, observaciones, fuente_actual
+    FROM vw_bomba_actual_consolidada WHERE id_pozo = ? LIMIT 1`, [pozoId]);
+  if (consolidated.length) {
+    const row = consolidated[0];
+    if ([row.marca, row.modelo, row.serial, row.fecha_inst].every(value => value == null || value === '')) return null;
+    return { ...row, serial_rotor: row.serial, tvu_dias: row.tvu };
+  }
+  return null;
 }
 
 /**
@@ -1288,7 +1228,7 @@ async function getComparativoParametrosNivelesByPozo(pozoId) {
  * Últimas muestras asociadas al pozo.
  */
 async function getUltimasMuestrasByPozo(pozoId, limit = 500) {
-  const columns = await getExistingColumns('muestras_fluido');
+  const columns = await getExistingColumns('vw_pozo_muestras_con_fuente');
 
   const selectSql = buildSafeSelect(columns, [
     'id',
@@ -1301,7 +1241,10 @@ async function getUltimasMuestrasByPozo(pozoId, limit = 500) {
     'sync_status',
     'id_personal',
     'uuid_local',
-    'id_usuario_carga'
+    'id_usuario_carga',
+    'fuente',
+    'origen_archivo',
+    'lote_carga'
   ]);
 
   return query(
@@ -1312,7 +1255,7 @@ async function getUltimasMuestrasByPozo(pozoId, limit = 500) {
     FROM (
       SELECT
         ${selectSql}
-      FROM muestras_fluido
+      FROM vw_pozo_muestras_con_fuente
       WHERE id_pozo = ?
       ORDER BY
         fecha DESC,
@@ -1327,6 +1270,15 @@ async function getUltimasMuestrasByPozo(pozoId, limit = 500) {
     `,
     [pozoId, Number(limit) || 10]
   );
+}
+
+/** Historial de pruebas del pozo, incluido OFM. */
+async function getPruebasByPozo(pozoId) {
+  const rows = await query(`SELECT id, id_pozo, fecha_prueba, ays, api, volumetria,
+    bbpd, bnpd, gasf, fuente FROM pruebas_pozo
+    WHERE id_pozo = ? ORDER BY fecha_prueba ASC, id ASC`, [pozoId]);
+  return rows.map(row => ({ ...row, ...Object.fromEntries(
+    ['ays', 'api', 'volumetria', 'bbpd', 'bnpd', 'gasf'].map(key => [key, toNumber(row[key])])) }));
 }
 
 /**
@@ -1442,7 +1394,9 @@ async function getBootstrapData(pozoId) {
     historialNiveles,
     comparativoParametrosNiveles,
     ultimasMuestras,
-    survey
+    survey,
+    produccion,
+    pruebas
   ] = await Promise.all([
     getBombaActualByPozo(pozo.id),
     getHistorialBombasByPozo(pozo.id),
@@ -1452,7 +1406,9 @@ async function getBootstrapData(pozoId) {
     getHistorialNivelesByPozo(pozo.id),
     getComparativoParametrosNivelesByPozo(pozo.id),
     getUltimasMuestrasByPozo(pozo.id, 10),
-    getSurveyActivoByPozo(pozo.id)
+    getSurveyActivoByPozo(pozo.id),
+    getProduccionByPozo(pozo.id),
+    getPruebasByPozo(pozo.id)
   ]);
 
   const timeline = await getPozoTimeline(pozo.id, {
@@ -1473,7 +1429,9 @@ async function getBootstrapData(pozoId) {
     comparativoParametrosNiveles,
     ultimasMuestras,
     timeline,
-    survey
+    survey,
+    produccion,
+    pruebas
   };
 }
 
@@ -1481,7 +1439,7 @@ async function getBootstrapData(pozoId) {
  * Survey activo.
  */
 async function getSurveyActivoByPozo(pozoId) {
-  return query(
+  const rows = await query(
     `
     SELECT
       id,
@@ -1495,19 +1453,26 @@ async function getSurveyActivoByPozo(pozoId) {
       delta_y,
       azimut,
       lote_carga,
-      raw_payload,
-      activo,
       created_at,
       updated_at
-    FROM pozo_survey
+    FROM vw_pozo_survey_activo
     WHERE id_pozo = ?
-      AND activo = 1
     ORDER BY
       fila_orden ASC,
-      id ASC
+      md ASC
     `,
     [pozoId]
   );
+  return rows.map(row => Object.fromEntries(Object.entries(row).map(([key, value]) =>
+    [key, ['md', 'tvd', 'x_offset', 'y_offset', 'delta_x', 'delta_y', 'azimut'].includes(key) ? toNumber(value) : value])));
+}
+
+async function getProduccionByPozo(pozoId) {
+  const rows = await query(`SELECT id, id_pozo, fecha, completacion, petroleo, agua, gas,
+    fuente, origen_archivo FROM vw_pozo_produccion_historial
+    WHERE id_pozo = ? ORDER BY fecha ASC, id ASC`, [pozoId]);
+  return rows.map(row => ({ ...row, ...Object.fromEntries(
+    ['petroleo', 'agua', 'gas'].map(key => [key, toNumber(row[key])])) }));
 }
 
 /**
@@ -2133,10 +2098,12 @@ module.exports = {
   getComparativoParametrosNivelesByPozo,
 
   getUltimasMuestrasByPozo,
+  getPruebasByPozo,
   getPozoTimeline,
   getBootstrapData,
 
   getSurveyActivoByPozo,
+  getProduccionByPozo,
   replaceSurveyActivoByPozo,
 
   updatePozoPotencial,

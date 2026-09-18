@@ -258,6 +258,11 @@
           ${card('Potencial activo', formatNumber(kpis.potencial, 2))}
         </section>
 
+        <section class="grid gap-3 sm:grid-cols-2" aria-label="Cobertura OFM">
+          ${card('Pozos con producción OFM', resumen.dashboard?.ofmCoverage?.produccion ?? '—')}
+          ${card('Pozos con pruebas OFM', resumen.dashboard?.ofmCoverage?.pruebas ?? '—')}
+        </section>
+
         <section class="grid gap-4 xl:grid-cols-3">
           <article class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900 xl:col-span-2">
             <div class="mb-4 flex items-center justify-between gap-3">
@@ -604,6 +609,8 @@
     const muestras = sortByDateDesc(full.muestras || full.timeline?.muestras || []);
     const bombas = sortByDateDesc(full.bombas || full.historialBombas || [], 'fecha_inst');
     const survey = full.survey || [];
+    const produccion = full.produccion || full.detalle?.produccion || [];
+    const pruebas = full.pruebas || full.detalle?.pruebas || [];
 
     const ultimoParametro = full.ultimoParametro || parametros[0] || null;
     const ultimoNivel = full.ultimoNivel || niveles[0] || null;
@@ -626,6 +633,8 @@
       },
       ultimasMuestras: muestras,
       survey,
+      produccion,
+      pruebas,
       counts: full.counts || {},
       offline: true,
       source: 'indexeddb'
@@ -777,6 +786,8 @@
       <section class="space-y-6" data-offline-pozo-detail="true">
         ${renderDetalleHeader({ pozo, codigoPozo, estadoPozo, colorEstado, velocidades, bombaActual: data.bombaActual })}
 
+        <div class="flex justify-stretch sm:justify-end"><button type="button" data-export-pozo-report class="min-h-11 w-full rounded-lg bg-[#033F73] px-4 py-2 text-sm font-semibold text-white sm:w-auto">Exportar reporte del pozo</button></div>
+
         <div class="border-b border-slate-200 dark:border-slate-700">
           <ul class="-mb-px flex flex-wrap text-center text-sm font-medium" id="pozo-detail-tabs" role="tablist">
             <li class="me-2" role="presentation">
@@ -802,6 +813,8 @@
                 Muestras
               </button>
             </li>
+            <li class="me-2" role="presentation"><button class="pozo-tab-btn inline-block rounded-t-lg border-b-2 border-transparent p-4 text-slate-500 hover:border-slate-300 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200" type="button" data-tab-target="tab-produccion">Producción</button></li>
+            <li class="me-2" role="presentation"><button class="pozo-tab-btn inline-block rounded-t-lg border-b-2 border-transparent p-4 text-slate-500 hover:border-slate-300 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200" type="button" data-tab-target="tab-bomba-produccion">Análisis por bomba</button></li>
           </ul>
         </div>
 
@@ -817,7 +830,10 @@
           <div id="tab-muestras" class="pozo-tab-panel hidden">
             ${renderTabMuestras(data)}
           </div>
+          <div id="tab-produccion" class="pozo-tab-panel hidden">${renderTabProduccion(data.produccion || [], pozo)}</div>
+          <div id="tab-bomba-produccion" class="pozo-tab-panel hidden"></div>
         </div>
+        <script id="pozo-detail-data" type="application/json">${jsonScript(data)}</script>
       </section>
     `;
 
@@ -1001,6 +1017,7 @@
               ${infoCard('TVU', bombaActual.tvu_dias != null ? `${formatNumber(bombaActual.tvu_dias, 0)} días` : '—')}
               ${infoCard('Estatus', bombaActual.estatus || bombaActual.estado)}
             </div>
+            <p class="mt-3 text-xs text-slate-500">Fuente: ${escapeHTML(bombaActual.fuente_actual || 'Sin información')}</p>
           ` : `
             <div class="rounded-xl bg-yellow-50 p-4 text-sm text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-300">
               No hay bomba registrada para este pozo.
@@ -1027,8 +1044,9 @@
             <div class="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/60">
               <h3 class="text-sm font-semibold text-slate-900 dark:text-white">Trayectoria / Survey</h3>
               <script type="application/json" id="survey-data-json">${jsonScript(survey)}</script>
+              <p class="mt-2 text-xs text-slate-500">${survey.length} puntos · MD máxima: ${survey.some(row => row.md != null) ? formatNumber(Math.max(...survey.map(row => Number(row.md)).filter(Number.isFinite)), 2) : '—'} · TVD máxima: ${survey.some(row => row.tvd != null) ? formatNumber(Math.max(...survey.map(row => Number(row.tvd)).filter(Number.isFinite)), 2) : '—'}</p>
               <div id="chart-survey-pozo" class="mt-3 min-h-[320px] rounded-xl border border-dashed border-slate-300 bg-white p-2 dark:border-slate-600 dark:bg-slate-900">
-                ${!survey.length ? chartEmpty('Gráfica de survey pendiente.') : ''}
+                ${!survey.length ? chartEmpty('Este pozo no tiene survey activo.') : ''}
               </div>
             </div>
           </div>
@@ -1042,6 +1060,22 @@
     `;
   }
 
+  function renderTabProduccion(rows, pozo = {}) {
+    const sources = [...new Set(rows.map(row => row.fuente).filter(Boolean))];
+    return `<section class="space-y-4 rounded-2xl bg-slate-50 p-3 dark:bg-slate-950 sm:p-4">
+      <header class="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Producción</h2>
+        <p class="text-sm text-slate-500">Historial de producción por completación.</p>
+        <div class="mt-3 flex flex-wrap gap-2 text-xs font-semibold"><span class="rounded-full bg-emerald-100 px-3 py-1 text-emerald-800">● Petróleo</span><span class="rounded-full bg-blue-100 px-3 py-1 text-blue-800">● Agua</span><span class="rounded-full bg-red-100 px-3 py-1 text-red-800">● Gas</span></div>
+        <p class="mt-3 text-xs text-slate-500">Fuente de los registros: ${escapeHTML(sources.length ? sources.join(', ') : 'Sin información')}. La fuente de cada punto aparece al pasar sobre él.</p>
+      </header>
+      <script id="produccion-data-json" type="application/json">${jsonScript(rows)}</script>
+      ${rows.length ? `<div class="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900"><div class="flex flex-wrap gap-4 text-sm"><label>Completación<select id="produccion-completacion" class="mt-1 block rounded-lg border border-slate-300 bg-white p-2 dark:bg-slate-800"></select></label><label>Período horizontal<select id="produccion-periodo" class="mt-1 block rounded-lg border border-slate-300 bg-white p-2 dark:bg-slate-800"><option value="1">1 año</option><option value="5">5 años</option><option value="all" selected>Todo</option></select></label></div><p id="produccion-contexto" class="mt-3 text-xs text-slate-500"></p><p class="mt-2 text-sm text-slate-600 dark:text-slate-300"><strong>Leyenda de las gráficas:</strong> los nombres con puntos de color identifican las completaciones (y, en el cruce, también el fluido). Toca un nombre para mostrar u ocultar su línea. El trazo continuo marca la primera completación con datos; los punteados distinguen las demás. El selector «Período horizontal» cambia las fechas que se ven; esos nombres no son períodos.</p></div>
+        ${[['petroleo', 'Petróleo'], ['agua', 'Agua'], ['gas', 'Gas']].map(([key, label]) => `<article class="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900"><div class="flex flex-wrap items-start justify-between gap-3"><div><h3 class="text-base font-semibold">${label}</h3><p id="produccion-${key}-max-observado" class="text-xs font-medium text-slate-600"></p><p class="text-xs text-slate-500">Escala vertical en valores reales. Deja un límite vacío para ajuste automático.</p></div><button type="button" data-export-chart="chart-produccion-${key}" data-export-name="produccion-${key}-${escapeHTML(pozo.codigo || 'pozo')}" data-export-pozo="${escapeHTML(pozo.codigo || 'pozo')}" data-export-kind="produccion" class="min-h-11 rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium">Exportar PNG</button><div class="flex flex-wrap items-end gap-2 text-xs"><label>Mínimo<input id="produccion-${key}-min" type="number" step="any" inputmode="decimal" placeholder="Auto" class="mt-1 block w-24 rounded-lg border border-slate-300 bg-white p-2 dark:bg-slate-800"></label><label>Máximo<input id="produccion-${key}-max" type="number" step="any" inputmode="decimal" placeholder="Auto" class="mt-1 block w-24 rounded-lg border border-slate-300 bg-white p-2 dark:bg-slate-800"></label></div></div><p id="produccion-${key}-escala-estado" class="mt-2 text-xs text-rose-600" aria-live="polite"></p><div id="chart-produccion-${key}" class="mt-2 min-h-[300px]"></div></article>`).join('')}
+        <article class="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900"><div class="flex flex-wrap items-center justify-between gap-2"><h3 class="text-base font-semibold">Cruce de petróleo, agua y gas</h3><button type="button" data-export-chart="chart-produccion-cruce" data-export-name="produccion-cruce-${escapeHTML(pozo.codigo || 'pozo')}" data-export-pozo="${escapeHTML(pozo.codigo || 'pozo')}" data-export-kind="produccion" class="min-h-11 rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium">Exportar PNG</button></div><p class="mt-1 text-xs text-slate-500">Tendencias relativas: 100% es el máximo visible de cada variable. El valor real y la fuente se muestran al pasar sobre cada punto.</p><div id="chart-produccion-cruce" class="mt-3 min-h-[360px]"></div></article>` : '<p class="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-500">Este pozo no tiene historial de producción.</p>'}
+    </section>`;
+  }
+
   function chartEmpty(message) {
     return `
       <div class="flex min-h-[300px] items-center justify-center">
@@ -1051,7 +1085,7 @@
   }
 
   function jsonScript(value) {
-    return escapeHTML(JSON.stringify(value || [])).replaceAll('&quot;', '"');
+    return JSON.stringify(value || []).replace(/</g, '\\u003c');
   }
 
   function renderSurveyTable(survey) {
@@ -1097,7 +1131,7 @@
                 </tr>
               `).join('') : `
                 <tr>
-                  <td colspan="8" class="px-4 py-5 text-center text-xs text-slate-500 dark:text-slate-400">Survey pendiente por cargar.</td>
+                  <td colspan="8" class="px-4 py-5 text-center text-xs text-slate-500 dark:text-slate-400">Este pozo no tiene survey activo.</td>
                 </tr>
               `}
             </tbody>
@@ -1349,6 +1383,7 @@
   function renderTabMuestras(data) {
     const pozo = data.pozo || {};
     const muestras = data.ultimasMuestras || [];
+    const pruebas = data.pruebas || [];
     const codigoPozo = pozo.codigo || 'pozo';
 
     return `
@@ -1358,6 +1393,7 @@
             <div>
               <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Muestras de fluido</h2>
               <p class="text-sm text-slate-500 dark:text-slate-400">Marca las muestras representativas para incluirlas en la tendencia de % AyS.</p>
+              <p class="text-xs text-slate-500">Fuente de muestra actual: ${escapeHTML(pozo.fuente_muestra_actual || 'Sin información')}</p>
             </div>
             <div class="flex flex-wrap gap-2">
               <button type="button" data-pozo-action="nueva-muestra" data-pozo-id="${escapeHTML(pozo.id || '')}" class="inline-flex items-center gap-2 rounded-lg bg-[#033F73] px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-[#022f56]">Nueva muestra</button>
@@ -1393,6 +1429,15 @@
             </table>
           </div>
         </div>
+        <section class="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
+          <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Pruebas OFM · % AyS</h2>
+          <p class="mt-1 text-sm text-slate-500">Tendencia de % AyS de OFM. Las dos tablas siguientes permiten consultar todas las pruebas por fuente.</p>
+          <p class="mt-2 text-xs text-slate-500">Fuente de la prueba actual: ${escapeHTML(pozo.fuente_prueba_actual || 'Sin información')} · ${pruebas.filter(row => row.fuente === 'OFM').length} pruebas OFM</p>
+          <script id="pruebas-data-json" type="application/json">${jsonScript(pruebas)}</script>
+          <div class="mt-3 flex justify-end"><button type="button" data-export-chart="chart-pruebas-ays-pozo" data-export-name="pruebas-ofm-${escapeHTML(codigoPozo)}" data-export-pozo="${escapeHTML(codigoPozo)}" data-export-kind="pruebas" class="min-h-11 rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white">Exportar gráfica PNG</button></div>
+          <div id="chart-pruebas-ays-pozo" class="mt-4 min-h-[320px]"></div>
+        </section>
+        <div id="pruebas-tablas" class="space-y-4"></div>
       </section>
     `;
   }
@@ -1405,13 +1450,13 @@
 
     return `
       <tr class="border-b bg-white dark:border-slate-800 dark:bg-slate-900">
-        <td class="whitespace-nowrap px-4 py-3" data-order="${escapeHTML(fecha)}">${escapeHTML(formatDate(muestra.fecha))}</td>
+        <td class="whitespace-nowrap px-4 py-3" data-order="${escapeHTML(fecha)}">${escapeHTML(formatDate(muestra.fecha))}<span class="block text-xs text-slate-500">Fuente: ${escapeHTML(muestra.fuente || 'Sin información')}</span></td>
         <td class="whitespace-nowrap px-4 py-3" data-order="${escapeHTML(ays)}">${formatNumber(ays, 2)}</td>
         <td class="whitespace-nowrap px-4 py-3">${formatNumber(muestra.porcentaje_liq, 2)}</td>
         <td class="whitespace-nowrap px-4 py-3">${formatNumber(muestra.api, 2)}</td>
         <td class="whitespace-nowrap px-4 py-3">
-          <label class="inline-flex cursor-pointer items-center gap-2">
-            <input type="checkbox" class="peer sr-only" data-muestra-representativa="true" data-muestra-id="${escapeHTML(id)}" data-pozo-id="${escapeHTML(pozoId || muestra.id_pozo || muestra.pozo_id || '')}" data-fecha="${escapeHTML(fecha)}" data-ays="${escapeHTML(ays)}" ${representativa ? 'checked' : ''}>
+          <label class="relative inline-flex cursor-pointer items-center gap-2">
+            <input type="checkbox" class="peer sr-only" data-muestra-representativa="true" data-muestra-id="${escapeHTML(id)}" data-pozo-id="${escapeHTML(pozoId || muestra.id_pozo || muestra.pozo_id || '')}" data-fecha="${escapeHTML(fecha)}" data-ays="${escapeHTML(ays)}" data-fuente="${escapeHTML(muestra.fuente || 'Sin información')}" ${representativa ? 'checked' : ''}>
             <span class="h-5 w-9 rounded-full bg-slate-300 after:mt-0.5 after:ml-0.5 after:block after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-all peer-checked:bg-emerald-500 peer-checked:after:translate-x-4 dark:bg-slate-700"></span>
             <span data-muestra-switch-label class="min-w-[18px] text-left text-xs font-semibold ${representativa ? 'text-emerald-700 dark:text-emerald-300' : 'text-slate-500 dark:text-slate-400'}">${representativa ? 'Sí' : 'No'}</span>
           </label>
@@ -1805,7 +1850,12 @@
         showAlert('Sincronizando datos offline...', 'info');
 
         try {
-          await window.PetroSync?.syncNow?.({ force: true });
+          const result = await window.PetroSync?.syncNow?.({ force: true });
+          if (!result || result.failedStores?.length) {
+            throw new Error(result?.failedStores?.length
+              ? `No se actualizaron: ${result.failedStores.map(item => item.store).join(', ')}`
+              : 'No se completó la descarga offline.');
+          }
           showAlert('Datos offline actualizados.', 'success');
           updateHeaderStatus();
           await routeFromInitialPath();

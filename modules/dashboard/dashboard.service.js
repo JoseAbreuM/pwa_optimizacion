@@ -1,4 +1,19 @@
 const { pool } = require('../../config/db');
+let ofmCoverageCache = null;
+
+async function getOfmCoverage() {
+  if (ofmCoverageCache && Date.now() - ofmCoverageCache.at < 120000) return ofmCoverageCache.value;
+  const [[production], [tests]] = await Promise.all([
+    pool.query("SELECT COUNT(DISTINCT id_pozo) AS pozos FROM produccion_mensual WHERE fuente = 'OFM'"),
+    pool.query("SELECT COUNT(DISTINCT id_pozo) AS pozos FROM pruebas_pozo WHERE fuente = 'OFM'")
+  ]);
+  const value = {
+    produccion: Number(production[0]?.pozos || 0),
+    pruebas: Number(tests[0]?.pozos || 0)
+  };
+  ofmCoverageCache = { at: Date.now(), value };
+  return value;
+}
 
 async function getPotencialPorArea() {
   const [rows] = await pool.query(`
@@ -150,6 +165,7 @@ async function getDashboardData(currentUser) {
   `);
 
   const potencialPorArea = await getPotencialPorArea();
+  const ofmCoverage = await getOfmCoverage();
 
   return {
     title: 'Dashboard',
@@ -162,7 +178,8 @@ async function getDashboardData(currentUser) {
     servicios,
     muestrasAlerta,
     bombasCriticas,
-    potencialPorArea
+    potencialPorArea,
+    ofmCoverage
   };
 }
 

@@ -5,6 +5,7 @@
   const API_SYNC = '/api/offline/sync';
   const API_MANIFEST = '/api/offline/manifest';
   const API_CHUNK_BASE = '/api/offline/chunk';
+  const OFFLINE_DATA_VERSION = 4;
 
   const CHUNK_STORES = [
     'dashboard',
@@ -15,7 +16,9 @@
     'bombas',
     'servicios',
     'mapa_pozos',
-    'survey'
+    'survey',
+    'produccion',
+    'pruebas'
   ];
 
   const REQUIRED_STORES = [
@@ -28,7 +31,9 @@
     'bombas',
     'servicios',
     'mapa_pozos',
-    'survey'
+    'survey',
+    'produccion',
+    'pruebas'
   ];
 
   let initialized = false;
@@ -126,12 +131,14 @@
       lastSnapshotAt,
       snapshotVersion,
       serverTime,
-      counts
+      counts,
+      datasetVersion
     ] = await Promise.all([
       db.getMetadata('lastSnapshotAt'),
       db.getMetadata('snapshotVersion'),
       db.getMetadata('serverTime'),
-      db.getMetadata('snapshotCounts')
+      db.getMetadata('snapshotCounts'),
+      db.getMetadata('offlineDatasetVersion')
     ]);
 
     return {
@@ -139,7 +146,8 @@
       lastSnapshotAt,
       snapshotVersion,
       serverTime,
-      counts: counts || {}
+      counts: counts || {},
+      datasetVersion
     };
   }
 
@@ -240,7 +248,9 @@
       bombas: tables.bombas?.total || 0,
       servicios: tables.servicios?.total || 0,
       mapaPozos: tables.mapa_pozos?.total || 0,
-      survey: tables.survey?.total || 0
+      survey: tables.survey?.total || 0,
+      produccion: tables.produccion?.total || 0,
+      pruebas: tables.pruebas?.total || 0
     };
   }
 
@@ -282,16 +292,8 @@
 
     const normalizedRows = normalizeRowsForStore(store, rows);
 
-    /**
-     * Importante:
-     * Este clear ocurre SOLO después de haber descargado
-     * todos los chunks de este store correctamente.
-     */
-    await db.clear(store);
-
-    if (normalizedRows.length) {
-      await db.putMany(store, normalizedRows);
-    }
+    // Clear y escritura comparten una transacción: si falla, quedan los datos anteriores.
+    await db.replaceAll(store, normalizedRows);
 
     return normalizedRows.length;
   }
@@ -396,6 +398,8 @@
       if (!manifest) return null;
 
       const tables = getManifestTables(manifest);
+      const missingStores = CHUNK_STORES.filter(store => !tables[store]);
+      if (missingStores.length) throw new Error(`Manifiesto incompleto: ${missingStores.join(', ')}`);
       const expectedCounts = getCountsFromManifest(tables);
       const totalWork = Math.max(1, getTotalWorkFromManifest(tables));
 
@@ -441,6 +445,9 @@
           });
 
           const rows = await downloadStoreChunks(store, table, progressContext);
+          if (rows.length !== Number(table.total || 0)) {
+            throw new Error(`${store}: se recibieron ${rows.length} de ${table.total} registros.`);
+          }
 
           emitStatus({
             state: 'saving',
@@ -453,6 +460,8 @@
           });
 
           const saved = await replaceStoreSafely(store, rows);
+          const stored = await db.count(store);
+          if (stored !== saved) throw new Error(`${store}: IndexedDB guardó ${stored} de ${saved} registros.`);
           savedCounts[store] = saved;
 
           await db.setMetadata(`store:${store}:lastSyncAt`, new Date().toISOString());
@@ -482,7 +491,9 @@
         bombas: savedCounts.bombas ?? expectedCounts.bombas ?? 0,
         servicios: savedCounts.servicios ?? expectedCounts.servicios ?? 0,
         mapaPozos: savedCounts.mapa_pozos ?? expectedCounts.mapaPozos ?? 0,
-        survey: savedCounts.survey ?? expectedCounts.survey ?? 0
+        survey: savedCounts.survey ?? expectedCounts.survey ?? 0,
+        produccion: savedCounts.produccion ?? expectedCounts.produccion ?? 0,
+        pruebas: savedCounts.pruebas ?? expectedCounts.pruebas ?? 0
       };
 
       emitStatus({
@@ -498,6 +509,7 @@
       await db.setMetadata('snapshotCounts', finalCounts);
       await db.setMetadata('offlineMode', 'chunked');
       await db.setMetadata('failedStores', failedStores);
+      if (!failedStores.length) await db.setMetadata('offlineDatasetVersion', OFFLINE_DATA_VERSION);
 
       try {
         localStorage.setItem('petro-offline-ready', failedStores.length ? 'partial' : '1');
@@ -508,7 +520,7 @@
 
       if (failedStores.length) {
         emitStatus({
-          state: 'ready',
+          state: 'error',
           message: `Offline parcial. Fallaron: ${failedStores.map((item) => item.store).join(', ')}`,
           progress: 100,
           counts: finalCounts,
@@ -523,12 +535,9 @@
         });
       }
 
-      emitUpdated({
-        counts: finalCounts,
-        version: manifest.version,
-        serverTime: manifest.serverTime,
-        mode: 'chunked',
-        failedStores
+      if (!failedStores.length) emitUpdated({
+        counts: finalCounts, version: manifest.version,
+        serverTime: manifest.serverTime, mode: 'chunked', failedStores
       });
 
       return {
@@ -658,7 +667,16 @@
         counts
       });
 
-      await db.putMany(store, rows);
+      if (store === 'pozo_detalles') {
+        const existing = await db.getAll('pozo_detalles');
+        const byId = new Map(existing.map(row => [Number(row.id), row]));
+        await db.putMany(store, rows.map(row => {
+          const previous = byId.get(Number(row.id));
+          return previous?.source === 'server' ? { ...row, ...previous } : row;
+        }));
+      } else {
+        await db.putMany(store, rows);
+      }
     }
 
     await db.setMetadata('lastSnapshotAt', new Date().toISOString());
@@ -911,17 +929,16 @@
       return null;
     }
 
-    if (!navigator.onLine && !options.force) {
+    if (!navigator.onLine) {
       return emitOfflineStatus('Sin conexión. Trabajando con datos locales.');
     }
 
-    if (!options.force && lastSyncStartedAt && Date.now() - lastSyncStartedAt < 8000) {
-      emitStatus({
-        state: 'busy',
-        message: 'Sincronización reciente en proceso o recién ejecutada.',
-        progress: 8
-      });
-
+    if (!options.force) {
+      await flushQueue();
+      const metadata = await getMetadataSnapshot();
+      emitStatus({ state: metadata.datasetVersion === OFFLINE_DATA_VERSION ? 'available' : 'needs-download',
+        message: metadata.datasetVersion === OFFLINE_DATA_VERSION ? 'Datos offline disponibles. Actualización manual.' : 'Descarga inicial pendiente. Usa Actualizar datos.',
+        progress: null, counts: metadata.counts });
       return null;
     }
 
@@ -1003,6 +1020,8 @@
       servicios,
       mapaPozos,
       survey,
+      produccion,
+      pruebas,
       queue,
       offlineMode,
       failedStores
@@ -1017,7 +1036,9 @@
       db.getAll('bombas'),
       db.getAll('servicios'),
       db.getAll('mapa_pozos'),
-      db.getAll('survey'),
+      db.count('survey'),
+      db.count('produccion'),
+      db.count('pruebas'),
       db.getPendingQueue(),
       db.getMetadata('offlineMode'),
       db.getMetadata('failedStores')
@@ -1041,7 +1062,9 @@
         bombas: bombas.length,
         servicios: servicios.length,
         mapa_pozos: mapaPozos.length,
-        survey: survey.length,
+        survey,
+        produccion,
+        pruebas,
         queue: queue.length
       }
     };
@@ -1068,45 +1091,25 @@
 
     const metadata = await getMetadataSnapshot();
 
-    emitStatus({
-      state: navigator.onLine ? 'idle-online' : 'offline',
-      message: navigator.onLine
-        ? (
-          metadata.hasSnapshot
-            ? 'Con conexión. Verificando actualización offline...'
-            : 'Con conexión. Preparando datos offline por primera vez...'
-        )
-        : (
-          metadata.hasSnapshot
-            ? 'Sin conexión. Trabajando con datos locales.'
-            : 'Sin conexión. No hay datos offline guardados.'
-        ),
-      progress: metadata.hasSnapshot ? 100 : 5,
-      counts: metadata.counts
-    });
+    const complete = metadata.datasetVersion === OFFLINE_DATA_VERSION && metadata.hasSnapshot;
+    const initialAttemptKey = `petro-offline-initial-attempt-v${OFFLINE_DATA_VERSION}`;
+    emitStatus({ state: navigator.onLine ? (complete ? 'available' : 'needs-download') : 'offline',
+      message: complete ? 'Datos offline disponibles. Actualización manual.' : 'Descarga inicial pendiente.',
+      progress: null, counts: metadata.counts });
 
-    window.addEventListener('online', () => {
-      emitStatus({
-        state: 'online',
-        message: 'Conexión recuperada. Sincronizando...',
-        progress: 8
-      });
-
-      syncNow().catch(() => {});
-    });
+    window.addEventListener('online', () => { syncNow().catch(() => {}); });
 
     window.addEventListener('offline', async () => {
       await emitOfflineStatus('Sin conexión. Los cambios se guardarán localmente.');
     });
 
-    window.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'visible' && navigator.onLine) {
-        syncNow().catch(() => {});
-      }
-    });
-
     if (navigator.onLine) {
-      await syncNow();
+      if (!complete && !localStorage.getItem(initialAttemptKey)) {
+        localStorage.setItem(initialAttemptKey, new Date().toISOString());
+        await syncNow({ force: true });
+      } else {
+        await flushQueue();
+      }
     } else {
       await emitOfflineStatus();
     }

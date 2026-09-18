@@ -9,12 +9,14 @@
     && ultimoParametro ? ultimoParametro : null; const ultimoNivelSafe=typeof ultimoNivel !=='undefined' && ultimoNivel
     ? ultimoNivel : null; const pozoDetailPayload={ pozo, velocidades: velocidadesSafe, bombaActual: bombaActualSafe,
     historialBombas: historialBombasSafe, ultimoParametro: ultimoParametroSafe, ultimoNivel: ultimoNivelSafe, timeline:
-    timelineSafe, ultimasMuestras: ultimasMuestrasSafe, survey: surveySafe, offline: false, source: 'server' }; %>
+    timelineSafe, ultimasMuestras: ultimasMuestrasSafe, survey: surveySafe, produccion, pruebas, offline: false, source: 'server' }; %>
 
     <!-- Root futuro para renderer único online/offline -->
     <div id="pozo-detail-root" class="space-y-6">
 
       <%- include('./partials/detalle-header', { pozo, velocidades: velocidadesSafe, bombaActual: bombaActualSafe }) %>
+
+      <div class="flex justify-stretch sm:justify-end"><button type="button" data-export-pozo-report class="min-h-11 w-full rounded-lg bg-[#033F73] px-4 py-2 text-sm font-semibold text-white sm:w-auto"><i class="fa-solid fa-file-pdf mr-2"></i>Exportar reporte del pozo</button></div>
 
         <!-- Tabs de la ficha -->
         <div class="border-b border-slate-200 dark:border-slate-700">
@@ -43,6 +45,8 @@
                 Muestras
               </button>
             </li>
+            <li class="me-2" role="presentation"><button class="pozo-tab-btn inline-block rounded-t-lg border-b-2 border-transparent p-4 text-slate-500 hover:border-slate-300 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200" type="button" data-tab-target="tab-produccion">Producción</button></li>
+            <li class="me-2" role="presentation"><button class="pozo-tab-btn inline-block rounded-t-lg border-b-2 border-transparent p-4 text-slate-500 hover:border-slate-300 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200" type="button" data-tab-target="tab-bomba-produccion">Análisis por bomba</button></li>
 
           </ul>
         </div>
@@ -64,9 +68,13 @@
 
           <!-- TAB MUESTRAS -->
           <div id="tab-muestras" class="pozo-tab-panel hidden">
-            <%- include('./partials/tab-muestras', { pozo, ultimasMuestras: ultimasMuestrasSafe, timeline: timelineSafe
+            <%- include('./partials/tab-muestras', { pozo, ultimasMuestras: ultimasMuestrasSafe, timeline: timelineSafe, pruebas
               }) %>
           </div>
+          <div id="tab-produccion" class="pozo-tab-panel hidden">
+            <%- include('./partials/tab-produccion', { produccion, pozo }) %>
+          </div>
+          <div id="tab-bomba-produccion" class="pozo-tab-panel hidden"></div>
 
         </div>
 
@@ -76,5 +84,7 @@
     <script id="pozo-detail-data" type="application/json">
     <%- JSON.stringify(pozoDetailPayload).replace(/</g, '\\u003c') %>
   </script>
+  <script src="/js/modules/pozo-reporte.js?v=20260918-07"></script>
+  <script src="/js/modules/bomba-produccion.js?v=20260918-07"></script>
 
 </section>

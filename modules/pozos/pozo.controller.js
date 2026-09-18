@@ -139,7 +139,9 @@ async function detail(req, res, next) {
       comparativoParametrosNiveles,
       ultimasMuestras,
       timeline,
-      survey
+      survey,
+      produccion,
+      pruebas
     } = bootstrap;
 
     const velocidades = buildVelocidades(pozo, ultimoParametro);
@@ -186,6 +188,8 @@ async function detail(req, res, next) {
       ultimasMuestras,
       timeline,
       survey,
+      produccion,
+      pruebas,
       velocidades,
 
       currentSection: 'pozos',
@@ -238,6 +242,7 @@ async function detailApi(req, res, next) {
 async function getSurvey(req, res, next) {
   try {
     setNoCacheHeaders(res);
+    if (!/^[1-9]\d*$/.test(req.params.id)) return res.status(400).json({ ok: false, message: 'ID de pozo inválido.' });
 
     const pozo = await pozoService.getPozoById(req.params.id);
 
@@ -257,6 +262,16 @@ async function getSurvey(req, res, next) {
   } catch (error) {
     return next(error);
   }
+}
+
+async function getProduccion(req, res, next) {
+  try {
+    setNoCacheHeaders(res);
+    if (!/^[1-9]\d*$/.test(req.params.id)) return res.status(400).json({ ok: false, message: 'ID de pozo inválido.' });
+    const pozo = await pozoService.getPozoById(req.params.id);
+    if (!pozo) return res.status(404).json({ ok: false, message: 'Pozo no encontrado.' });
+    return res.json({ ok: true, data: await pozoService.getProduccionByPozo(pozo.id) });
+  } catch (error) { return next(error); }
 }
 
 /**
@@ -700,6 +715,7 @@ module.exports = {
   listApi,
   detailApi,
   getSurvey,
+  getProduccion,
   updateSurvey,
   actualizarPotencialPozo,
   updateMuestraRepresentativa,

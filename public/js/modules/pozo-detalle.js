@@ -4,6 +4,9 @@
   let comparativoChart = null;
   let surveyChart = null;
   let muestrasChart = null;
+  let pruebasChart = null;
+  let produccionCharts = [];
+  let produccionChartMap = {};
 
   let activeModalId = null;
   let modalHistoryPushed = false;
@@ -23,6 +26,8 @@
     initComparativoChart();
     initMuestrasTable();
     initMuestrasChart();
+    initPruebasTables();
+    cacheDetalleConsultado();
     initChartExports();
     initOfflineBackLinks();
     initPlaceholderActions();
@@ -63,6 +68,14 @@
         if (targetPanel) {
           targetPanel.classList.remove('hidden');
         }
+        if (targetId === 'tab-produccion') initProduccion();
+        if (targetId === 'tab-bomba-produccion') {
+          window.PetroBombaProduccion?.mount?.();
+          initChartExports();
+        }
+        if (targetId === 'tab-muestras') {
+          initPruebasChart();
+        }
 
         setTimeout(() => {
           window.dispatchEvent(new Event('resize'));
@@ -72,6 +85,8 @@
           safeResizeChart(comparativoChart);
           safeResizeChart(surveyChart);
           safeResizeChart(muestrasChart);
+          safeResizeChart(pruebasChart);
+          produccionCharts.forEach(safeResizeChart);
 
           adjustVisibleDataTables();
         }, 100);
@@ -509,7 +524,8 @@
 
     const data = rows.map((row) => ({
       x: normalizeDateLabel(row.fecha),
-      y: row.ays
+      y: row.ays,
+      fuente: row.fuente || 'Sin información'
     }));
 
     chartEl.innerHTML = '';
@@ -529,6 +545,7 @@
       theme: {
         mode: theme.mode
       },
+      dataLabels: { enabled: false },
       series: [
         {
           name: '% AyS',
@@ -582,11 +599,9 @@
         theme: theme.mode,
         shared: true,
         intersect: false,
-        y: {
-          formatter: (value) => {
-            const number = Number(value);
-            return Number.isFinite(number) ? `${number.toFixed(2)}%` : value;
-          }
+        custom: ({ dataPointIndex, w }) => {
+          const point = w.config.series[0].data[dataPointIndex];
+          return `<div class="p-2 text-xs"><strong>${Number(point.y).toFixed(2)}% AyS</strong><br>${escapeChartText(point.x)}<br>Fuente: ${escapeChartText(point.fuente)}</div>`;
         }
       },
       legend: {
@@ -644,6 +659,7 @@
           pozoId: input.dataset.pozoId,
           fecha,
           ays: parseChartNumber(aysRaw),
+          fuente: input.dataset.fuente || 'Sin información',
           representativa: input.checked
         };
       })
@@ -676,6 +692,7 @@
             row.porcentaje_ays ??
             row.porcentaje_agua_sedimentos
           ),
+          fuente: row.fuente || 'Sin información',
           representativa: normalizeBoolean(
             row.representativa ??
             row.es_representativa ??
@@ -1032,6 +1049,272 @@
     box.classList.remove('hidden');
   }
 
+  async function cacheDetalleConsultado() {
+    const el = document.getElementById('pozo-detail-data');
+    if (!el || !window.PetroDB || !navigator.onLine) return;
+    try {
+      const data = JSON.parse(el.textContent);
+      if (Number.isInteger(Number(data.pozo?.id))) {
+        await window.PetroDB.put('pozo_detalles', { ...data, id: Number(data.pozo.id) });
+      }
+    } catch (error) { console.warn('No se pudo guardar la ficha offline:', error); }
+  }
+
+  function initPruebasTables() {
+    const dataEl = document.getElementById('pruebas-data-json');
+    const host = document.getElementById('pruebas-tablas');
+    if (!dataEl || !host) return;
+
+    const rows = readJsonData(dataEl, []);
+    const isOfm = row => String(row.fuente || '').trim().toUpperCase() === 'OFM';
+    host.innerHTML = '';
+    createPruebasTable(host, 'ofm', 'Pruebas OFM', rows.filter(isOfm));
+    createPruebasTable(host, 'otras', 'Pruebas de otras fuentes', rows.filter(row => !isOfm(row)));
+  }
+
+  function createPruebasTable(host, key, title, rows) {
+    const fields = [
+      ['fecha_prueba', 'Fecha'], ['ays', '% AyS'], ['api', 'API'],
+      ['volumetria', 'Volumetría'], ['bbpd', 'BBPD'], ['bnpd', 'BNPD'],
+      ['gasf', 'Gas'], ['fuente', 'Fuente']
+    ];
+    const section = document.createElement('section');
+    section.className = 'rounded-2xl border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-700 dark:bg-slate-900 sm:p-4';
+    section.innerHTML = `
+      <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div><h3 class="text-base font-semibold text-slate-900 dark:text-white">${title} <span class="text-sm font-normal text-slate-500">(${rows.length})</span></h3>
+          <p class="text-xs text-slate-500 dark:text-slate-400">Busca, ordena las columnas y cambia de página.</p></div>
+        <div class="flex flex-col gap-2 sm:flex-row sm:items-end">
+          <label class="text-xs font-medium text-slate-600 dark:text-slate-300">Buscar
+            <input type="search" data-pruebas-search="${key}" placeholder="Fecha, fuente o valor" class="mt-1 block min-h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm dark:border-slate-600 dark:bg-slate-800 sm:w-48" aria-label="Buscar en ${title}">
+          </label>
+          <label class="text-xs font-medium text-slate-600 dark:text-slate-300">Filas
+            <select data-pruebas-size="${key}" class="mt-1 block min-h-11 rounded-lg border border-slate-300 bg-white px-2 text-sm dark:border-slate-600 dark:bg-slate-800"><option>10</option><option>25</option><option>50</option></select>
+          </label>
+        </div>
+      </div>
+      <div class="mt-3 overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700" role="region" aria-label="${title}" tabindex="0">
+        <table class="w-full min-w-[820px] text-left text-sm text-slate-700 dark:text-slate-200">
+          <thead class="bg-slate-50 text-xs dark:bg-slate-800"><tr>${fields.map(([field, label]) => `<th scope="col" class="whitespace-nowrap p-2"><button type="button" data-pruebas-sort="${field}" class="min-h-10 text-left font-semibold hover:text-sky-700 dark:hover:text-sky-300" aria-label="Ordenar por ${label}">${label} <span data-sort-indicator="${field}" aria-hidden="true"></span></button></th>`).join('')}</tr></thead>
+          <tbody data-pruebas-body="${key}"></tbody>
+        </table>
+      </div>
+      <div class="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-600 dark:text-slate-300">
+        <span data-pruebas-count="${key}" aria-live="polite"></span>
+        <div class="flex items-center gap-2"><button type="button" data-pruebas-prev="${key}" class="min-h-11 rounded-lg border border-slate-300 px-3 dark:border-slate-600">Anterior</button><span data-pruebas-page="${key}"></span><button type="button" data-pruebas-next="${key}" class="min-h-11 rounded-lg border border-slate-300 px-3 dark:border-slate-600">Siguiente</button></div>
+      </div>`;
+    host.appendChild(section);
+
+    const state = { query: '', sort: 'fecha_prueba', direction: -1, page: 1, size: 10 };
+    const cellText = (row, field) => {
+      const value = row[field];
+      if (value === null || value === undefined || value === '') return '—';
+      if (field === 'fecha_prueba') return normalizeDateLabel(value);
+      if (field === 'fuente') return String(value);
+      const number = Number(value);
+      return Number.isFinite(number) ? number.toLocaleString('es-VE', { maximumFractionDigits: 2 }) : String(value);
+    };
+    const render = () => {
+      const query = state.query.toLocaleLowerCase('es');
+      const visible = rows.filter(row => !query || fields.some(([field]) => cellText(row, field).toLocaleLowerCase('es').includes(query)));
+      visible.sort((a, b) => {
+        const left = a[state.sort];
+        const right = b[state.sort];
+        if (state.sort !== 'fecha_prueba' && state.sort !== 'fuente') {
+          const l = Number(left), r = Number(right);
+          if (Number.isFinite(l) && Number.isFinite(r)) return (l - r) * state.direction;
+        }
+        return String(left ?? '').localeCompare(String(right ?? ''), 'es') * state.direction;
+      });
+      const pages = Math.max(1, Math.ceil(visible.length / state.size));
+      state.page = Math.min(state.page, pages);
+      const pageRows = visible.slice((state.page - 1) * state.size, state.page * state.size);
+      section.querySelector(`[data-pruebas-body="${key}"]`).innerHTML = pageRows.length
+        ? pageRows.map(row => `<tr class="border-t border-slate-100 dark:border-slate-700">${fields.map(([field]) => `<td class="whitespace-nowrap p-2">${escapeChartText(cellText(row, field))}</td>`).join('')}</tr>`).join('')
+        : `<tr><td colspan="${fields.length}" class="p-4 text-center text-slate-500">Sin pruebas para mostrar.</td></tr>`;
+      section.querySelector(`[data-pruebas-count="${key}"]`).textContent = `${visible.length} registros · ${pageRows.length} en esta página`;
+      section.querySelector(`[data-pruebas-page="${key}"]`).textContent = `${state.page} / ${pages}`;
+      section.querySelector(`[data-pruebas-prev="${key}"]`).disabled = state.page <= 1;
+      section.querySelector(`[data-pruebas-next="${key}"]`).disabled = state.page >= pages;
+      section.querySelectorAll('[data-sort-indicator]').forEach(node => {
+        node.textContent = node.dataset.sortIndicator === state.sort ? (state.direction === -1 ? '↓' : '↑') : '';
+      });
+    };
+    section.querySelector(`[data-pruebas-search="${key}"]`).addEventListener('input', event => {
+      state.query = event.target.value.trim(); state.page = 1; render();
+    });
+    section.querySelector(`[data-pruebas-size="${key}"]`).addEventListener('change', event => {
+      state.size = Number(event.target.value); state.page = 1; render();
+    });
+    section.querySelectorAll('[data-pruebas-sort]').forEach(button => button.addEventListener('click', () => {
+      const field = button.dataset.pruebasSort;
+      state.direction = state.sort === field ? -state.direction : (field === 'fecha_prueba' ? -1 : 1);
+      state.sort = field; state.page = 1; render();
+    }));
+    section.querySelector(`[data-pruebas-prev="${key}"]`).addEventListener('click', () => { state.page -= 1; render(); });
+    section.querySelector(`[data-pruebas-next="${key}"]`).addEventListener('click', () => { state.page += 1; render(); });
+    render();
+  }
+
+  function initPruebasChart() {
+    const dataEl = document.getElementById('pruebas-data-json');
+    const target = document.getElementById('chart-pruebas-ays-pozo');
+    if (!dataEl || !target || typeof window.ApexCharts === 'undefined') return;
+    const rows = readJsonData(dataEl, []);
+    const points = rows.filter(row => String(row.fuente || '').trim().toUpperCase() === 'OFM' && row.ays != null && Number.isFinite(Number(row.ays)))
+      .map(row => ({ x: new Date(String(row.fecha_prueba).slice(0, 10) + 'T12:00:00').getTime(), y: Number(row.ays), fuente: row.fuente || 'Sin información' }))
+      .filter(point => Number.isFinite(point.x));
+    if (pruebasChart) pruebasChart.destroy();
+    if (!points.length) { renderChartMessage(target, 'No hay pruebas OFM con % AyS válido.'); return; }
+    target.innerHTML = '';
+    const theme = getChartTheme();
+    pruebasChart = new window.ApexCharts(target, {
+      chart: { type: 'area', height: 320, foreColor: theme.foreColor, background: 'transparent', zoom: { enabled: true }, toolbar: { show: true } },
+      dataLabels: { enabled: false },
+      theme: { mode: theme.mode }, colors: ['#8b5cf6'],
+      series: [{ name: '% AyS · Pruebas', data: points }],
+      stroke: { curve: 'smooth', width: 2.5 }, fill: { type: 'gradient', gradient: { opacityFrom: 0.3, opacityTo: 0.02 } },
+      markers: { size: points.length < 40 ? 3 : 0 },
+      xaxis: { type: 'datetime' }, yaxis: { title: { text: '% AyS' }, min: 0 },
+      tooltip: { custom: ({ dataPointIndex, w }) => { const point = w.config.series[0].data[dataPointIndex]; return `<div class="p-2 text-xs"><strong>${point.y.toLocaleString('es-VE')}% AyS</strong><br>${new Date(point.x).toLocaleDateString('es-VE')}<br>Fuente: ${escapeChartText(point.fuente)}</div>`; } }
+    });
+    pruebasChart.render();
+  }
+
+  function escapeChartText(value) {
+    return String(value ?? 'Sin información').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
+  function initProduccion() {
+    const dataEl = document.getElementById('produccion-data-json');
+    const selector = document.getElementById('produccion-completacion');
+    const period = document.getElementById('produccion-periodo');
+    if (!dataEl || !selector || !period || typeof window.ApexCharts === 'undefined') return;
+
+    const variables = [
+      { field: 'petroleo', label: 'Petróleo', color: '#10b981' },
+      { field: 'agua', label: 'Agua', color: '#3b82f6' },
+      { field: 'gas', label: 'Gas', color: '#ef4444' }
+    ];
+    const rows = readJsonData(dataEl, []);
+    const completaciones = [...new Set(rows.map(row => String(row.completacion || 'Sin información')))];
+    const previousSelection = selector.value;
+    selector.innerHTML = '<option value="__all__">Todas (series separadas)</option>' +
+      completaciones.map((name, index) => `<option value="${index}">${escapeChartText(name)}</option>`).join('');
+    selector.value = previousSelection && [...selector.options].some(option => option.value === previousSelection)
+      ? previousSelection : (completaciones.length === 1 ? '0' : '__all__');
+
+    const fechaMs = value => {
+      const key = String(value || '').slice(0, 10);
+      return /^\d{4}-\d{2}-\d{2}$/.test(key) ? new Date(`${key}T12:00:00`).getTime() : NaN;
+    };
+    const numberText = value => Number(value).toLocaleString('es-VE', { maximumFractionDigits: 2 });
+    const render = () => {
+      produccionCharts.forEach(chart => chart.destroy());
+      produccionCharts = [];
+      produccionChartMap = {};
+      const latest = Math.max(...rows.map(row => fechaMs(row.fecha)).filter(Number.isFinite));
+      const cutoff = period.value === 'all' ? null : new Date(latest);
+      if (cutoff) cutoff.setFullYear(cutoff.getFullYear() - Number(period.value));
+      const selected = selector.value === '__all__' ? completaciones : [completaciones[Number(selector.value)]];
+      const visible = rows.filter(row => selected.includes(String(row.completacion || 'Sin información')) &&
+        Number.isFinite(fechaMs(row.fecha)) && (!cutoff || fechaMs(row.fecha) >= cutoff.getTime()));
+      document.getElementById('produccion-contexto').textContent =
+        `Completación: ${selector.value === '__all__' ? 'Todas, sin sumar completaciones' : selected[0]}. Período: ${period.selectedOptions[0].textContent}. ${visible.length} registros visibles.`;
+      const theme = getChartTheme();
+      const grid = { borderColor: theme.gridColor, strokeDashArray: 4 };
+      const formatTooltip = (point, label, relative = false) => `<div class="rounded-lg bg-white p-3 text-xs text-slate-800 shadow-lg dark:bg-slate-800 dark:text-slate-100"><strong>${escapeChartText(label)}: ${numberText(point.valor ?? point.y)}${relative ? ` (${numberText(point.y)}% del máximo)` : ''}</strong><br>${new Date(point.x).toLocaleDateString('es-VE')}<br>Fuente: ${escapeChartText(point.fuente)}<br>Archivo: ${escapeChartText(point.archivo)}</div>`;
+      const pointFor = (row, field) => ({ x: fechaMs(row.fecha), y: Number(row[field]), fuente: row.fuente || 'Sin información', archivo: row.origen_archivo || '—' });
+      const validRows = field => visible.filter(row => row[field] != null && Number.isFinite(Number(row[field])));
+      const scaleFor = field => {
+        const minEl = document.getElementById(`produccion-${field}-min`);
+        const maxEl = document.getElementById(`produccion-${field}-max`);
+        const status = document.getElementById(`produccion-${field}-escala-estado`);
+        const min = minEl.value.trim() === '' ? null : Number(minEl.value);
+        const max = maxEl.value.trim() === '' ? null : Number(maxEl.value);
+        if ((min != null && !Number.isFinite(min)) || (max != null && !Number.isFinite(max)) || (min != null && max != null && min >= max)) {
+          status.textContent = 'El mínimo debe ser menor que el máximo. Se muestra la escala automática.';
+          return {};
+        }
+        status.textContent = '';
+        return { ...(min == null ? {} : { min }), ...(max == null ? {} : { max }) };
+      };
+
+      for (const variable of variables) {
+        const target = document.getElementById(`chart-produccion-${variable.field}`);
+        if (!target) continue;
+        const data = validRows(variable.field);
+        const maxObserved = document.getElementById(`produccion-${variable.field}-max-observado`);
+        if (maxObserved) maxObserved.textContent = data.length ? `Máximo visible: ${numberText(Math.max(...data.map(row => Number(row[variable.field]))))}` : 'Sin valores en el período';
+        const series = selected.map(name => ({
+          name: selected.length === 1 ? variable.label : name,
+          data: data.filter(row => String(row.completacion || 'Sin información') === name).map(row => pointFor(row, variable.field))
+        })).filter(item => item.data.length);
+        if (!series.length) { renderChartMessage(target, `Sin datos de ${variable.label.toLowerCase()} para el filtro.`); continue; }
+        target.innerHTML = '';
+        const chart = new window.ApexCharts(target, {
+          chart: { type: 'area', height: 300, foreColor: theme.foreColor, background: 'transparent', zoom: { enabled: true }, toolbar: { show: true } },
+          theme: { mode: theme.mode }, colors: series.map(() => variable.color), series,
+          dataLabels: { enabled: false },
+          stroke: { curve: 'smooth', width: 2.5, dashArray: series.map((_, index) => index ? 4 + index * 2 : 0) },
+          fill: { type: 'gradient', gradient: { opacityFrom: 0.22, opacityTo: 0.01 } },
+          markers: { size: data.length < 40 ? 3 : 0 }, grid,
+          xaxis: { type: 'datetime', title: { text: 'Fecha' } },
+          yaxis: { title: { text: variable.label }, decimalsInFloat: 2, ...scaleFor(variable.field) },
+          legend: { show: series.length > 1, position: 'top', horizontalAlign: 'left' },
+          tooltip: { custom: ({ seriesIndex, dataPointIndex, w }) => formatTooltip(w.config.series[seriesIndex].data[dataPointIndex], variable.label) }
+        });
+        produccionCharts.push(chart);
+        produccionChartMap[`chart-produccion-${variable.field}`] = chart;
+        chart.render();
+      }
+
+      const crossing = document.getElementById('chart-produccion-cruce');
+      if (!crossing) return;
+      const crossSeries = [];
+      const crossColors = [];
+      const crossDashes = [];
+      for (const variable of variables) {
+        const data = validRows(variable.field);
+        const maximum = Math.max(0, ...data.map(row => Number(row[variable.field])));
+        let visibleSeriesIndex = 0;
+        for (const name of selected) {
+          const points = data.filter(row => String(row.completacion || 'Sin información') === name).map(row => {
+            const point = pointFor(row, variable.field);
+            return { ...point, valor: point.y, y: maximum > 0 ? (point.y / maximum) * 100 : 0 };
+          });
+          if (points.length) {
+            crossSeries.push({ name: selected.length === 1 ? variable.label : `${variable.label} · ${name}`, data: points });
+            crossColors.push(variable.color);
+            crossDashes.push(visibleSeriesIndex ? 4 + visibleSeriesIndex * 2 : 0);
+            visibleSeriesIndex += 1;
+          }
+        }
+      }
+      if (!crossSeries.length) { renderChartMessage(crossing, 'No hay datos para comparar en este período.'); return; }
+      crossing.innerHTML = '';
+      const crossChart = new window.ApexCharts(crossing, {
+        chart: { type: 'line', height: 360, foreColor: theme.foreColor, background: 'transparent', zoom: { enabled: true }, toolbar: { show: true } },
+        theme: { mode: theme.mode }, colors: crossColors, series: crossSeries,
+        dataLabels: { enabled: false },
+        stroke: { curve: 'smooth', width: 2.5, dashArray: crossDashes },
+        markers: { size: 0 }, grid, xaxis: { type: 'datetime', title: { text: 'Fecha' } },
+        yaxis: { min: 0, max: 100, title: { text: '% del máximo visible por variable' }, labels: { formatter: value => `${Number(value).toFixed(0)}%` } },
+        legend: { position: 'bottom', horizontalAlign: 'center' },
+        tooltip: { custom: ({ seriesIndex, dataPointIndex, w }) => formatTooltip(w.config.series[seriesIndex].data[dataPointIndex], w.config.series[seriesIndex].name, true) }
+      });
+      produccionCharts.push(crossChart);
+      produccionChartMap['chart-produccion-cruce'] = crossChart;
+      crossChart.render();
+    };
+    bindOnce(selector, 'ProduccionSelector', render, 'change');
+    bindOnce(period, 'ProduccionPeriodo', render, 'change');
+    for (const variable of variables) {
+      for (const bound of ['min', 'max']) bindOnce(document.getElementById(`produccion-${variable.field}-${bound}`), `ProduccionEscala${bound}`, render, 'change');
+    }
+    render();
+  }
+
   function initSurveyChart() {
     const chartEl = document.getElementById('chart-survey-pozo');
     const dataEl = document.getElementById('survey-data-json');
@@ -1046,23 +1329,24 @@
     const survey = readJsonData(dataEl, []);
 
     if (!Array.isArray(survey) || !survey.length) {
-      renderChartMessage(chartEl, 'Gráfica de survey pendiente.');
+      renderChartMessage(chartEl, 'Este pozo no tiene survey activo.');
       destroyChart('survey');
       return;
     }
 
     const seriesData = survey
       .map((row) => ({
-        x: Number(row.x_offset),
-        y: Number(row.y_offset),
+        x: row.x_offset == null ? NaN : Number(row.x_offset),
+        y: row.tvd == null ? NaN : Number(row.tvd),
         md: row.md,
         tvd: row.tvd,
+        y_offset: row.y_offset,
         azimut: row.azimut
       }))
       .filter((point) => Number.isFinite(point.x) && Number.isFinite(point.y));
 
     if (!seriesData.length) {
-      renderChartMessage(chartEl, 'El survey no tiene X Offset / Y Offset válidos para graficar.');
+      renderChartMessage(chartEl, 'El survey no tiene X Offset y TVD válidos para graficar.');
       destroyChart('survey');
       return;
     }
@@ -1084,6 +1368,7 @@
       theme: {
         mode: theme.mode
       },
+      dataLabels: { enabled: false },
       series: [
         {
           name: 'Trayectoria',
@@ -1109,7 +1394,8 @@
         }
       },
       yaxis: {
-        title: { text: 'Y Offset' },
+        reversed: true,
+        title: { text: 'TVD (profundidad)' },
         labels: {
           formatter: (value) => Number(value).toFixed(0)
         }
@@ -1121,8 +1407,8 @@
 
           return `
             <div class="px-3 py-2 text-xs">
-              <div><strong>X:</strong> ${point.x}</div>
-              <div><strong>Y:</strong> ${point.y}</div>
+              <div><strong>X Offset:</strong> ${point.x}</div>
+              <div><strong>Y Offset:</strong> ${point.y_offset ?? '—'}</div>
               <div><strong>MD:</strong> ${point.md ?? '—'}</div>
               <div><strong>TVD:</strong> ${point.tvd ?? '—'}</div>
               <div><strong>Azimut:</strong> ${point.azimut ?? '—'}</div>
@@ -1409,13 +1695,7 @@
           distributed: false
         }
       },
-      dataLabels: {
-        enabled: true,
-        formatter: (value) => {
-          const number = Number(value);
-          return Number.isFinite(number) ? number.toFixed(2) : value;
-        }
-      },
+      dataLabels: { enabled: false },
       grid: {
         borderColor: theme.gridColor,
         strokeDashArray: 4
@@ -1526,6 +1806,7 @@
       theme: {
         mode: theme.mode
       },
+      dataLabels: { enabled: false },
       series,
       stroke: {
         curve: 'smooth',
@@ -1635,6 +1916,12 @@
   }
 
   function destroyAllCharts() {
+    if (pruebasChart) pruebasChart.destroy();
+    pruebasChart = null;
+    produccionCharts.forEach(chart => chart.destroy());
+    produccionCharts = [];
+    produccionChartMap = {};
+    window.PetroBombaProduccion?.destroy?.();
     destroyChart('parametros');
     destroyChart('niveles');
     destroyChart('comparativo');
@@ -1673,6 +1960,8 @@
     if (text.includes('comparativ')) return 'comparativo';
     if (text.includes('survey')) return 'survey';
     if (text.includes('muestra')) return 'muestras';
+    if (text.includes('produccion')) return 'produccion';
+    if (text.includes('pruebas')) return 'pruebas';
 
     return 'grafica';
   }
@@ -1740,6 +2029,13 @@
       return 'Gráfica de trayectoria / survey';
     }
 
+    if (kind === 'produccion') {
+      return `Historial de producción · ${getSelectValue('produccion-periodo') || 'todo el período'} · fuente disponible en los puntos`;
+    }
+
+    if (kind === 'pruebas') return 'Pruebas OFM · % AyS';
+    if (kind === 'bomba-produccion') return 'Cruce de producción mensual con períodos de bomba · meses completos';
+
     return 'Gráfica del pozo';
   }
 
@@ -1749,6 +2045,9 @@
     if (chartId === 'chart-comparativa-pozo') return comparativoChart;
     if (chartId === 'chart-survey-pozo') return surveyChart;
     if (chartId === 'chart-muestras-pozo') return muestrasChart;
+    if (chartId === 'chart-pruebas-ays-pozo') return pruebasChart;
+    if (produccionChartMap[chartId]) return produccionChartMap[chartId];
+    if (window.PetroBombaProduccion?.getChart) return window.PetroBombaProduccion.getChart(chartId);
 
     return null;
   }
@@ -1811,14 +2110,26 @@
         canvas.height - 10
       );
 
-      const finalUri = canvas.toDataURL('image/png');
-
+      const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+      if (!blob) throw new Error('No se pudo crear el archivo PNG.');
+      const file = new File([blob], `${sanitizeFilename(filename)}.png`, { type: 'image/png' });
+      if (navigator.share && navigator.canShare?.({ files: [file] })) {
+        try {
+          await navigator.share({ files: [file], title: meta.pozoCodigo || 'Gráfica del pozo' });
+          showToast('Gráfica compartida correctamente.', 'success');
+          return;
+        } catch (shareError) {
+          if (shareError?.name === 'AbortError') return;
+        }
+      }
+      const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
-      link.href = finalUri;
-      link.download = `${sanitizeFilename(filename)}.png`;
+      link.href = url;
+      link.download = file.name;
       document.body.appendChild(link);
       link.click();
       link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 60000);
 
       showToast('Gráfica exportada correctamente.', 'success');
     } catch (error) {

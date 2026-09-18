@@ -45,6 +45,7 @@ router.patch('/:id/update-potencial', ensureAuthenticated, pozoController.actual
  * GET /pozos/:id/survey
  */
 router.get('/:id/survey', ensureAuthenticated, pozoController.getSurvey);
+router.get('/:id/produccion', ensureAuthenticated, pozoController.getProduccion);
 
 /**
  * Actualiza el survey activo del pozo pegando una tabla desde Excel.

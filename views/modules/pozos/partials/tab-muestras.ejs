@@ -29,6 +29,7 @@
             Histórico de muestras registradas para este pozo. Marca como representativas las muestras que quieras ver en
             la gráfica.
           </p>
+          <p class="text-xs text-slate-500 dark:text-slate-400">Fuente de muestra actual: <%= pozo?.fuente_muestra_actual || 'Sin información' %></p>
         </div>
 
         <button type="button" data-pozo-action="nueva-muestra" data-pozo-id="<%= idPozo %>"
@@ -71,6 +72,7 @@
                   <td class="whitespace-nowrap px-4 py-3 font-semibold text-slate-900 dark:text-white"
                     data-order="<%= fechaIso %>">
                     <%= fallback(formatDate(muestra.fecha)) %>
+                    <span class="block text-xs font-normal text-slate-500 dark:text-slate-400">Fuente: <%= muestra.fuente || 'Sin información' %></span>
                   </td>
 
                   <td class="whitespace-nowrap px-4 py-3 font-medium text-slate-700 dark:text-slate-200"
@@ -97,10 +99,10 @@
 
                   <td class="whitespace-nowrap px-4 py-3 text-center" data-order="<%= isRepresentativa ? 1 : 0 %>">
 
-                    <label class="inline-flex cursor-pointer select-none items-center justify-center gap-2">
+                    <label class="relative inline-flex cursor-pointer select-none items-center justify-center gap-2">
                       <input type="checkbox" class="peer sr-only" data-muestra-representativa="true"
                         data-muestra-id="<%= muestraId %>" data-pozo-id="<%= idPozo %>" data-fecha="<%= fechaIso %>"
-                        data-ays="<%= aysValue != null ? aysValue : '' %>" <%=isRepresentativa ? 'checked' : '' %>>
+                        data-ays="<%= aysValue != null ? aysValue : '' %>" data-fuente="<%= muestra.fuente || 'Sin información' %>" <%=isRepresentativa ? 'checked' : '' %>>
 
                       <span
                         class="relative h-6 w-11 shrink-0 rounded-full bg-slate-300 transition after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:shadow after:transition peer-checked:bg-emerald-600 peer-checked:after:translate-x-5 dark:bg-slate-700">
@@ -169,4 +171,14 @@
       </div>
     </section>
 
+    <% const pruebasRows = typeof pruebas !== 'undefined' && Array.isArray(pruebas) ? pruebas : []; %>
+    <section class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+      <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Pruebas OFM · % AyS</h2>
+      <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Tendencia de % AyS de OFM. Las dos tablas siguientes permiten consultar todas las pruebas por fuente.</p>
+      <p class="mt-2 text-xs text-slate-500 dark:text-slate-400">Fuente de la prueba actual: <%= pozo?.fuente_prueba_actual || 'Sin información' %> · <%= pruebasRows.filter(row => row.fuente === 'OFM').length %> pruebas OFM</p>
+      <script id="pruebas-data-json" type="application/json"><%- JSON.stringify(pruebasRows).replace(/</g, '\\u003c') %></script>
+      <div class="mt-3 flex justify-end"><button type="button" data-export-chart="chart-pruebas-ays-pozo" data-export-name="pruebas-ofm-<%= codigoPozo %>" data-export-pozo="<%= codigoPozo %>" data-export-kind="pruebas" class="min-h-11 rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white">Exportar gráfica PNG</button></div>
+      <div id="chart-pruebas-ays-pozo" class="mt-4 min-h-[320px]"></div>
+    </section>
+    <div id="pruebas-tablas" class="space-y-4"></div>
   </div>

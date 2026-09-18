@@ -118,6 +118,11 @@
     }
   }
 
+  async function safeGetByPozo(storeName, idPozo) {
+    try { return await getDB().getByPozo(storeName, idPozo); }
+    catch (error) { console.warn(`[OfflineStore] No se pudo leer ${storeName} por pozo:`, error); return []; }
+  }
+
   async function safeGet(storeName, key, fallbackValue = null) {
     try {
       const db = getDB();
@@ -208,6 +213,7 @@
 
   async function getPozoDetalle(id) {
     const numericId = normalizeId(id);
+    const pozo = await safeGet('pozos', numericId, null);
 
     /**
      * Camino principal:
@@ -216,16 +222,16 @@
     const detalle = await safeGet('pozo_detalles', numericId, null);
 
     if (detalle) {
-      return normalizeDetalle(detalle, Number(id));
+      return normalizeDetalle(pozo ? {
+        ...detalle,
+        pozo: { ...(detalle.pozo || {}), ...pozo }
+      } : detalle, Number(id));
     }
 
     /**
      * Fallback:
      * reconstruir desde store pozos.
      */
-    const pozos = await getPozos();
-    const pozo = pozos.find((item) => Number(item.id) === Number(id));
-
     if (!pozo) return null;
 
     return {
@@ -263,7 +269,7 @@
   }
 
   async function getParametrosByPozo(idPozo) {
-    const rows = await getParametros();
+    const rows = await safeGetByPozo('parametros', idPozo);
 
     return rows
       .filter((row) => samePozo(row, idPozo))
@@ -271,7 +277,7 @@
   }
 
   async function getNivelesByPozo(idPozo) {
-    const rows = await getNiveles();
+    const rows = await safeGetByPozo('niveles', idPozo);
 
     return rows
       .filter((row) => samePozo(row, idPozo))
@@ -279,7 +285,7 @@
   }
 
   async function getMuestrasByPozo(idPozo) {
-    const rows = await getMuestras();
+    const rows = await safeGetByPozo('muestras', idPozo);
 
     return rows
       .filter((row) => samePozo(row, idPozo))
@@ -287,7 +293,7 @@
   }
 
   async function getBombasByPozo(idPozo) {
-    const rows = await getBombas();
+    const rows = await safeGetByPozo('bombas', idPozo);
 
     return rows
       .filter((row) => samePozo(row, idPozo))
@@ -295,7 +301,7 @@
   }
 
   async function getSurveyByPozo(idPozo) {
-    const rows = await getSurvey();
+    const rows = await safeGetByPozo('survey', idPozo);
 
     return rows
       .filter((row) => samePozo(row, idPozo))
@@ -305,6 +311,14 @@
 
         return orderA - orderB;
       });
+  }
+
+  async function getProduccionByPozo(idPozo) {
+    return (await safeGetByPozo('produccion', idPozo)).sort((a, b) => String(a.fecha || '').localeCompare(String(b.fecha || '')));
+  }
+
+  async function getPruebasByPozo(idPozo) {
+    return (await safeGetByPozo('pruebas', idPozo)).sort((a, b) => String(a.fecha_prueba || '').localeCompare(String(b.fecha_prueba || '')));
   }
 
   async function getMapaPozo(idPozo) {
@@ -331,11 +345,19 @@
     return rows.sort(sortByFechaDesc(dateField));
   }
 
-  function getBombaActual(detalle, bombas) {
+  function getBombaActual(detalle, bombas, pozo) {
+    const bombaFicha = pozo && [pozo.bomba_marca_actual, pozo.bomba_modelo_actual, pozo.bomba_serial_actual, pozo.bomba_fecha_inst_actual].some(value => value != null && value !== '')
+      ? { metodo: pozo.bomba_metodo_actual, marca: pozo.bomba_marca_actual, modelo: pozo.bomba_modelo_actual,
+          serial: pozo.bomba_serial_actual, fecha_inst: pozo.bomba_fecha_inst_actual,
+          fecha_falla: pozo.bomba_fecha_falla_actual, tvu: pozo.bomba_tvu_actual,
+          tvu_dias: pozo.bomba_tvu_actual, estatus: pozo.bomba_estatus_actual,
+          observaciones: pozo.bomba_observaciones_actual, fuente_actual: pozo.bomba_fuente_actual }
+      : null;
     return firstValid(
       detalle?.bombaActual,
       detalle?.bomba_actual,
       detalle?.bomba,
+      bombaFicha,
       ensureArray(bombas)[0]
     );
   }
@@ -365,6 +387,8 @@
       muestrasFromStore,
       bombasFromStore,
       surveyFromStore,
+      produccionFromStore,
+      pruebasFromStore,
       mapaFromStore
     ] = await Promise.all([
       getParametrosByPozo(idPozo),
@@ -372,6 +396,8 @@
       getMuestrasByPozo(idPozo),
       getBombasByPozo(idPozo),
       getSurveyByPozo(idPozo),
+      getProduccionByPozo(idPozo),
+      getPruebasByPozo(idPozo),
       getMapaPozo(idPozo)
     ]);
 
@@ -380,38 +406,38 @@
     const pozo = normalizedDetalle?.pozo || null;
 
     const parametros = mergeRows(
-      normalizedDetalle?.parametros,
       parametrosFromStore,
+      normalizedDetalle?.parametros,
       'fecha'
     );
 
     const niveles = mergeRows(
-      normalizedDetalle?.niveles,
       nivelesFromStore,
+      normalizedDetalle?.niveles,
       'fecha'
     );
 
     const muestras = mergeRows(
-      normalizedDetalle?.muestras,
       muestrasFromStore,
+      normalizedDetalle?.muestras,
       'fecha'
     );
 
     const bombas = mergeRows(
-      normalizedDetalle?.bombas,
       bombasFromStore,
+      normalizedDetalle?.bombas,
       'fecha_inst'
     );
 
-    const survey = ensureArray(normalizedDetalle?.survey).length
-      ? ensureArray(normalizedDetalle.survey)
-      : surveyFromStore;
+    const survey = surveyFromStore.length ? surveyFromStore : ensureArray(normalizedDetalle?.survey);
+    const produccion = produccionFromStore.length ? produccionFromStore : ensureArray(normalizedDetalle?.produccion);
+    const pruebas = pruebasFromStore.length ? pruebasFromStore : ensureArray(normalizedDetalle?.pruebas);
 
     const mapa = normalizedDetalle?.mapa || mapaFromStore || null;
 
     const ultimoParametro = getUltimoParametro(normalizedDetalle, parametros);
     const ultimoNivel = getUltimoNivel(normalizedDetalle, niveles);
-    const bombaActual = getBombaActual(normalizedDetalle, bombas);
+    const bombaActual = getBombaActual(normalizedDetalle, bombas, pozo);
 
     return {
       id: Number(idPozo),
@@ -424,6 +450,8 @@
       muestras,
       bombas,
       survey,
+      produccion,
+      pruebas,
 
       ultimoParametro,
       ultimoNivel,
@@ -435,6 +463,8 @@
         muestras: muestras.length,
         bombas: bombas.length,
         survey: survey.length,
+        produccion: produccion.length,
+        pruebas: pruebas.length,
         mapa: mapa ? 1 : 0
       },
 
@@ -482,7 +512,9 @@
       muestras,
       servicios,
       mapaPozos,
-      survey,
+      surveyCount,
+      produccionCount,
+      pruebasCount,
       detalles
     ] = await Promise.all([
       getDashboard(),
@@ -495,7 +527,9 @@
       getMuestras(),
       getServicios(),
       getMapaPozos(),
-      getSurvey(),
+      getDB().count('survey'),
+      getDB().count('produccion'),
+      getDB().count('pruebas'),
       safeGetAll('pozo_detalles')
     ]);
 
@@ -522,7 +556,9 @@
         muestras: muestras.length,
         servicios: servicios.length,
         mapa_pozos: mapaPozos.length,
-        survey: survey.length,
+        survey: surveyCount,
+        produccion: produccionCount,
+        pruebas: pruebasCount,
         queue: queue.length
       }
     };
@@ -617,6 +653,8 @@
     getMuestrasByPozo,
     getBombasByPozo,
     getSurveyByPozo,
+    getProduccionByPozo,
+    getPruebasByPozo,
     getMapaPozo,
 
     getPendingQueue,

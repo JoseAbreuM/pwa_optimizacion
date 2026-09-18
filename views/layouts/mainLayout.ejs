@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="theme-color" content="#033F73" />
 
-  <link rel="manifest" href="/manifest.json?v=20260520-10" />
+  <link rel="manifest" href="/manifest.json?v=20260918-07" />
   <link rel="icon" type="image/png" href="/assets/icons/icono.png" />
 
   <!-- Tema inicial antes de pintar la pantalla -->
@@ -29,8 +29,8 @@
   <link rel="stylesheet" href="https://cdn.datatables.net/colreorder/2.0.4/css/colReorder.dataTables.min.css" />
 
   <!-- Estilos propios -->
-  <link rel="stylesheet" href="/css/tailwind.css?v=20260520-10" />
-  <link rel="stylesheet" href="/css/app.css?v=20260520-10" />
+  <link rel="stylesheet" href="/css/tailwind.css?v=20260918-07" />
+  <link rel="stylesheet" href="/css/app.css?v=20260918-07" />
 
   <title>
     <%= typeof title !=='undefined' ? title : 'Dashboard' %> | Cavallino
@@ -112,6 +112,7 @@
           const counts = document.getElementById('offline-ready-counts');
           const closeButton = document.getElementById('offline-ready-close');
           const syncNowButton = document.getElementById('offline-ready-sync-now');
+          const manualUpdateButton = document.getElementById('offline-manual-update');
 
           if (!indicator || !dot || !title || !message || !progress || !counts) return;
 
@@ -158,6 +159,10 @@
           }
 
           function show(detail = {}) {
+            if (detail.state === 'available' || detail.state === 'needs-download') {
+              indicator.classList.add('hidden');
+              return;
+            }
             if (closedManually && detail.state !== 'error') return;
 
             clearTimeout(hideTimer);
@@ -174,7 +179,7 @@
 
               hideTimer = setTimeout(() => {
                 indicator.classList.add('hidden');
-              }, 12000);
+              }, 5000);
             } else if (state === 'error') {
               title.textContent = 'No se pudo preparar offline';
               message.textContent = detail.message || 'Ocurrió un error durante la sincronización local.';
@@ -243,6 +248,7 @@
 
             await window.PetroSync.syncNow({ force: true });
           });
+          manualUpdateButton?.addEventListener('click', () => window.PetroSync?.syncNow?.({ force: true }));
 
           window.addEventListener('petro:offline-status', (event) => {
             show(event.detail || {});
@@ -278,16 +284,12 @@
           window.addEventListener('online', () => {
             closedManually = false;
             syncNowButton?.classList.remove('hidden');
-
-            show({
-              state: 'online',
-              message: 'Conexión recuperada. Verificando modo offline...',
-              progress: 10
-            });
+            if (manualUpdateButton) manualUpdateButton.disabled = false;
           });
 
           window.addEventListener('offline', () => {
             closedManually = false;
+            if (manualUpdateButton) manualUpdateButton.disabled = true;
 
             show({
               state: 'offline',
@@ -301,15 +303,7 @@
            * Si el usuario está online y aún no se ha marcado offline-ready,
            * mostramos el indicador desde el layout mientras sync.js termina de cargar.
            */
-          window.addEventListener('DOMContentLoaded', () => {
-            if (navigator.onLine && localStorage.getItem('petro-offline-ready') !== '1') {
-              show({
-                state: 'idle-online',
-                message: 'Con conexión. Preparando datos offline...',
-                progress: 5
-              });
-            }
-          });
+          if (manualUpdateButton) manualUpdateButton.disabled = !navigator.onLine;
         })();
       </script>
 
@@ -317,7 +311,7 @@
       <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 
       <!-- ApexCharts -->
-      <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+      <script src="/js/vendor/apexcharts.min.js"></script>
 
       <!-- Flowbite -->
       <script src="https://cdn.jsdelivr.net/npm/flowbite@2.5.2/dist/flowbite.min.js"></script>
@@ -336,20 +330,20 @@
       <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 
       <!-- Scripts offline/core con cache-busting -->
-      <script src="/js/offline/db.js?v=20260520-10"></script>
-      <script src="/js/offline/store.js?v=20260520-10"></script>
-      <script src="/js/offline/sync.js?v=20260520-10"></script>
-      <script src="/js/offline/status.js?v=20260520-10"></script>
+      <script src="/js/offline/db.js?v=20260918-07"></script>
+      <script src="/js/offline/store.js?v=20260918-07"></script>
+      <script src="/js/offline/sync.js?v=20260918-07"></script>
+      <script src="/js/offline/status.js?v=20260918-07"></script>
 
       <!-- Scripts core con cache-busting -->
-      <script src="/js/core/ui.js?v=20260520-10"></script>
-      <script src="/js/core/app.js?v=20260520-10"></script>
-      <script src="/js/sw-register.js?v=20260520-10"></script>
-      <script src="/js/app-theme.js?v=20260520-10"></script>
+      <script src="/js/core/ui.js?v=20260918-07"></script>
+      <script src="/js/core/app.js?v=20260918-07"></script>
+      <script src="/js/sw-register.js?v=20260918-07"></script>
+      <script src="/js/app-theme.js?v=20260918-07"></script>
 
       <!-- Script específico de cada página -->
       <% if (typeof pageScript !=='undefined' && pageScript) { %>
-        <script src="<%= pageScript %>?v=20260520-10"></script>
+        <script src="<%= pageScript %>?v=20260918-07"></script>
         <% } %>
 
 </body>

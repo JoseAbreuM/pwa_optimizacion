@@ -22,11 +22,9 @@ const CHUNK_STORE_CONFIG = {
       FROM pozos p
     `,
     dataSql: `
-      SELECT
-        p.*,
-        ep.nombre AS estado_nombre
+      SELECT p.*, v.*
       FROM pozos p
-      LEFT JOIN estado_pozo ep ON ep.id = p.id_estado
+      INNER JOIN vw_pozo_ficha_general v ON v.id = p.id
       ORDER BY p.codigo ASC
       LIMIT ? OFFSET ?
     `
@@ -64,11 +62,11 @@ const CHUNK_STORE_CONFIG = {
     pageSize: 1000,
     countSql: `
       SELECT COUNT(*) AS total
-      FROM muestras_fluido
+      FROM vw_pozo_muestras_con_fuente
     `,
     dataSql: `
       SELECT *
-      FROM muestras_fluido
+      FROM vw_pozo_muestras_con_fuente
       ORDER BY fecha DESC, id DESC
       LIMIT ? OFFSET ?
     `
@@ -118,25 +116,26 @@ const CHUNK_STORE_CONFIG = {
 
   survey: {
     pageSize: 1000,
-    countSql: `
-      SELECT COUNT(*) AS total
-      FROM pozo_survey ps
-      INNER JOIN pozos p ON p.id = ps.id_pozo
-    `,
-    dataSql: `
-      SELECT
-        ps.*,
-        ps.id_pozo AS pozo_id,
-        p.codigo AS codigo_pozo
-      FROM pozo_survey ps
-      INNER JOIN pozos p ON p.id = ps.id_pozo
-      ORDER BY
-        ps.id_pozo ASC,
-        COALESCE(ps.fila_orden, 0) ASC,
-        COALESCE(ps.md, 0) ASC,
-        ps.id ASC
-      LIMIT ? OFFSET ?
-    `
+    countSql: 'SELECT COUNT(*) AS total FROM vw_pozo_survey_activo',
+    dataSql: `SELECT id, id_pozo, fila_orden, md, tvd, x_offset, y_offset,
+      delta_x, delta_y, azimut FROM vw_pozo_survey_activo
+      ORDER BY id ASC LIMIT ? OFFSET ?`
+  },
+
+  produccion: {
+    pageSize: 1000,
+    countSql: 'SELECT COUNT(*) AS total FROM vw_pozo_produccion_historial',
+    dataSql: `SELECT id, id_pozo, fecha, completacion, petroleo, agua, gas,
+      fuente, origen_archivo FROM vw_pozo_produccion_historial
+      ORDER BY id ASC LIMIT ? OFFSET ?`
+  },
+
+  pruebas: {
+    pageSize: 1000,
+    countSql: 'SELECT COUNT(*) AS total FROM pruebas_pozo',
+    dataSql: `SELECT id, id_pozo, fecha_prueba, ays, api, volumetria,
+      bbpd, bnpd, gasf, fuente FROM pruebas_pozo
+      ORDER BY id ASC LIMIT ? OFFSET ?`
   }
 };
 
@@ -300,6 +299,7 @@ async function getDashboardSnapshot(currentUser) {
     servicios: [],
     muestrasAlerta: [],
     bombasCriticas: [],
+    ofmCoverage: { produccion: 0, pruebas: 0 },
     potencialPorArea: {
       labels: [],
       values: [],
@@ -319,6 +319,7 @@ async function getDashboardSnapshot(currentUser) {
     servicios: dashboardSource.servicios || [],
     muestrasAlerta: dashboardSource.muestrasAlerta || [],
     bombasCriticas: dashboardSource.bombasCriticas || [],
+    ofmCoverage: dashboardSource.ofmCoverage || { produccion: 0, pruebas: 0 },
     potencialPorArea: dashboardSource.potencialPorArea || {
       labels: [],
       values: [],
@@ -514,23 +515,7 @@ async function buildOfflineSnapshot(currentUser) {
       [],
       []
     ),
-    safeQuery(
-      `
-        SELECT
-          ps.*,
-          ps.id_pozo AS pozo_id,
-          p.codigo AS codigo_pozo
-        FROM pozo_survey ps
-        INNER JOIN pozos p ON p.id = ps.id_pozo
-        ORDER BY
-          ps.id_pozo ASC,
-          COALESCE(ps.fila_orden, 0) ASC,
-          COALESCE(ps.md, 0) ASC,
-          ps.id ASC
-      `,
-      [],
-      []
-    )
+    Promise.resolve([])
   ]);
 
   const parametros = parametrosRaw.sort(sortByDateDesc('fecha'));

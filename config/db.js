@@ -30,7 +30,7 @@ const pool = mysql.createPool({
   port: Number(process.env.DB_PORT || 3306),
   user: process.env.DB_USER || 'root',
   password: process.env.DB_PASSWORD || '',
-  database: process.env.DB_NAME || 'pwa_opti',
+  database: process.env.DB_NAME || 'pwa_ofm',
 
   waitForConnections: true,
   connectionLimit: 10,
@@ -73,7 +73,7 @@ async function countTableSafe(tableName) {
 async function testConnection() {
   const [dbRows] = await pool.query('SELECT DATABASE() AS db');
 
-  const dbName = dbRows[0]?.db || process.env.DB_NAME || 'pwa_opti';
+  const dbName = dbRows[0]?.db || process.env.DB_NAME || 'pwa_ofm';
 
   console.log('=================================');
   console.log('Conexión MySQL OK');

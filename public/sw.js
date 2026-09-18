@@ -1,4 +1,4 @@
-const CACHE_NAME = 'petrofield-cache-v20';
+const CACHE_NAME = 'petrofield-cache-v27';
 
 const APP_SHELL_FILES = [
   /**
@@ -43,6 +43,9 @@ const APP_SHELL_FILES = [
    */
   '/js/modules/pozos.js',
   '/js/modules/pozo-detalle.js',
+  '/js/modules/pozo-reporte.js',
+  '/js/modules/bomba-produccion.js',
+  '/js/vendor/apexcharts.min.js',
   '/js/modules/dashboard.js',
   '/js/modules/muestras.js',
   '/js/modules/parametros.js',
@@ -161,6 +164,13 @@ async function cacheAppShell() {
 async function getOfflineFallback(request = null) {
   const requestUrl = request ? new URL(request.url) : null;
   const pathname = requestUrl?.pathname || '';
+
+  // Reconstruye las rutas principales desde IndexedDB, incluso si el pozo
+  // nunca se abrió antes. Evita servir HTML online antiguo desde caché.
+  if (isPozoDetailPath(pathname) || isPozosPath(pathname) || isDashboardPath(pathname)) {
+    const cachedAppShell = await getCachedPath('/offline-app.html');
+    if (cachedAppShell) return cachedAppShell;
+  }
 
   /**
    * 1. Primero intenta devolver exactamente la ruta solicitada.

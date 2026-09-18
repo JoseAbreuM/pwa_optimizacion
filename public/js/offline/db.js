@@ -2,7 +2,7 @@
   if (window.PetroDB) return;
 
   const DB_NAME = 'petrofield-offline';
-  const DB_VERSION = 2;
+  const DB_VERSION = 4;
   const STORES = [
     { name: 'metadata', options: { keyPath: 'key' } },
     { name: 'dashboard', options: { keyPath: 'key' } },
@@ -15,6 +15,8 @@
     { name: 'servicios', options: { keyPath: 'id' } },
     { name: 'mapa_pozos', options: { keyPath: 'id' } },
     { name: 'survey', options: { keyPath: 'id' } },
+    { name: 'produccion', options: { keyPath: 'id' } },
+    { name: 'pruebas', options: { keyPath: 'id' } },
     { name: 'queue', options: { keyPath: 'id', autoIncrement: true } }
   ];
 
@@ -30,9 +32,20 @@
             db.createObjectStore(store.name, store.options);
           }
         });
+        for (const name of ['parametros', 'niveles', 'muestras', 'bombas', 'survey', 'produccion', 'pruebas']) {
+          const objectStore = event.target.transaction.objectStore(name);
+          if (!objectStore.indexNames.contains('id_pozo')) objectStore.createIndex('id_pozo', 'id_pozo', { unique: false });
+        }
+        if (event.oldVersion < 3 && db.objectStoreNames.contains('survey')) {
+          event.target.transaction.objectStore('survey').clear();
+        }
       };
 
-      request.onsuccess = () => resolve(request.result);
+      request.onsuccess = () => {
+        const db = request.result;
+        db.onversionchange = () => db.close();
+        resolve(db);
+      };
       request.onerror = () => reject(request.error);
     });
   }
@@ -69,6 +82,14 @@
     });
   }
 
+  async function replaceAll(storeName, values = []) {
+    return withStore(storeName, 'readwrite', (store) => {
+      store.clear();
+      values.forEach(value => store.put(value));
+      return Promise.resolve(values.length);
+    });
+  }
+
   async function get(storeName, key) {
     return withStore(storeName, 'readonly', (store) => {
       return new Promise((resolve) => {
@@ -87,6 +108,23 @@
         request.onerror = () => resolve([]);
       });
     });
+  }
+
+  async function getByPozo(storeName, idPozo) {
+    return withStore(storeName, 'readonly', (store) => new Promise((resolve) => {
+      if (!store.indexNames.contains('id_pozo')) { resolve([]); return; }
+      const request = store.index('id_pozo').getAll(Number(idPozo));
+      request.onsuccess = () => resolve(request.result || []);
+      request.onerror = () => resolve([]);
+    }));
+  }
+
+  async function count(storeName) {
+    return withStore(storeName, 'readonly', (store) => new Promise((resolve) => {
+      const request = store.count();
+      request.onsuccess = () => resolve(request.result || 0);
+      request.onerror = () => resolve(0);
+    }));
   }
 
   async function deleteEntry(storeName, key) {
@@ -144,8 +182,11 @@
     openDB,
     put,
     putMany,
+    replaceAll,
     get,
     getAll,
+    getByPozo,
+    count,
     delete: deleteEntry,
     clear,
     getMetadata,

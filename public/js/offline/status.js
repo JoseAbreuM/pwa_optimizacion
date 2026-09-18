@@ -15,6 +15,7 @@
   }
 
   function clampProgress(value) {
+    if (value === null || value === undefined || value === '') return null;
     const number = Number(value);
     if (!Number.isFinite(number)) return null;
     return Math.max(0, Math.min(100, number));
@@ -26,7 +27,7 @@
     els.badge.className = 'inline-flex max-w-[170px] items-center gap-2 rounded-xl border px-2.5 py-2 text-xs font-semibold sm:max-w-none sm:px-3';
     els.dot.className = 'h-2.5 w-2.5 shrink-0 rounded-full';
 
-    if (state === 'ready') {
+    if (state === 'ready' || state === 'available') {
       els.badge.classList.add(
         'border-emerald-200',
         'bg-emerald-50',
@@ -93,6 +94,8 @@
     const state = detail.state;
 
     if (state === 'ready') return 'Listo offline';
+    if (state === 'available') return 'Listo offline';
+    if (state === 'needs-download') return 'Descarga pendiente';
     if (state === 'loading') return 'Descargando';
     if (state === 'saving') return 'Guardando';
     if (state === 'syncing-queue') return 'Sincronizando';
@@ -172,8 +175,8 @@
       const parsed = JSON.parse(raw);
 
       updateStatus({
-        state: navigator.onLine ? parsed.state : 'offline',
-        progress: parsed.progress,
+        state: !navigator.onLine ? 'offline' : (localStorage.getItem('petro-offline-ready') === '1' ? 'available' : 'needs-download'),
+        progress: null,
         message: parsed.message
       });
     } catch (error) {
@@ -213,9 +216,8 @@
 
     window.addEventListener('online', () => {
       updateStatus({
-        state: 'online',
-        progress: 5,
-        message: 'Conexión recuperada.'
+        state: localStorage.getItem('petro-offline-ready') === '1' ? 'available' : 'needs-download',
+        progress: null
       });
     });
 
